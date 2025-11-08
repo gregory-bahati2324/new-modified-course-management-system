@@ -1,0 +1,215 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* MUST LMS Design System - Academic Excellence & Accessibility */
+
+@layer base {
+  :root {
+    /* Academic Color Palette */
+    --background: 0 0% 100%;
+    --foreground: 220 13% 18%;
+    
+    /* MUST Brand Colors */
+    --primary: 217 100% 45%;  /* Academic Blue */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 100% 40%;
+    --primary-subtle: 217 100% 97%;
+    
+    /* Success & Learning Colors */
+    --success: 142 76% 36%;  /* Academic Green */
+    --success-foreground: 0 0% 100%;
+    --success-subtle: 142 76% 96%;
+    
+    /* Warning & Alert Colors */
+    --warning: 35 91% 62%;  /* Academic Orange */
+    --warning-foreground: 0 0% 100%;
+    --warning-subtle: 35 91% 96%;
+    
+    /* Cards & Surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 18%;
+    --card-subtle: 220 13% 98%;
+    
+    /* Interactive Elements */
+    --secondary: 220 13% 95%;
+    --secondary-foreground: 220 13% 18%;
+    --secondary-hover: 220 13% 90%;
+    
+    --muted: 220 13% 95%;
+    --muted-foreground: 220 9% 46%;
+    
+    --accent: 217 100% 97%;
+    --accent-foreground: 217 100% 45%;
+    
+    /* States */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Borders & Inputs */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 100% 45%;
+    
+    /* Layout */
+    --radius: 0.5rem;
+    
+    /* Academic Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(217 100% 45%), hsl(217 100% 55%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 13% 98%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%));
+    
+    /* Shadows */
+    --shadow-subtle: 0 1px 3px hsl(220 13% 18% / 0.1);
+    --shadow-medium: 0 4px 12px hsl(220 13% 18% / 0.15);
+    --shadow-strong: 0 10px 30px hsl(220 13% 18% / 0.2);
+    
+    /* Transitions */
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark Mode Academic Colors */
+    --background: 220 13% 9%;
+    --foreground: 0 0% 98%;
+    
+    /* MUST Brand Colors - Dark */
+    --primary: 217 100% 60%;  /* Brighter blue for dark mode */
+    --primary-foreground: 220 13% 9%;
+    --primary-hover: 217 100% 65%;
+    --primary-subtle: 217 100% 15%;
+    
+    /* Success & Learning Colors - Dark */
+    --success: 142 76% 50%;
+    --success-foreground: 220 13% 9%;
+    --success-subtle: 142 76% 15%;
+    
+    /* Warning & Alert Colors - Dark */
+    --warning: 35 91% 70%;
+    --warning-foreground: 220 13% 9%;
+    --warning-subtle: 35 91% 15%;
+    
+    /* Cards & Surfaces - Dark */
+    --card: 220 13% 12%;
+    --card-foreground: 0 0% 98%;
+    --card-subtle: 220 13% 15%;
+    
+    /* Interactive Elements - Dark */
+    --secondary: 220 13% 16%;
+    --secondary-foreground: 0 0% 98%;
+    --secondary-hover: 220 13% 20%;
+    
+    --muted: 220 13% 16%;
+    --muted-foreground: 220 9% 70%;
+    
+    --accent: 217 100% 15%;
+    --accent-foreground: 217 100% 60%;
+    
+    /* States - Dark */
+    --destructive: 0 84% 70%;
+    --destructive-foreground: 220 13% 9%;
+    
+    /* Borders & Inputs - Dark */
+    --border: 220 13% 20%;
+    --input: 220 13% 20%;
+    --ring: 217 100% 60%;
+    
+    /* Academic Gradients - Dark */
+    --gradient-hero: linear-gradient(135deg, hsl(217 100% 30%), hsl(217 100% 40%));
+    --gradient-card: linear-gradient(145deg, hsl(220 13% 12%), hsl(220 13% 15%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 30%), hsl(142 76% 40%));
+    
+    /* Shadows - Dark */
+    --shadow-subtle: 0 1px 3px hsl(0 0% 0% / 0.3);
+    --shadow-medium: 0 4px 12px hsl(0 0% 0% / 0.4);
+    --shadow-strong: 0 10px 30px hsl(0 0% 0% / 0.5);
+    
+    /* Sidebar - Dark */
+    --sidebar-background: 220 13% 10%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 217 100% 60%;
+    --sidebar-primary-foreground: 220 13% 9%;
+    --sidebar-accent: 220 13% 16%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 220 13% 20%;
+    --sidebar-ring: 217 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  /* Academic Typography */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+  
+  /* Smooth Transitions */
+  .transition-colors {
+    transition: var(--transition-smooth);
+  }
+}
+
+@layer components {
+  /* Hero Gradient Background */
+  .bg-hero-gradient {
+    background: var(--gradient-hero);
+  }
+  
+  /* Card Gradient Background */
+  .bg-card-gradient {
+    background: var(--gradient-card);
+  }
+  
+  /* Success Gradient Background */
+  .bg-success-gradient {
+    background: var(--gradient-success);
+  }
+  
+  /* Academic Shadows */
+  .shadow-academic {
+    box-shadow: var(--shadow-medium);
+  }
+  
+  .shadow-academic-strong {
+    box-shadow: var(--shadow-strong);
+  }
+  
+  /* Glassmorphism Effect */
+  .glass {
+    @apply backdrop-blur-sm bg-white/80 dark:bg-gray-900/80;
+  }
+  
+  /* Focus States */
+  .focus-academic {
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
+  }
+  
+  /* Smooth Scrolling */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+}
