@@ -136,18 +136,20 @@ export default function CreateCourse() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Category *</Label>
+                  <Label>Collage *</Label>
                   <Select
                     value={courseData.category}
                     onValueChange={value => setCourseData({ ...courseData, category: value })}
                   >
-                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select Collage" /></SelectTrigger>
                     <SelectContent className="bg-white text-black shadow-lg rounded-md z-50" >
-                      <SelectItem value="computer-science">Computer Science</SelectItem>
-                      <SelectItem value="engineering">Engineering</SelectItem>
-                      <SelectItem value="mathematics">Mathematics</SelectItem>
-                      <SelectItem value="business">Business</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="cet">CET</SelectItem>
+                      <SelectItem value="coste">COSTE</SelectItem>
+                      <SelectItem value="chbs">CHBS</SelectItem>
+                      <SelectItem value="cact">CACT</SelectItem>
+                      <SelectItem value="coict">CoICT</SelectItem>
+                      <SelectItem value="cast">CAST</SelectItem>
+                      <SelectItem value="chst">CHST</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -159,9 +161,16 @@ export default function CreateCourse() {
                   >
                     <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
                     <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                      <SelectItem value="beginner">Beginner</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="advanced">Advanced</SelectItem>
+                      <SelectItem value="certificate">Certificate</SelectItem>
+                      <SelectItem value="ordinary_diploma">Ordinary Diploma</SelectItem>
+                      <SelectItem value="diploma">Diploma</SelectItem>
+                      <SelectItem value="advanced_diploma">Advanced Diploma</SelectItem>
+                      <SelectItem value="bachelor">Bachelor</SelectItem>
+                      <SelectItem value="post_diploma">Postgraduate Diploma</SelectItem>
+                      <SelectItem value="atc">ATC II</SelectItem>
+                      <SelectItem value="cpa">Certified Public Accountant (CPA(T))</SelectItem>
+                      <SelectItem value="masters">Master's</SelectItem>
+                      <SelectItem value="doctory_of_philosophy">Doctory of Philosophy</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

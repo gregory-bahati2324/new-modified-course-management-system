@@ -33,6 +33,29 @@ class CourseService {
       throw new Error(handleApiError(error));
     }
   }
+
+
+  
 }
+
+export interface Course {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  instructor_id: string;
+  instructor_name: string;
+  category: string;
+  level: string;
+  duration: string;
+  students_enrolled: number;
+  rating: number;
+  image_url?: string;
+  created_at: string;
+  updated_at: string;
+  is_published: boolean;
+}
+
+
 
 export const courseService = new CourseService();

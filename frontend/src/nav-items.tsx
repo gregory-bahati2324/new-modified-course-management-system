@@ -1,4 +1,4 @@
-import { HomeIcon, BookOpen, Users, MessageSquare, Award, BarChart3, Settings, Calendar, FileText, Plus, Eye, Edit, FileQuestion, Shield } from "lucide-react";
+import { HomeIcon, BookOpen, Users, MessageSquare, Award, BarChart3, Settings, Calendar, FileText, Plus, Eye, Edit, FileQuestion, Shield, UserPlus, Upload, Download } from "lucide-react";
 import Home from "./pages/Home.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import StudentCourses from "./pages/student/Courses.tsx";
@@ -8,6 +8,9 @@ import StudentGrades from "./pages/student/Grades.tsx";
 import StudentProfile from "./pages/student/Profile.tsx";
 import CourseLearn from "./pages/student/CourseLearn.tsx";
 import InstructorDashboard from "./pages/instructor/Dashboard.tsx";
+import InstructorCourses from "./pages/instructor/Courses.tsx";
+import InstructorModules from "./pages/instructor/Modules.tsx";
+import InstructorAssignments from "./pages/instructor/Assignments.tsx";
 import CreateCourse from "./pages/instructor/CreateCourse.tsx";
 import InstructorSchedule from "./pages/instructor/Schedule.tsx";
 import CourseManage from "./pages/instructor/CourseManage.tsx";
@@ -17,16 +20,24 @@ import InstructorAnalytics from "./pages/instructor/Analytics.tsx";
 import ScheduleSession from "./pages/instructor/ScheduleSession.tsx";
 import EditCourseDescription from "./pages/instructor/EditCourseDescription.tsx";
 import AddModule from "./pages/instructor/AddModule.tsx";
+import AddLesson from "./pages/instructor/AddLesson.tsx";
 import CreateAssignment from "./pages/instructor/CreateAssignment.tsx";
 import ViewAssignment from "./pages/instructor/ViewAssignment.tsx";
 import GradeAssignment from "./pages/instructor/GradeAssignment.tsx";
 import ExamsTests from "./pages/instructor/ExamsTests.tsx";
+import CreateAssessment from "./pages/instructor/CreateAssessment.tsx";
+import StudentList from "./pages/instructor/StudentList.tsx";
+import GradeSubmissions from "./pages/instructor/GradeSubmissions.tsx";
 import AdminDashboard from "./pages/admin/Dashboard.tsx";
 import AdminLogin from "./pages/admin/Login.tsx";
 import AdminUsers from "./pages/admin/Users.tsx";
 import AdminSettings from "./pages/admin/Settings.tsx";
 import AdminAnalytics from "./pages/admin/Analytics.tsx";
 import AdminApprovals from "./pages/admin/Approvals.tsx";
+import AdminAddUser from "./pages/admin/AddUser.tsx";
+import AdminCreateCourse from "./pages/admin/CreateCourse.tsx";
+import AdminBulkImport from "./pages/admin/BulkImport.tsx";
+import AdminExportData from "./pages/admin/ExportData.tsx";
 import Courses from "./pages/Courses.tsx";
 import CourseDetail from "./pages/CourseDetail.tsx";
 import Forums from "./pages/Forums.tsx";
@@ -91,6 +102,24 @@ export const navItems = [
     page: <InstructorDashboard />,
   },
   {
+    title: "Instructor Courses",
+    to: "/instructor/courses",
+    icon: <BookOpen className="h-4 w-4" />,
+    page: <InstructorCourses />,
+  },
+  {
+    title: "Instructor Modules",
+    to: "/instructor/modules",
+    icon: <FileText className="h-4 w-4" />,
+    page: <InstructorModules />,
+  },
+  {
+    title: "Instructor Assignments",
+    to: "/instructor/assignments",
+    icon: <FileQuestion className="h-4 w-4" />,
+    page: <InstructorAssignments />,
+  },
+  {
     title: "Create Course",
     to: "/instructor/create-course",
     icon: <BookOpen className="h-4 w-4" />,
@@ -145,8 +174,14 @@ export const navItems = [
     page: <AddModule />,
   },
   {
+    title: "Add Lesson",
+    to: "/instructor/course/:courseId/module/:moduleId/add-lesson",
+    icon: <Plus className="h-4 w-4" />,
+    page: <AddLesson />,
+  },
+  {
     title: "Create Assignment",
-    to: "/instructor/course/:id/create-assignment",
+    to: "/instructor/create-assignment",
     icon: <FileText className="h-4 w-4" />,
     page: <CreateAssignment />,
   },
@@ -167,6 +202,24 @@ export const navItems = [
     to: "/instructor/exams",
     icon: <FileQuestion className="h-4 w-4" />,
     page: <ExamsTests />,
+  },
+  {
+    title: "Create Assessment",
+    to: "/instructor/create-assessment",
+    icon: <Plus className="h-4 w-4" />,
+    page: <CreateAssessment />,
+  },
+  {
+    title: "Grade Submissions",
+    to: "/instructor/grade",
+    icon: <Edit className="h-4 w-4" />,
+    page: <GradeSubmissions />,
+  },
+  {
+    title: "Student List",
+    to: "/instructor/students",
+    icon: <Users className="h-4 w-4" />,
+    page: <StudentList />,
   },
   {
     title: "Admin Login",
@@ -203,6 +256,30 @@ export const navItems = [
     to: "/admin/approvals",
     icon: <Settings className="h-4 w-4" />,
     page: <AdminApprovals />,
+  },
+  {
+    title: "Admin Add User",
+    to: "/admin/add-user",
+    icon: <UserPlus className="h-4 w-4" />,
+    page: <AdminAddUser />,
+  },
+  {
+    title: "Admin Create Course",
+    to: "/admin/create-course",
+    icon: <Plus className="h-4 w-4" />,
+    page: <AdminCreateCourse />,
+  },
+  {
+    title: "Admin Bulk Import",
+    to: "/admin/bulk-import",
+    icon: <Upload className="h-4 w-4" />,
+    page: <AdminBulkImport />,
+  },
+  {
+    title: "Admin Export Data",
+    to: "/admin/export-data",
+    icon: <Download className="h-4 w-4" />,
+    page: <AdminExportData />,
   },
   {
     title: "Courses",

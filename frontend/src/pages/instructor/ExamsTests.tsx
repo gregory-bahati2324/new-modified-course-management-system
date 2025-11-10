@@ -156,7 +156,7 @@ export default function ExamsTests() {
             </p>
           </div>
           <Button asChild>
-            <Link to="/instructor/create-exam">
+            <Link to="/instructor/create-assessment">
               <Plus className="mr-2 h-4 w-4" />
               Create Assessment
             </Link>
