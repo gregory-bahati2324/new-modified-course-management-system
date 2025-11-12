@@ -211,7 +211,7 @@ export default function InstructorModules() {
                 <SelectTrigger className="w-full md:w-64">
                   <SelectValue placeholder="Select a course" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                   {courses.map((course) => (
                     <SelectItem key={course.id} value={course.id}>
                       {course.title}

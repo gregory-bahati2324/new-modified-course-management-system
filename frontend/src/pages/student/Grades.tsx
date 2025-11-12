@@ -1,10 +1,24 @@
-import { Trophy, TrendingUp, Award } from 'lucide-react';
+import { useState } from 'react';
+import { Trophy, TrendingUp, Award, Download, Eye, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
 import StudentLayout from '@/components/layout/StudentLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 
 export default function StudentGrades() {
+  const [selectedAssessment, setSelectedAssessment] = useState<any>(null);
+  
   const courses = [
     {
       id: 1,
@@ -152,11 +166,133 @@ export default function StudentGrades() {
                         <p className="text-sm font-medium">{assignment.name}</p>
                         <p className="text-xs text-muted-foreground">Weight: {assignment.weight}%</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">{assignment.grade}%</p>
-                        <Badge variant="outline" className="text-xs">
-                          {assignment.weight}% of grade
-                        </Badge>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className="text-sm font-semibold">{assignment.grade}%</p>
+                          <Badge variant="outline" className="text-xs">
+                            {assignment.weight}% of grade
+                          </Badge>
+                        </div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSelectedAssessment({ ...assignment, courseName: course.name })}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Assessment Details: {assignment.name}</DialogTitle>
+                              <DialogDescription>
+                                {course.name} - {course.code}
+                              </DialogDescription>
+                            </DialogHeader>
+                            
+                            <div className="space-y-6">
+                              {/* Score Summary */}
+                              <Card>
+                                <CardContent className="p-6">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Your Score</p>
+                                      <p className="text-4xl font-bold">{assignment.grade}%</p>
+                                    </div>
+                                    <Badge className="text-lg px-4 py-2">
+                                      {assignment.grade >= 90 ? 'A' : assignment.grade >= 80 ? 'B' : assignment.grade >= 70 ? 'C' : 'D'}
+                                    </Badge>
+                                  </div>
+                                </CardContent>
+                              </Card>
+
+                              {/* Question Results */}
+                              <div className="space-y-4">
+                                <h3 className="font-semibold text-lg">Question-by-Question Results</h3>
+                                
+                                {[
+                                  {
+                                    question: 'What is normalization in database design?',
+                                    studentAnswer: 'Normalization is organizing data to reduce redundancy.',
+                                    correct: true,
+                                    points: 8,
+                                    maxPoints: 10,
+                                    feedback: 'Good answer! You covered the main concept well.'
+                                  },
+                                  {
+                                    question: 'Explain the difference between DELETE and TRUNCATE.',
+                                    studentAnswer: 'DELETE removes rows and TRUNCATE removes all.',
+                                    correct: false,
+                                    points: 5,
+                                    maxPoints: 10,
+                                    feedback: 'Your answer is partially correct but missing key details about DML vs DDL and rollback capabilities.'
+                                  }
+                                ].map((q, idx) => (
+                                  <Card key={idx}>
+                                    <CardContent className="p-4 space-y-3">
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <Badge variant="outline">Q{idx + 1}</Badge>
+                                          {q.correct ? (
+                                            <CheckCircle className="h-5 w-5 text-green-500" />
+                                          ) : (
+                                            <XCircle className="h-5 w-5 text-red-500" />
+                                          )}
+                                        </div>
+                                        <div className="text-right">
+                                          <span className="font-bold">{q.points}</span>
+                                          <span className="text-muted-foreground">/{q.maxPoints}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      <p className="font-medium text-sm">{q.question}</p>
+                                      
+                                      <div className="p-3 bg-muted/50 rounded-lg">
+                                        <p className="text-xs text-muted-foreground mb-1">Your Answer:</p>
+                                        <p className="text-sm">{q.studentAnswer}</p>
+                                      </div>
+                                      
+                                      {q.feedback && (
+                                        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                                          <p className="text-xs font-medium text-blue-900 dark:text-blue-300 mb-1">
+                                            Instructor Feedback:
+                                          </p>
+                                          <p className="text-sm">{q.feedback}</p>
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+
+                              {/* Overall Feedback */}
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle className="text-base">Overall Feedback</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <p className="text-sm">
+                                    Good effort on this assignment. You demonstrated solid understanding of the core concepts.
+                                    Focus on providing more detailed explanations in future assignments to earn full marks.
+                                  </p>
+                                </CardContent>
+                              </Card>
+
+                              {/* Actions */}
+                              <div className="flex gap-2">
+                                <Button variant="outline" className="flex-1 gap-2">
+                                  <Download className="h-4 w-4" />
+                                  Download Results (PDF)
+                                </Button>
+                                <Button variant="outline" className="flex-1 gap-2">
+                                  <MessageSquare className="h-4 w-4" />
+                                  Contact Instructor
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </div>
                   ))}

@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   GraduationCap,
-  ClipboardCheck
+  ClipboardCheck,
+  Video
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,16 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
       title: 'Profile',
       href: '/student/profile',
       icon: User,
+    },
+    {
+      title: 'Discussions',
+      href: '/student/discussions',
+      icon: MessageSquare,
+    },
+    {
+      title: 'Live Sessions',
+      href: '/student/live-sessions',
+      icon: Video,
     },
   ];
 

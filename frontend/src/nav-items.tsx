@@ -28,6 +28,13 @@ import ExamsTests from "./pages/instructor/ExamsTests.tsx";
 import CreateAssessment from "./pages/instructor/CreateAssessment.tsx";
 import StudentList from "./pages/instructor/StudentList.tsx";
 import GradeSubmissions from "./pages/instructor/GradeSubmissions.tsx";
+import MarkingDashboard from "./pages/instructor/MarkingDashboard.tsx";
+import MarkingSubmission from "./pages/instructor/MarkingSubmission.tsx";
+import ResultsOverview from "./pages/instructor/ResultsOverview.tsx";
+import InstructorDiscussions from "./pages/instructor/Discussions.tsx";
+import InstructorLiveSessions from "./pages/instructor/LiveSessions.tsx";
+import StudentDiscussions from "./pages/student/Discussions.tsx";
+import StudentLiveSessions from "./pages/student/LiveSessions.tsx";
 import AdminDashboard from "./pages/admin/Dashboard.tsx";
 import AdminLogin from "./pages/admin/Login.tsx";
 import AdminUsers from "./pages/admin/Users.tsx";
@@ -220,6 +227,48 @@ export const navItems = [
     to: "/instructor/students",
     icon: <Users className="h-4 w-4" />,
     page: <StudentList />,
+  },
+  {
+    title: "AI Marking Dashboard",
+    to: "/instructor/marking",
+    icon: <BarChart3 className="h-4 w-4" />,
+    page: <MarkingDashboard />,
+  },
+  {
+    title: "Marking Submission",
+    to: "/instructor/marking/submission/:id",
+    icon: <Edit className="h-4 w-4" />,
+    page: <MarkingSubmission />,
+  },
+  {
+    title: "Results Overview",
+    to: "/instructor/results-overview",
+    icon: <Award className="h-4 w-4" />,
+    page: <ResultsOverview />,
+  },
+  {
+    title: "Instructor Discussions",
+    to: "/instructor/discussions",
+    icon: <MessageSquare className="h-4 w-4" />,
+    page: <InstructorDiscussions />,
+  },
+  {
+    title: "Instructor Live Sessions",
+    to: "/instructor/live-sessions",
+    icon: <BookOpen className="h-4 w-4" />,
+    page: <InstructorLiveSessions />,
+  },
+  {
+    title: "Student Discussions",
+    to: "/student/discussions",
+    icon: <MessageSquare className="h-4 w-4" />,
+    page: <StudentDiscussions />,
+  },
+  {
+    title: "Student Live Sessions",
+    to: "/student/live-sessions",
+    icon: <BookOpen className="h-4 w-4" />,
+    page: <StudentLiveSessions />,
   },
   {
     title: "Admin Login",

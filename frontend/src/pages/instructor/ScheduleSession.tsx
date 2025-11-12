@@ -142,7 +142,7 @@ export default function ScheduleSession() {
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                         {sessionTypes.map(type => (
                           <SelectItem key={type.id} value={type.id}>
                             {type.name}

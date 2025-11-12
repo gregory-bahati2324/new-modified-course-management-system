@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Link } from 'react-router-dom';
 
 export default function CreateAssignment() {
   const navigate = useNavigate();
   const { id } = useParams();
-  
+
   const [assignmentData, setAssignmentData] = useState({
     title: '',
     type: 'assignment',
@@ -50,9 +51,9 @@ export default function CreateAssignment() {
   return (
     <div className="container py-8 space-y-6 animate-fade-in">
       <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => navigate(`/instructor/course/${id}/manage`)}
           className="gap-2"
         >
@@ -83,17 +84,17 @@ export default function CreateAssignment() {
                       id="title"
                       placeholder="Enter assignment title"
                       value={assignmentData.title}
-                      onChange={(e) => setAssignmentData({...assignmentData, title: e.target.value})}
+                      onChange={(e) => setAssignmentData({ ...assignmentData, title: e.target.value })}
                       required
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="type">Assignment Type</Label>
-                    <Select value={assignmentData.type} onValueChange={(value) => setAssignmentData({...assignmentData, type: value})}>
+                    <Select value={assignmentData.type} onValueChange={(value) => setAssignmentData({ ...assignmentData, type: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                         {assignmentTypes.map(type => (
                           <SelectItem key={type.id} value={type.id}>
                             {type.name}
@@ -107,11 +108,11 @@ export default function CreateAssignment() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="module">Module</Label>
-                    <Select value={assignmentData.module} onValueChange={(value) => setAssignmentData({...assignmentData, module: value})}>
+                    <Select value={assignmentData.module} onValueChange={(value) => setAssignmentData({ ...assignmentData, module: value })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select module" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                         {modules.map(module => (
                           <SelectItem key={module.id} value={module.id}>
                             {module.name}
@@ -127,7 +128,7 @@ export default function CreateAssignment() {
                       type="number"
                       placeholder="100"
                       value={assignmentData.points}
-                      onChange={(e) => setAssignmentData({...assignmentData, points: e.target.value})}
+                      onChange={(e) => setAssignmentData({ ...assignmentData, points: e.target.value })}
                     />
                   </div>
                 </div>
@@ -138,7 +139,7 @@ export default function CreateAssignment() {
                     id="description"
                     placeholder="Brief description of the assignment"
                     value={assignmentData.description}
-                    onChange={(e) => setAssignmentData({...assignmentData, description: e.target.value})}
+                    onChange={(e) => setAssignmentData({ ...assignmentData, description: e.target.value })}
                     rows={3}
                   />
                 </div>
@@ -149,7 +150,7 @@ export default function CreateAssignment() {
                     id="instructions"
                     placeholder="Detailed instructions for students"
                     value={assignmentData.instructions}
-                    onChange={(e) => setAssignmentData({...assignmentData, instructions: e.target.value})}
+                    onChange={(e) => setAssignmentData({ ...assignmentData, instructions: e.target.value })}
                     rows={6}
                   />
                 </div>
@@ -171,7 +172,7 @@ export default function CreateAssignment() {
                       id="dueDate"
                       type="date"
                       value={assignmentData.dueDate}
-                      onChange={(e) => setAssignmentData({...assignmentData, dueDate: e.target.value})}
+                      onChange={(e) => setAssignmentData({ ...assignmentData, dueDate: e.target.value })}
                       required
                     />
                   </div>
@@ -181,7 +182,7 @@ export default function CreateAssignment() {
                       id="dueTime"
                       type="time"
                       value={assignmentData.dueTime}
-                      onChange={(e) => setAssignmentData({...assignmentData, dueTime: e.target.value})}
+                      onChange={(e) => setAssignmentData({ ...assignmentData, dueTime: e.target.value })}
                     />
                   </div>
                 </div>
@@ -189,11 +190,11 @@ export default function CreateAssignment() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="attempts">Allowed Attempts</Label>
-                    <Select value={assignmentData.attempts} onValueChange={(value) => setAssignmentData({...assignmentData, attempts: value})}>
+                    <Select value={assignmentData.attempts} onValueChange={(value) => setAssignmentData({ ...assignmentData, attempts: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                         <SelectItem value="1">1 Attempt</SelectItem>
                         <SelectItem value="2">2 Attempts</SelectItem>
                         <SelectItem value="3">3 Attempts</SelectItem>
@@ -208,7 +209,7 @@ export default function CreateAssignment() {
                       type="number"
                       placeholder="Leave blank for no limit"
                       value={assignmentData.timeLimit}
-                      onChange={(e) => setAssignmentData({...assignmentData, timeLimit: e.target.value})}
+                      onChange={(e) => setAssignmentData({ ...assignmentData, timeLimit: e.target.value })}
                     />
                   </div>
                 </div>
@@ -244,8 +245,8 @@ export default function CreateAssignment() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Due:</span>
                   <span>
-                    {assignmentData.dueDate ? 
-                      `${new Date(assignmentData.dueDate).toLocaleDateString()}${assignmentData.dueTime ? ` at ${assignmentData.dueTime}` : ''}` 
+                    {assignmentData.dueDate ?
+                      `${new Date(assignmentData.dueDate).toLocaleDateString()}${assignmentData.dueTime ? ` at ${assignmentData.dueTime}` : ''}`
                       : 'Not set'}
                   </span>
                 </div>
@@ -258,13 +259,18 @@ export default function CreateAssignment() {
                   <Save className="mr-2 h-4 w-4" />
                   Create Assignment
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   className="w-full"
-                  onClick={() => setAssignmentData({...assignmentData, status: 'draft'})}
+                  onClick={() => setAssignmentData({ ...assignmentData, status: 'draft' })}
                 >
                   Save as Draft
+                </Button>
+                <Button asChild variant="outline" size="sm" className="flex-1 md:flex-none">
+                  <Link to="/instructor/course/:id/assignment/:assignmentId/view">
+                    View Assignment
+                  </Link>
                 </Button>
               </CardContent>
             </Card>

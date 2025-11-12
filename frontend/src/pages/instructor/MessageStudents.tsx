@@ -127,7 +127,7 @@ export default function MessageStudents() {
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Filter by course" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                     <SelectItem value="all">All Courses</SelectItem>
                     {courses.map(course => (
                       <SelectItem key={course.id} value={course.id}>

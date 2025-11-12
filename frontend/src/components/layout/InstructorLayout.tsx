@@ -16,7 +16,8 @@ import {
   ChevronDown,
   Home,
   Users,
-  FileQuestion
+  FileQuestion,
+  Video,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,8 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
         { title: 'Create Assignment', href: '/instructor/create-assignment' },
         { title: 'Tests & Exams', href: '/instructor/exams' },
         { title: 'Grade Submissions', href: '/instructor/grade' },
+        { title: 'Marking Dashboard', href: '/instructor/marking' },
+        { title: 'Results Overview', href: '/instructor/results-overview' },
       ],
     },
     {
@@ -78,6 +81,16 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
         { title: 'Student Reviews', href: '/instructor/student-review' },
         { title: 'Message Students', href: '/instructor/messages' },
       ],
+    },
+    {
+      title: 'Discussions',
+      href: '/instructor/discussions',
+      icon: MessageSquare,
+    },
+    {
+      title: 'Live Sessions',
+      href: '/instructor/live-sessions',
+      icon: Video,
     },
     {
       title: 'Schedule',

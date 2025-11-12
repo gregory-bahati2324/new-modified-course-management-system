@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
   // Course endpoints - maps to FastAPI /api/courses/*
   courses: {
     list: '/api/courses',
+    me: '/api/courses/me',
     detail: (id: string) => `/api/courses/${id}`,
     create: '/api/courses',
     update: (id: string) => `/api/courses/${id}`,

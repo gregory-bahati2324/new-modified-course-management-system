@@ -206,8 +206,8 @@ export default function ExamsTests() {
               <Select value={filterType} onValueChange={setFilterType}>
                 <SelectTrigger className="w-full md:w-[180px]">
                   <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
+                </SelectTrigger >
+                <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="exam">Exams</SelectItem>
                   <SelectItem value="test">Tests</SelectItem>
@@ -218,7 +218,7 @@ export default function ExamsTests() {
                 <SelectTrigger className="w-full md:w-[180px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="scheduled">Scheduled</SelectItem>

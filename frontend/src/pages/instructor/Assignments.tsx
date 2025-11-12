@@ -163,7 +163,7 @@ export default function InstructorAssignments() {
                 <SelectTrigger className="w-full md:w-48">
                   <SelectValue placeholder="All Courses" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                   <SelectItem value="all">All Courses</SelectItem>
                   {courses.map((course) => (
                     <SelectItem key={course.id} value={course.id}>
@@ -177,7 +177,7 @@ export default function InstructorAssignments() {
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="published">Published</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>

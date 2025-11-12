@@ -24,11 +24,16 @@ import { InstructorLayout } from '@/components/layout/InstructorLayout';
 
 interface Question {
   id: number;
-  type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay';
+  type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'coding' | 'file-upload' | 'matching' | 'ordering';
   question: string;
   points: number;
   options?: string[];
-  correctAnswer?: number | string;
+  correctAnswer?: number | string | string[];
+  modelAnswer?: string;
+  testCases?: { input: string; expectedOutput: string }[];
+  referenceFile?: File | null;
+  matchingPairs?: { left: string; right: string }[];
+  correctOrder?: string[];
 }
 
 export default function CreateAssessment() {
@@ -279,6 +284,10 @@ export default function CreateAssessment() {
                                 <SelectItem value="true-false">True/False</SelectItem>
                                 <SelectItem value="short-answer">Short Answer</SelectItem>
                                 <SelectItem value="essay">Essay</SelectItem>
+                                <SelectItem value="coding">Coding Question</SelectItem>
+                                <SelectItem value="file-upload">File Upload</SelectItem>
+                                <SelectItem value="matching">Matching</SelectItem>
+                                <SelectItem value="ordering">Ordering/Sequence</SelectItem>
                               </SelectContent>
                             </Select>
                             <div className="flex items-center gap-2">
@@ -323,18 +332,107 @@ export default function CreateAssessment() {
                           )}
 
                           {question.type === 'true-false' && (
-                            <Select
-                              value={String(question.correctAnswer)}
-                              onValueChange={(value) => updateQuestion(question.id, { correctAnswer: value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select correct answer" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="true">True</SelectItem>
-                                <SelectItem value="false">False</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <div className="space-y-2">
+                              <Label>Correct Answer</Label>
+                              <Select
+                                value={String(question.correctAnswer)}
+                                onValueChange={(value) => updateQuestion(question.id, { correctAnswer: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select correct answer" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="true">True</SelectItem>
+                                  <SelectItem value="false">False</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {(question.type === 'short-answer' || question.type === 'essay') && (
+                            <div className="space-y-2">
+                              <Label>Model Answer / Answer Key</Label>
+                              <Textarea
+                                placeholder="Enter the model answer or expected response..."
+                                value={question.modelAnswer || ''}
+                                onChange={(e) => updateQuestion(question.id, { modelAnswer: e.target.value })}
+                                rows={4}
+                                className="font-mono text-sm"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                This will be used by AI to compare and grade student responses
+                              </p>
+                            </div>
+                          )}
+
+                          {question.type === 'coding' && (
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <Label>Expected Output</Label>
+                                <Textarea
+                                  placeholder="Enter expected code output..."
+                                  value={question.modelAnswer || ''}
+                                  onChange={(e) => updateQuestion(question.id, { modelAnswer: e.target.value })}
+                                  rows={3}
+                                  className="font-mono text-sm"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Test Cases (Optional)</Label>
+                                <div className="p-3 border rounded-lg space-y-2 bg-muted/30">
+                                  <div className="flex gap-2">
+                                    <Input placeholder="Input" className="font-mono text-xs" />
+                                    <Input placeholder="Expected Output" className="font-mono text-xs" />
+                                  </div>
+                                  <Button type="button" variant="outline" size="sm" className="w-full">
+                                    + Add Test Case
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {question.type === 'file-upload' && (
+                            <div className="space-y-2">
+                              <Label>Reference/Sample Solution (Optional)</Label>
+                              <Input
+                                type="file"
+                                onChange={(e) => updateQuestion(question.id, { referenceFile: e.target.files?.[0] || null })}
+                                className="cursor-pointer"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Upload a reference file or sample solution for comparison
+                              </p>
+                            </div>
+                          )}
+
+                          {question.type === 'matching' && (
+                            <div className="space-y-2">
+                              <Label>Matching Pairs</Label>
+                              <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Input placeholder="Left item" className="text-sm" />
+                                  <Input placeholder="Right item (correct match)" className="text-sm" />
+                                </div>
+                                <Button type="button" variant="outline" size="sm" className="w-full">
+                                  + Add Pair
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {question.type === 'ordering' && (
+                            <div className="space-y-2">
+                              <Label>Correct Order</Label>
+                              <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
+                                <Input placeholder="Item 1 (first)" className="text-sm" />
+                                <Input placeholder="Item 2" className="text-sm" />
+                                <Input placeholder="Item 3" className="text-sm" />
+                                <Button type="button" variant="outline" size="sm" className="w-full">
+                                  + Add Item
+                                </Button>
+                              </div>
+                            </div>
                           )}
                         </div>
 

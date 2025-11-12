@@ -46,19 +46,11 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
           {isAuthenticated && (
             <nav className="hidden md:flex items-center space-x-1">
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/dashboard">Dashboard</Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
                 <Link to="/courses">Courses</Link>
               </Button>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/calendar">Calendar</Link>
               </Button>
-              {user?.role === 'instructor' && (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/instructor">Teach</Link>
-                </Button>
-              )}
               {user?.role === 'admin' && (
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/admin">Admin</Link>
@@ -87,22 +79,6 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
         {/* Right Actions */}
         <div className="flex items-center space-x-2">
           {/* Language Switcher */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hidden sm:flex">
-                <Globe className="h-4 w-4" />
-                <span className="sr-only">Switch language</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                English
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                Kiswahili
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           {isAuthenticated ? (
             <>
@@ -117,7 +93,7 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
                     <span className="sr-only">Notifications</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuContent align="end" className="w-80 bg-white text-black shadow-lg rounded-md z-50">
                   <DropdownMenuLabel>Notifications</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
@@ -151,7 +127,7 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
                     <span className="sr-only">User menu</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-56 bg-white text-black shadow-lg rounded-md z-50">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium">{user?.name}</p>

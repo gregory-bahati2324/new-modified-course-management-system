@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InstructorLayout } from '@/components/layout/InstructorLayout';
-import { courseService } from '@/services/courseService_fake';
+import { courseService } from '@/services/courseService';
 import type { Course } from '@/services/courseService';
 import { useToast } from '@/hooks/use-toast';
 

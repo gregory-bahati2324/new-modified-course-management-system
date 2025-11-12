@@ -18,6 +18,9 @@ export { moduleService } from './moduleService';
 export { homeService } from './homeService';
 export { learningService } from './learningService';
 export { adminService } from './adminService';
+export { markingService } from './markingService';
+export { discussionService } from './discussionService';
+export { liveSessionService } from './liveSessionService';
 
 // Export API utilities
 export { default as apiClient, handleApiError, getToken, setToken, removeTokens } from './api';

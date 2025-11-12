@@ -121,7 +121,7 @@ export default function InstructorSchedule() {
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
               <SelectItem value="week">Week</SelectItem>
               <SelectItem value="month">Month</SelectItem>
               <SelectItem value="agenda">Agenda</SelectItem>
