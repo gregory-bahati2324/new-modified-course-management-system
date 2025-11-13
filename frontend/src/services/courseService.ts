@@ -6,7 +6,9 @@ export interface CreateCourseRequest {
   title: string;
   description?: string;
   category?: string;
+  department?:string;
   level?: string;
+  course_type?: string;
   duration?: string;
   max_students?: number;
   prerequisites?: string;

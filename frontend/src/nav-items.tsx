@@ -1,6 +1,8 @@
 import { HomeIcon, BookOpen, Users, MessageSquare, Award, BarChart3, Settings, Calendar, FileText, Plus, Eye, Edit, FileQuestion, Shield, UserPlus, Upload, Download } from "lucide-react";
 import Home from "./pages/Home.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
+import Profile from "./pages/Profile.tsx";
+import SettingsPage from "./pages/Settings.tsx";
 import StudentCourses from "./pages/student/Courses.tsx";
 import StudentAssignments from "./pages/student/Assignments.tsx";
 import StudentSchedule from "./pages/student/Schedule.tsx";
@@ -353,6 +355,18 @@ export const navItems = [
     to: "/certificates",
     icon: <Award className="h-4 w-4" />,
     page: <Certificates />,
+  },
+  {
+    title: "Profile",
+    to: "/profile",
+    icon: <Users className="h-4 w-4" />,
+    page: <Profile />,
+  },
+  {
+    title: "Settings",
+    to: "/settings",
+    icon: <Settings className="h-4 w-4" />,
+    page: <SettingsPage />,
   },
   {
     title: "Login",

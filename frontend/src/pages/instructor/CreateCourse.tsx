@@ -11,17 +11,23 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { courseService, CreateCourseRequest } from '@/services/courseService';
 import { toast } from '@/hooks/use-toast'; // <-- custom toast
+import { levels } from '@/data/universityStructure';
+import { colleges, getDepartmentsByCollege, Department } from '@/data/universityStructure';
+
 
 export default function CreateCourse() {
   const navigate = useNavigate();
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
+  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
   const [courseData, setCourseData] = useState<CreateCourseRequest>({
     title: '',
     code: '',
     description: '',
     category: '',
+    department: '', // ✅ Added new field for department
     level: '',
+    course_type: '',
     duration: '',
     max_students: undefined,
     prerequisites: '',
@@ -30,6 +36,10 @@ export default function CreateCourse() {
     allow_self_enrollment: true,
     certificate: true,
   });
+
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [courseType, setCourseType] = useState<string>('');
+
 
   const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -68,15 +78,15 @@ export default function CreateCourse() {
 
       const detail = error?.response?.data?.detail || error?.message || 'Unknown error';
 
-    toast({
-      title: 'Error creating course',
-      description: Array.isArray(detail)
-        ? detail.map((d: any) => d.msg || d).join(', ')
-        : detail,
-    });
+      toast({
+        title: 'Error creating course',
+        description: Array.isArray(detail)
+          ? detail.map((d: any) => d.msg || d).join(', ')
+          : detail,
+      });
     }
 
-    
+
   };
 
   return (
@@ -135,52 +145,133 @@ export default function CreateCourse() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Collage *</Label>
-                  <Select
-                    value={courseData.category}
-                    onValueChange={value => setCourseData({ ...courseData, category: value })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Select Collage" /></SelectTrigger>
-                    <SelectContent className="bg-white text-black shadow-lg rounded-md z-50" >
-                      <SelectItem value="cet">CET</SelectItem>
-                      <SelectItem value="coste">COSTE</SelectItem>
-                      <SelectItem value="chbs">CHBS</SelectItem>
-                      <SelectItem value="cact">CACT</SelectItem>
-                      <SelectItem value="coict">CoICT</SelectItem>
-                      <SelectItem value="cast">CAST</SelectItem>
-                      <SelectItem value="chst">CHST</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* College Selector */}
+                  <div className="space-y-2">
+                    <Label>College *</Label>
+                    <Select
+                      value={courseData.category}
+                      onValueChange={(value) => {
+                        // Get departments for selected college
+                        const depts = getDepartmentsByCollege(value);
+                        setFilteredDepartments(depts);
+
+                        // Update course data
+                        setCourseData({
+                          ...courseData,
+                          category: value,
+                          department: '', // reset department
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select College" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
+                        {colleges.map((college) => (
+                          <SelectItem key={college.id} value={college.id}>
+                            {college.shortName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Department Selector */}
+                  <div className="space-y-2">
+                    <Label>Department *</Label>
+                    <Select
+                      disabled={!courseData.category}
+                      value={courseData.department || ''}
+                      onValueChange={(value) =>
+                        setCourseData({ ...courseData, department: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            courseData.category
+                              ? 'Select Department'
+                              : 'Select a college first'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
+                        {filteredDepartments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
+
                 <div className="space-y-2">
                   <Label>Level *</Label>
                   <Select
+                    disabled={!courseData.category || !courseData.department} // ✅ disable until both college & department selected
                     value={courseData.level}
-                    onValueChange={value => setCourseData({ ...courseData, level: value })}
+                    onValueChange={(value) => setCourseData({ ...courseData, level: value })}
                   >
-                    <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          !courseData.category
+                            ? "Select a college first"
+                            : !courseData.department
+                              ? "Select a department first"
+                              : "Select level"
+                        }
+                      />
+                    </SelectTrigger>
                     <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                      <SelectItem value="certificate">Certificate</SelectItem>
-                      <SelectItem value="ordinary_diploma">Ordinary Diploma</SelectItem>
-                      <SelectItem value="diploma">Diploma</SelectItem>
-                      <SelectItem value="advanced_diploma">Advanced Diploma</SelectItem>
-                      <SelectItem value="bachelor">Bachelor</SelectItem>
-                      <SelectItem value="post_diploma">Postgraduate Diploma</SelectItem>
-                      <SelectItem value="atc">ATC II</SelectItem>
-                      <SelectItem value="cpa">Certified Public Accountant (CPA(T))</SelectItem>
-                      <SelectItem value="masters">Master's</SelectItem>
-                      <SelectItem value="doctory_of_philosophy">Doctory of Philosophy</SelectItem>
+                      {levels.map((level) => (
+                        <SelectItem key={level.id} value={level.id}>
+                          {level.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+
                 </div>
-                <div className="space-y-2">
-                  <Label>Duration (weeks)</Label>
-                  <Input
-                    type="number"
-                    value={courseData.duration}
-                    onChange={e => setCourseData({ ...courseData, duration: e.target.value })}
-                  />
+                {/* Course Type and Duration Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Course Type *</Label>
+                    <Select
+                      value={courseData.course_type}
+                      onValueChange={(value) => {
+                        setCourseType(value);
+                        setCourseData({ ...courseData, course_type: value }); // reset duration when type changes
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select course type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
+                        <SelectItem value="normal">Normal Course</SelectItem>
+                        <SelectItem value="short">Short Course</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Conditionally render duration */}
+                  {courseType && (
+                    <div className="space-y-2">
+                      <Label>
+                        Duration ({courseType === 'normal' ? 'years' : 'weeks'}) *
+                      </Label>
+                      <Input
+                        type="number"
+                        placeholder={courseType === 'normal' ? 'e.g., 3 (years)' : 'e.g., 8 (weeks)'}
+                        value={courseData.duration}
+                        onChange={e => setCourseData({ ...courseData, duration: e.target.value })}
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -208,7 +299,7 @@ export default function CreateCourse() {
                 <Label>Prerequisites</Label>
                 <Textarea
                   value={courseData.prerequisites}
-                  onChange={e => setCourseData({ ...courseData, prerequisites: e.target.value})}
+                  onChange={e => setCourseData({ ...courseData, prerequisites: e.target.value })}
                   className="min-h-16"
                 />
               </div>

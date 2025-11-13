@@ -8,7 +8,9 @@ class CourseBase(BaseModel):
     title: str
     description: Optional[str] = None
     category: Optional[str] = None
+    department: Optional[str] = None
     level: Optional[str] = None
+    course_type: Optional[str] = None
     duration: Optional[str] = None
     is_published: Optional[bool] = False
     allow_self_enrollment: Optional[bool] = True
@@ -25,6 +27,9 @@ class CourseUpdate(CourseBase):
 
 class CourseOut(CourseBase):
     id: str
+    title: str
+    course_type: str
+    duration: str
     instructor_id: str
     created_at: datetime
     updated_at: datetime

@@ -11,7 +11,9 @@ class Course(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     category = Column(String, nullable=True)
+    department = Column(String, nullable=True)
     level = Column(String, nullable=True)
+    course_type = Column(String, nullable=True)
     duration = Column(String, nullable=True)  # e.g. "12 weeks" or number
     instructor_id = Column(String, nullable=False, index=True)
     is_published = Column(Boolean, default=False)
