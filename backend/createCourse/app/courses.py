@@ -22,7 +22,7 @@ def create_course(course_in: schemas.CourseCreate, db: Session = Depends(databas
 
 @router.get("", response_model=List[schemas.CourseOut])
 def list_courses(skip: int = 0, limit: int = 50, db: Session = Depends(database.get_db)):
-    items = crud.list_courses(db, skip=skip, limit=limit)
+    items = crud.list_courses_2(db, skip=skip, limit=limit)
     return [schemas.CourseOut.from_orm(i) for i in items]
 
 @router.get("/me", response_model=List[schemas.CourseOut])
@@ -30,6 +30,31 @@ def list_my_courses(db: Session = Depends(database.get_db), token=Depends(auth_u
                     skip: int = 0, limit: int = 50):
     items = crud.list_my_courses(db, instructor_id=token.sub, skip=skip, limit=limit)
     return [schemas.CourseOut.from_orm(i) for i in items]
+
+
+@router.get("/", response_model=List[schemas.CourseOut])
+def list_my_filtered_courses(
+    db: Session = Depends(database.get_db),
+    token=Depends(auth_utils.get_current_user_token),
+    category: str | None = None,
+    department: str | None = None,
+    level: str | None = None,
+    type: str | None = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    courses = crud.list_my_filtered_courses(
+        db=db,
+        instructor_id=token.sub,
+        category=category,
+        department=department,
+        level=level,
+        course_type=type,
+        skip=skip,
+        limit=limit
+    )
+    return [schemas.CourseOut.from_orm(c) for c in courses]
+
 
 @router.get("/{course_id}", response_model=schemas.CourseOut)
 def get_course(course_id: str, db: Session = Depends(database.get_db)):

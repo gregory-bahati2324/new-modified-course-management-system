@@ -51,8 +51,32 @@ def get_course(db: Session, course_id: str):
 def get_course_by_code(db: Session, code: str):
     return db.query(models.Course).filter(models.Course.code == code).first()
 
-def list_courses(db: Session, skip: int = 0, limit: int = 50):
+def list_courses_2(db: Session, skip: int = 0, limit: int = 50):
     return db.query(models.Course).offset(skip).limit(limit).all()
+
+def list_my_filtered_courses(
+    db: Session,
+    instructor_id: str,
+    category: str | None,
+    department: str | None,
+    level: str | None,
+    course_type: str | None,
+    skip: int = 0,
+    limit: int = 50
+):
+    query = db.query(models.Course).filter(models.Course.instructor_id == instructor_id)
+
+    if category:
+        query = query.filter(models.Course.category == category)
+    if department:
+        query = query.filter(models.Course.department == department)
+    if level:
+        query = query.filter(models.Course.level == level)
+    if course_type:
+        query = query.filter(models.Course.course_type == course_type)
+
+    return query.offset(skip).limit(limit).all()
+
 
 def list_my_courses(db: Session, instructor_id: str, skip: int = 0, limit: int = 50):
     return db.query(models.Course).filter(models.Course.instructor_id == instructor_id).offset(skip).limit(limit).all()

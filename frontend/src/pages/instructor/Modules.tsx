@@ -43,7 +43,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { moduleService } from '@/services/moduleService';
 import { courseService } from '@/services/courseService';
+import { lessonService } from '@/services/lessonService';
 import type { Module } from '@/services/moduleService';
+import api from '@/services/api';
 import type { Course } from '@/services/courseService';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -61,38 +63,9 @@ import {
 } from '@/data/universityStructure';
 import { LessonPreview } from '@/components/LessonPreview';
 
+/// -------------------------
+// Load Real Data (NO MOCKS)
 // -------------------------
-// Mock Data
-// -------------------------
-const MOCK_COURSES: Course[] = [
-  { id: 'course1', title: 'Introduction to Programming', description: 'Learn the basics of programming.' },
-  { id: 'course2', title: 'Advanced Data Structures', description: 'Deep dive into trees, graphs and more.' },
-  { id: 'course3', title: 'Database Management', description: 'Learn SQL and NoSQL databases.' },
-];
-
-const MOCK_MODULES: Module[] = [
-  {
-    id: 'module1',
-    title: 'Getting Started',
-    description: 'Introduction and setup',
-    order: 1,
-    lessons: [
-      { id: 'lesson1', title: 'Welcome', type: 'video', content: 'Welcome to the course', video_url: '', duration: 5, order: 1 },
-      { id: 'lesson2', title: 'Setup Environment', type: 'reading', content: 'Install necessary tools', video_url: '', duration: 10, order: 2 },
-    ],
-  },
-  {
-    id: 'module2',
-    title: 'Basics of Programming',
-    description: 'Learn variables, loops, and functions',
-    order: 2,
-    lessons: [
-      { id: 'lesson3', title: 'Variables', type: 'reading', content: 'Learn about variables', video_url: '', duration: 8, order: 1 },
-      { id: 'lesson4', title: 'Loops', type: 'video', content: 'Loops explained', video_url: '', duration: 12, order: 2 },
-      { id: 'lesson5', title: 'Functions', type: 'video', content: 'Functions explained', video_url: '', duration: 15, order: 3 },
-    ],
-  },
-];
 
 export default function InstructorModules() {
   const navigate = useNavigate();
@@ -111,6 +84,7 @@ export default function InstructorModules() {
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModuleOpen, setIsCreateModuleOpen] = useState(false);
   const [previewLesson, setPreviewLesson] = useState<any>(null);
@@ -119,12 +93,15 @@ export default function InstructorModules() {
   const [newModule, setNewModule] = useState({
     title: '',
     description: '',
-    order: 0,
+    order: 1,
+    course_id: '',
   });
 
-  // -------------------------
-  // Effects
-  // -------------------------
+  // ================================================================
+  // EFFECTS
+  // ================================================================
+
+  // Reset filters when college changes
   useEffect(() => {
     if (selectedCollege) {
       setFilteredDepartments(getDepartmentsByCollege(selectedCollege));
@@ -132,82 +109,148 @@ export default function InstructorModules() {
       setSelectedLevel('');
       setSelectedCourseType('');
       setSelectedCourseId('');
+      setCourses([]);
+      setModules([]);
     } else {
       setFilteredDepartments(departments);
     }
   }, [selectedCollege]);
 
+  // Load courses when all filters are selected
   useEffect(() => {
+    const loadCourses = async () => {
+      try {
+        const { courses } = await courseService.getMyCourses({
+          college: selectedCollege,
+          department: selectedDepartment,
+          level: selectedLevel,
+          type: selectedCourseType,
+        });
+
+        setCourses(courses);
+        setSelectedCourseId('');
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load courses',
+          variant: 'destructive',
+        });
+        console.error(error);
+      }
+    };
+
     if (selectedCollege && selectedDepartment && selectedLevel && selectedCourseType) {
-      setCourses(MOCK_COURSES);
-      setSelectedCourseId('');
+      loadCourses();
     }
   }, [selectedCollege, selectedDepartment, selectedLevel, selectedCourseType]);
 
+  // Load modules when a course is selected
   useEffect(() => {
     if (selectedCourseId) loadModules();
   }, [selectedCourseId]);
 
-  // -------------------------
-  // Load Modules
-  // -------------------------
+  // ================================================================
+  // LOAD MODULES
+  // ================================================================
   const loadModules = async () => {
     try {
       setLoading(true);
-      setModules(MOCK_MODULES);
-      // Replace with real API later
-      // const data = await moduleService.getModulesByCourse(selectedCourseId);
-      // setModules(data);
-    } catch {
+
+      const { data } = await moduleService.getModules(selectedCourseId);
+
+      setModules(data || []);
+    } catch (error) {
       toast({
         title: 'Error',
         description: 'Failed to load modules',
         variant: 'destructive',
       });
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  // -------------------------
-  // Handlers
-  // -------------------------
-  const handleCreateModule = async () => {
+  // ================================================================
+  // CREATE MODULE
+  // ================================================================
+  async function handleCreateModule() {
     try {
-      // For now just add to mock
-      setModules((prev) => [
-        ...prev,
-        { ...newModule, id: `module_${Date.now()}`, lessons: [] },
-      ]);
-      toast({ title: 'Module created successfully' });
+      await moduleService.createModule({
+        title: newModule.title,
+        description: newModule.description,
+        order: newModule.order,
+        course_id: selectedCourseId,   // REQUIRED
+      });
+
+      toast({
+        title: "Success",
+        description: "Module created successfully",
+      });
+
       setIsCreateModuleOpen(false);
-      setNewModule({ title: '', description: '', order: 0 });
-    } catch {
+      loadModules();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to create module",
+        variant: "destructive",
+      });
+
+    }
+  }
+
+  // ================================================================
+  // DELETE MODULE
+  // ================================================================
+  const handleDeleteModule = async (moduleId: string) => {
+    if (!confirm('Are you sure you want to delete this module?')) return;
+
+    try {
+      await moduleService.deleteModule(moduleId);
+
+      setModules((prev) => prev.filter((m) => m.id !== moduleId));
+
+      toast({ title: 'Module deleted successfully' });
+    } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to create module',
+        description: 'Failed to delete module',
         variant: 'destructive',
       });
+      console.error(error);
     }
   };
 
-  const handleDeleteModule = (moduleId: string) => {
-    if (!confirm('Are you sure you want to delete this module?')) return;
-    setModules((prev) => prev.filter((m) => m.id !== moduleId));
-    toast({ title: 'Module deleted successfully' });
+  // ================================================================
+  // DELETE LESSON
+  // ================================================================
+  const handleDeleteLesson = async (lessonId: string, moduleId: string) => {
+    try {
+      await lessonService.deleteLesson(lessonId);
+
+      setModules((prev) =>
+        prev.map((m) =>
+          m.id === moduleId
+            ? { ...m, lessons: m.lessons.filter((l) => l.id !== lessonId) }
+            : m
+        )
+      );
+
+      toast({ title: 'Lesson deleted successfully' });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete lesson',
+        variant: 'destructive',
+      });
+      console.error(error);
+    }
   };
 
-  const handleDeleteLesson = (lessonId: string, moduleId: string) => {
-    setModules((prev) =>
-      prev.map((m) =>
-        m.id === moduleId
-          ? { ...m, lessons: m.lessons.filter((l) => l.id !== lessonId) }
-          : m
-      )
-    );
-    toast({ title: 'Lesson deleted successfully' });
-  };
-
+  // ================================================================
+  // HELPERS
+  // ================================================================
   const getLessonIcon = (type: string) => {
     switch (type) {
       case 'video':
@@ -224,12 +267,9 @@ export default function InstructorModules() {
   const filteredModules = modules.filter(
     (module) =>
       module.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      module.description.toLowerCase().includes(searchQuery.toLowerCase())
+      module.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // -------------------------
-  // JSX
-  // -------------------------
   return (
     <InstructorLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -336,9 +376,9 @@ export default function InstructorModules() {
                     <DialogDescription>Add a new module to organize your lessons</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div><Label>Title</Label><Input value={newModule.title} onChange={(e) => setNewModule({...newModule, title: e.target.value})} /></div>
-                    <div><Label>Description</Label><Textarea value={newModule.description} onChange={(e) => setNewModule({...newModule, description: e.target.value})} /></div>
-                    <div><Label>Order</Label><Input type="number" value={newModule.order} onChange={(e) => setNewModule({...newModule, order: parseInt(e.target.value)})} /></div>
+                    <div><Label>Title</Label><Input value={newModule.title} onChange={(e) => setNewModule({ ...newModule, title: e.target.value })} /></div>
+                    <div><Label>Description</Label><Textarea value={newModule.description} onChange={(e) => setNewModule({ ...newModule, description: e.target.value })} /></div>
+                    <div><Label>Order</Label><Input type="number" value={newModule.order} onChange={(e) => setNewModule({ ...newModule, order: parseInt(e.target.value) })} /></div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsCreateModuleOpen(false)}>Cancel</Button>
