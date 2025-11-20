@@ -1,3 +1,4 @@
+import { departments } from '@/data/universityStructure';
 import { apiCourseClient, handleApiError } from './apiCourse';
 import { API_ENDPOINTS } from '@/config/api.config';
 
@@ -67,9 +68,8 @@ class CourseService {
       const token = localStorage.getItem('accessToken');
 
       const response = await apiCourseClient.get<Course[]>(
-        API_ENDPOINTS.courses.getMycourse,
+        API_ENDPOINTS.courses.getMycourse(params.college, params.department, params.level, params.type),
         {
-          params,
           headers: {
             Authorization: `Bearer ${token}`,
           },

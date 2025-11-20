@@ -43,7 +43,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { moduleService } from '@/services/moduleService';
 import { courseService } from '@/services/courseService';
-import { lessonService } from '@/services/lessonService';
+// import { lessonService } from '@/services/lessonService';
 import type { Module } from '@/services/moduleService';
 import api from '@/services/api';
 import type { Course } from '@/services/courseService';
@@ -87,6 +87,7 @@ export default function InstructorModules() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModuleOpen, setIsCreateModuleOpen] = useState(false);
+  const [isEditModuleOpen, setIsEditModuleOpen] = useState(false);
   const [previewLesson, setPreviewLesson] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -172,7 +173,7 @@ export default function InstructorModules() {
   };
 
   // ================================================================
-  // CREATE MODULE
+  // CREATE MODULE AND EDIT MODULE
   // ================================================================
   async function handleCreateModule() {
     try {
@@ -194,6 +195,32 @@ export default function InstructorModules() {
       toast({
         title: "Error",
         description: "Failed to create module",
+        variant: "destructive",
+      });
+
+    }
+  }
+
+  async function handleEditModule(moduleId) {
+    try {
+      await moduleService.updateModule(moduleId, {
+        title: newModule.title,
+        description: newModule.description,
+        order: newModule.order,
+        course_id: selectedCourseId,   // REQUIRED
+      });
+
+      toast({
+        title: "Success",
+        description: "Module Edited successfully",
+      });
+
+      setIsEditModuleOpen(false);
+      loadModules();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update module",
         variant: "destructive",
       });
 
@@ -438,6 +465,26 @@ export default function InstructorModules() {
                           <div className="flex gap-2">
                             <Button size="sm" onClick={() => navigate(`/instructor/course/:courseId/module/:moduleId/add-lesson`)}><Plus className="h-4 w-4 mr-2" />Add Lesson</Button>
                             <Button size="sm" variant="destructive" onClick={() => handleDeleteModule(module.id)}><Trash2 className="h-4 w-4" /></Button>
+                            <Dialog open={isCreateModuleOpen} onOpenChange={setIsCreateModuleOpen}>
+                              <DialogTrigger asChild>
+                                <Button><Plus className="h-4 w-4 mr-2" />Edit Module</Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Edit {module.title} </DialogTitle>
+                                  <DialogDescription>Edit {module.title} to organize your lessons</DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div><Label>Title</Label><Input value={newModule.title} onChange={(e) => setNewModule({ ...newModule, title: e.target.value })} /></div>
+                                  <div><Label>Description</Label><Textarea value={newModule.description} onChange={(e) => setNewModule({ ...newModule, description: e.target.value })} /></div>
+                                  <div><Label>Order</Label><Input type="number" value={newModule.order} onChange={(e) => setNewModule({ ...newModule, order: parseInt(e.target.value) })} /></div>
+                                </div>
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => setIsCreateModuleOpen(false)}>Cancel</Button>
+                                  <Button onClick={() => handleEditModule(module.id)}>Edit</Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
                           </div>
                         </div>
 
