@@ -1,53 +1,47 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+# routers/module.py
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from crud import (
-    create_module, get_modules, get_module, update_module, delete_module, get_course_modules,
+    create_module, get_modules, get_module, update_module, delete_module,
     create_lesson, get_lessons_by_module, get_lesson, update_lesson, delete_lesson
 )
-from schemas import ModuleCreate, LessonCreate, LessonUpdate, LessonResponse
-from typing import List
-import shutil
-import os
-import uuid
+from schemas import ModuleCreate, LessonCreate
 
-router = APIRouter()
+router = APIRouter(prefix="/modules", tags=["Modules"])
+
 
 # ---------------------
 # MODULE ROUTES
 # ---------------------
-module_router = APIRouter(prefix="/modules", tags=["Modules"])
 
-@module_router.post("/", summary="Create module")
+@router.post("/", summary="Create module")
 def create_module_route(data: ModuleCreate, db: Session = Depends(get_db)):
     return create_module(db, data)
 
-@module_router.get("/", summary="Get all modules")
+
+@router.get("/", summary="Get all modules")
 def get_all_modules_route(db: Session = Depends(get_db)):
     return get_modules(db)
 
-@module_router.get("/{module_id}", summary="Get module by ID")
+
+@router.get("/{module_id}", summary="Get module by ID")
 def get_module_route(module_id: str, db: Session = Depends(get_db)):
     module = get_module(db, module_id)
     if not module:
         raise HTTPException(404, "Module not found")
     return module
 
-@module_router.get("/course/{course_id}")
-def query_course_modules(course_id: str, db: Session = Depends(get_db)):
-    modules = get_course_modules(course_id=course_id, db=db)
-    if not modules:
-        raise HTTPException(404, "No Module found")
-    return modules
 
-@module_router.put("/update/{module_id}", summary="Update module")
+@router.put("/{module_id}", summary="Update module")
 def update_module_route(module_id: str, data: ModuleCreate, db: Session = Depends(get_db)):
     module = update_module(db, module_id, data)
     if not module:
         raise HTTPException(404, "Module not found")
     return module
 
-@module_router.delete("/{module_id}", summary="Delete module")
+
+@router.delete("/{module_id}", summary="Delete module")
 def delete_module_route(module_id: str, db: Session = Depends(get_db)):
     success = delete_module(db, module_id)
     if not success:
@@ -58,60 +52,36 @@ def delete_module_route(module_id: str, db: Session = Depends(get_db)):
 # ---------------------
 # LESSON ROUTES
 # ---------------------
-lesson_router = APIRouter(prefix="/lessons", tags=["Lessons"])
 
-@lesson_router.post("/", response_model=LessonResponse)
+@router.post("/lesson", summary="Create lesson")
 def create_lesson_route(data: LessonCreate, db: Session = Depends(get_db)):
     return create_lesson(db, data)
 
-@lesson_router.get("/module/{module_id}", response_model=List[LessonResponse])
-def get_lessons_by_module_route(module_id: str, db: Session = Depends(get_db)):
+
+@router.get("/{module_id}/lessons", summary="Get lessons in module")
+def get_lessons_route(module_id: str, db: Session = Depends(get_db)):
     return get_lessons_by_module(db, module_id)
 
-@lesson_router.get("/{lesson_id}", response_model=LessonResponse)
+
+@router.get("/lesson/{lesson_id}", summary="Get single lesson")
 def get_one_lesson_route(lesson_id: str, db: Session = Depends(get_db)):
     lesson = get_lesson(db, lesson_id)
     if not lesson:
         raise HTTPException(404, "Lesson not found")
     return lesson
 
-@lesson_router.put("/{lesson_id}", response_model=LessonResponse)
-def update_lesson_route(lesson_id: str, data: LessonUpdate, db: Session = Depends(get_db)):
+
+@router.put("/lesson/{lesson_id}", summary="Update lesson")
+def update_lesson_route(lesson_id: str, data: LessonCreate, db: Session = Depends(get_db)):
     lesson = update_lesson(db, lesson_id, data)
     if not lesson:
         raise HTTPException(404, "Lesson not found")
     return lesson
 
-@lesson_router.delete("/{lesson_id}")
+
+@router.delete("/lesson/{lesson_id}", summary="Delete lesson")
 def delete_lesson_route(lesson_id: str, db: Session = Depends(get_db)):
     success = delete_lesson(db, lesson_id)
     if not success:
         raise HTTPException(404, "Lesson not found")
     return {"message": "Lesson deleted"}
-
-
-# ---------------------
-# FILE UPLOAD ROUTES
-# ---------------------
-file_router = APIRouter(prefix="/uploads", tags=["Uploads"])
-
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-@file_router.post("/lesson/{lesson_id}/file")
-def upload_lesson_file(lesson_id: str, file: UploadFile = File(...)):
-    filename = f"{uuid.uuid4()}_{file.filename}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-
-    with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    return {"lesson_id": lesson_id, "filename": filename, "filepath": filepath}
-
-
-# ---------------------
-# INCLUDE ALL ROUTERS
-# ---------------------
-router.include_router(module_router)
-router.include_router(lesson_router)
-router.include_router(file_router)

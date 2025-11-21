@@ -36,7 +36,7 @@ export const API_ENDPOINTS = {
   courses: {
     list: '/api/courses',
     me: '/api/courses/me',
-    getMycourse: (category: string, department: string, level: string, type: string) => `/api/courses/${category}/${department}/${level}/${type}`,
+    getMycourse: '/api/courses',
     detail: (id: string) => `/api/courses/${id}`,
     create: '/api/courses',
     update: (id: string) => `/api/courses/${id}`,
@@ -51,23 +51,21 @@ export const API_ENDPOINTS = {
   modules: {
     create: "/modules",    // FIXED
     detail: (id: string) => `/modules/${id}`,
-    get_course_module: (id: string) => `/modules/course/${id}`,
-    update: (id: string) => `/modules/update/${id}`,
+    update: (id: string) => `/modules/${id}`,
     delete: (id: string) => `/modules/${id}`,
     reorder: "/api/modules/reorder",
   },
 
 
   // Lesson endpoints - maps to FastAPI /api/lessons/*
-  // Lesson endpoints inside module service (correct)
-  lessonRoutes: {
-    create: (moduleId: string) => `/modules/${moduleId}/lessons`,
-    list: (moduleId: string) => `/modules/${moduleId}/lessons`,
-    detail: (moduleId: string, lessonId: string) => `/modules/${moduleId}/lessons/${lessonId}`,
-    update: (moduleId: string, lessonId: string) => `/modules/${moduleId}/lessons/${lessonId}`,
-    delete: (moduleId: string, lessonId: string) => `/modules/${moduleId}/lessons/${lessonId}`,
+  lessons: {
+    list: (moduleId: string) => `/api/modules/${moduleId}/lessons`,
+    detail: (id: string) => `/api/lessons/${id}`,
+    create: '/api/lessons',
+    update: (id: string) => `/api/lessons/${id}`,
+    delete: (id: string) => `/api/lessons/${id}`,
+    complete: (id: string) => `/api/lessons/${id}/complete`,
   },
-
 
   // Assignment endpoints - maps to FastAPI /api/assignments/*
   assignments: {

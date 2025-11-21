@@ -32,7 +32,7 @@ def list_my_courses(db: Session = Depends(database.get_db), token=Depends(auth_u
     return [schemas.CourseOut.from_orm(i) for i in items]
 
 
-@router.get("/{category}/{department}/{level}/{type}", response_model=List[schemas.CourseOut])
+@router.get("/", response_model=List[schemas.CourseOut])
 def list_my_filtered_courses(
     db: Session = Depends(database.get_db),
     token=Depends(auth_utils.get_current_user_token),
