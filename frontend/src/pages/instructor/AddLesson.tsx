@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Save, BookOpen, Target, Clock, BarChart3,
   FileText, Video, Image, File, Code, MessageSquare,
   CheckCircle2, ChevronDown, ChevronRight, Star, Bookmark,
-  Award, Sun, Moon, Type, Download, Play, Volume2, Eye
+  Award, Sun, Moon, Type, Eye, Volume2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,32 +17,21 @@ import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger
-} from '@/components/ui/collapsible';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { toast } from 'sonner';
+import { lessonService } from '@/services/lessonService';
 import { InstructorLayout } from '@/components/layout/InstructorLayout';
 import { LessonPreview } from '@/components/LessonPreview';
 
 interface ContentBlock {
   id: number;
   type: 'text' | 'video' | 'image' | 'pdf' | 'ppt' | 'audio' | 'code';
-  content: string;       // For URLs or text
   title?: string;
-  file?: File | null;    // For uploaded files
-  previewUrl?: string;   // For temporary preview
+  content: string;
+  file?: File | null;
+  previewUrl?: string;
 }
-
 
 interface QuizQuestion {
   id: number;
@@ -53,17 +42,9 @@ interface QuizQuestion {
 
 export default function AddLesson() {
   const navigate = useNavigate();
-  const { courseId, moduleId } = useParams();
+  const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>();
 
-  const handleFileUpload = (id: number, file: File) => {
-    const previewUrl = URL.createObjectURL(file); // temporary local preview
-    setContentBlocks(contentBlocks.map(block =>
-      block.id === id ? { ...block, file, previewUrl, content: file.name } : block
-    ));
-  };
-
-
-  // Lesson Overview States
+  // ---------- Lesson Overview ----------
   const [lessonData, setLessonData] = useState({
     title: '',
     objectives: '',
@@ -73,29 +54,11 @@ export default function AddLesson() {
     tags: '',
   });
 
-  // Check if the URL is a YouTube link
-  const isYouTubeUrl = (url: string) => /youtube\.com|youtu\.be/.test(url);
+  // ---------- Content & Quiz ----------
+  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([{ id: 1, type: 'text', content: '', title: 'Introduction' }]);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
 
-  // Extract YouTube video ID
-  const extractYouTubeID = (url: string) => {
-    const regExp = /(?:youtube\.com\/.*v=|youtu\.be\/)([^&]+)/;
-    const match = url.match(regExp);
-    return match ? match[1] : '';
-  };
-
-
-
-  // Content Blocks
-  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([
-    { id: 1, type: 'text', content: '', title: 'Introduction' }
-  ]);
-
-  // Quiz Questions
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([
-    { id: 1, question: '', options: ['', '', '', ''], correctAnswer: 0 }
-  ]);
-
-  // UI States
+  // ---------- UI States ----------
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
     overview: true,
     content: true,
@@ -104,17 +67,47 @@ export default function AddLesson() {
     accessibility: false,
     analytics: false,
   });
-
   const [darkMode, setDarkMode] = useState(false);
-  const [fontSize, setFontSize] = useState('medium');
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
+  // ---------- Interactive / Feedback / Accessibility ----------
+  const [discussionEnabled, setDiscussionEnabled] = useState(false);
+  const [discussionPrompt, setDiscussionPrompt] = useState('');
+  const [trackCompletion, setTrackCompletion] = useState(true);
+  const [trackTime, setTrackTime] = useState(true);
+  const [trackQuiz, setTrackQuiz] = useState(true);
+  const [enableRatings, setEnableRatings] = useState(true);
+  const [enableReviews, setEnableReviews] = useState(true);
+  const [customFeedbackQuestions, setCustomFeedbackQuestions] = useState('');
+  const [transcriptText, setTranscriptText] = useState('');
+
+  // ---------- Section Toggle ----------
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
+  // ---------- File Upload ----------
+  const handleFileUpload = async (id: number, file: File) => {
+    try {
+      const previewUrl = URL.createObjectURL(file);
+      setContentBlocks(prev => prev.map(block => block.id === id ? { ...block, file, previewUrl } : block));
+
+      if (!moduleId) throw new Error('Module ID missing');
+
+      const { filepath } = await lessonService.uploadFile(moduleId, file);
+
+      setContentBlocks(prev => prev.map(block => block.id === id ? { ...block, content: filepath } : block));
+      toast.success('File uploaded successfully');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to upload file');
+    }
+  };
+
+  // ---------- Content Block Management ----------
   const addContentBlock = (type: ContentBlock['type']) => {
     const newBlock: ContentBlock = {
       id: contentBlocks.length + 1,
@@ -127,55 +120,109 @@ export default function AddLesson() {
   };
 
   const updateContentBlock = (id: number, field: keyof ContentBlock, value: string) => {
-    setContentBlocks(contentBlocks.map(block =>
-      block.id === id ? { ...block, [field]: value } : block
-    ));
+    setContentBlocks(prev => prev.map(block => block.id === id ? { ...block, [field]: value } : block));
   };
 
   const removeContentBlock = (id: number) => {
-    setContentBlocks(contentBlocks.filter(block => block.id !== id));
+    setContentBlocks(prev => prev.filter(block => block.id !== id));
     toast.success('Content block removed');
   };
 
+  // ---------- Quiz Management ----------
   const addQuizQuestion = () => {
-    setQuizQuestions([...quizQuestions, {
-      id: quizQuestions.length + 1,
-      question: '',
-      options: ['', '', '', ''],
-      correctAnswer: 0
-    }]);
+    setQuizQuestions(prev => [...prev, { id: prev.length + 1, question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
   };
 
-  const updateQuizQuestion = (id: number, field: string, value: any) => {
-    setQuizQuestions(quizQuestions.map(q =>
-      q.id === id ? { ...q, [field]: value } : q
-    ));
+  const updateQuizQuestion = (id: number, field: keyof QuizQuestion | 'options', value: any) => {
+    setQuizQuestions(prev =>
+      prev.map(q => q.id === id ? { ...q, [field]: value } : q)
+    );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Lesson data:', {
-      ...lessonData,
-      contentBlocks,
-      quizQuestions,
-      settings: { darkMode, fontSize, transcriptEnabled }
-    });
-    toast.success('Lesson created successfully!');
-    navigate(`/instructor/course/${courseId}/manage`);
+  // ---------- Helpers ----------
+  const isYouTubeUrl = (url: string) => /youtube\.com|youtu\.be/.test(url);
+  const extractYouTubeID = (url: string) => {
+    const regExp = /(?:youtube\.com\/.*v=|youtu\.be\/)([^&]+)/;
+    const match = url.match(regExp);
+    return match ? match[1] : '';
   };
-
   const getContentIcon = (type: string) => {
-    const icons = {
-      text: FileText,
-      video: Video,
-      image: Image,
-      pdf: File,
-      ppt: File,
-      audio: Volume2,
-      code: Code
-    };
-    return icons[type as keyof typeof icons] || FileText;
+    const icons: Record<string, any> = { text: FileText, video: Video, image: Image, pdf: File, ppt: File, audio: Volume2, code: Code };
+    return icons[type] || FileText;
   };
+
+  // ---------- Submit Lesson ----------
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log(moduleId);
+
+    if (!moduleId) {
+      return toast.error('Module ID is missing');
+    }
+
+    // Build payload safely
+    const payload = {
+      title: lessonData.title || null,
+      objectives: lessonData.objectives || null,
+      prerequisites: lessonData.prerequisites || null,
+      estimatedDuration: lessonData.estimatedDuration || null,
+      difficulty: lessonData.difficulty || null,
+      tags: lessonData.tags
+        ? lessonData.tags.split(',').map(t => t.trim())
+        : [],
+      contentBlocks: contentBlocks.map(b => ({
+        type: b.type,
+        title: b.title || null,
+        content: b.content || null,
+      })),
+      quizQuestions: quizQuestions.map(q => ({
+        id: q.id ?? undefined,
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+      })),
+      discussion: {
+        enabled: discussionEnabled,
+        prompt: discussionPrompt || null,
+      },
+      progressSettings: {
+        completion: trackCompletion,
+        timeSpent: trackTime,
+        quizScore: trackQuiz,
+      },
+      accessibility: {
+        darkMode,
+        fontSize,
+        transcriptEnabled,
+        transcriptText: transcriptText || null,
+      },
+      feedbackSettings: {
+        ratings: enableRatings,
+        reviews: enableReviews,
+        customQuestions: customFeedbackQuestions
+          .split('\n')
+          .filter(q => q.trim() !== ''),
+      },
+      order: 1,
+    };
+
+    try {
+      await lessonService.createLesson(moduleId, payload);
+      toast.success('Lesson created successfully');
+      navigate(`/instructor/course/${courseId}/manage`);
+    } catch (err: any) {
+      console.error('Lesson creation error:', err);
+
+      // Better error handling for FastAPI 422
+      const message =
+        err?.response?.data?.detail?.map((d: any) => d.msg).join(', ') ||
+        err?.message ||
+        'Failed to create lesson';
+
+      toast.error(message);
+    }
+  };
+
 
   return (
     <InstructorLayout>
@@ -773,7 +820,8 @@ export default function AddLesson() {
 
                         <div className="space-y-2">
                           <Label>Font Size</Label>
-                          <Select value={fontSize} onValueChange={setFontSize}>
+                          <Select value={fontSize}
+                            onValueChange={(value: string) => setFontSize(value as "small" | "medium" | "large")}>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
@@ -993,4 +1041,6 @@ export default function AddLesson() {
       </div>
     </InstructorLayout>
   );
-}
+
+
+}  

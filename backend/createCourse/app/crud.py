@@ -78,8 +78,12 @@ def list_my_filtered_courses(
     return query.offset(skip).limit(limit).all()
 
 
-def list_my_courses(db: Session, instructor_id: str, skip: int = 0, limit: int = 50):
-    return db.query(models.Course).filter(models.Course.instructor_id == instructor_id).offset(skip).limit(limit).all()
+def list_my_courses(db: Session, instructor_id: str, category: str, department: str, level: str, course_type: str, skip: int = 0, limit: int = 50):
+    return db.query(models.Course).filter(models.Course.instructor_id == instructor_id and 
+                                          models.Course.category == category and 
+                                          models.Course.department == department and
+                                          models.Course.level == level and 
+                                          models.Course.course_type == course_type).offset(skip).limit(limit).all()
 
 def update_course(db: Session, course_id: str, data: schemas.CourseUpdate):
     course = get_course(db, course_id)

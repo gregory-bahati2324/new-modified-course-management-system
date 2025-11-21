@@ -34,7 +34,7 @@ export class ModuleService {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await apiModuleClient.get<Module[]>(
-        `/courses/${courseId}/modules`,
+        API_ENDPOINTS.modules.get_course_module(courseId),
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -75,6 +75,7 @@ export class ModuleService {
       throw new Error(handleApiError(error));
     }
   }
+
 
   async updateModule(moduleId: string, data: Partial<CreateModuleRequest>): Promise<Module> {
     try {
