@@ -84,7 +84,7 @@ class LessonBase(BaseModel):
 # -------------------------
 
 class LessonCreate(LessonBase):
-    module_id: str  # required to link lesson to module
+    pass  # required to link lesson to module
 
 class LessonUpdate(BaseModel):
     title: Optional[str] = None

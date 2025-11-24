@@ -154,7 +154,9 @@ export default function AddLesson() {
   // ---------- Submit Lesson ----------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(moduleId);
+    console.log("COURSE ID:", courseId);
+    console.log("MODULE ID:", moduleId);
+
 
     if (!moduleId) {
       return toast.error('Module ID is missing');

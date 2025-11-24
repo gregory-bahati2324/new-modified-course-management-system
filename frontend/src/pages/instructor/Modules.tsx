@@ -463,7 +463,7 @@ export default function InstructorModules() {
                         <div className="flex justify-between items-center">
                           <h4 className="font-medium">Lessons</h4>
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={() => navigate(`/instructor/course/:courseId/module/:moduleId/add-lesson`)}><Plus className="h-4 w-4 mr-2" />Add Lesson</Button>
+                            <Button size="sm" onClick={() => navigate(`/instructor/course/${selectedCourseId}/module/${module.id}/add-lesson`)}><Plus className="h-4 w-4 mr-2" />Add Lesson</Button>
                             <Button size="sm" variant="destructive" onClick={() => handleDeleteModule(module.id)}><Trash2 className="h-4 w-4" /></Button>
                             <Dialog open={isCreateModuleOpen} onOpenChange={setIsCreateModuleOpen}>
                               <DialogTrigger asChild>
