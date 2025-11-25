@@ -10,16 +10,11 @@ export interface Module {
   lessons?: Lesson[];
 }
 
+
 export interface Lesson {
   id: string;
   module_id: string;
   title: string;
-  type: 'video' | 'reading' | 'quiz' | 'assignment' | 'lab';
-  content?: string;
-  video_url?: string;
-  duration?: number;
-  order: number;
-  is_completed?: boolean;
 }
 
 export interface CreateModuleRequest {

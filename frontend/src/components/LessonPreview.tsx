@@ -129,12 +129,15 @@ export function LessonPreview({
                                         {lessonData.difficulty}
                                     </Badge>
                                 )}
-                                {lessonData.tags &&
-                                    lessonData.tags.split(',').map((tag, idx) => (
-                                        <Badge key={idx} variant="outline">
-                                            {tag.trim()}
-                                        </Badge>
-                                    ))}
+                                {Array.isArray(lessonData.tags) && lessonData.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {lessonData.tags.map((tag, idx) => (
+                                            <Badge key={idx} variant="outline">
+                                                {tag}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Objectives */}

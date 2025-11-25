@@ -63,7 +63,7 @@ def delete_module_route(module_id: str, db: Session = Depends(get_db)):
 def create_lesson_route(data: LessonCreate, module_id: str, db: Session = Depends(get_db)):
     return create_lesson(db, module_id, data)
 
-@module_router.get("/lessons/{module_id}", response_model=List[LessonResponse])
+@module_router.get("/lessons/{module_id}/lessons", response_model=List[LessonResponse])
 def get_lessons_by_module_route(module_id: str, db: Session = Depends(get_db)):
     return get_lessons_by_module(db, module_id)
 
@@ -72,6 +72,7 @@ def get_one_lesson_route(lesson_id: str, db: Session = Depends(get_db)):
     lesson = get_lesson(db, lesson_id)
     if not lesson:
         raise HTTPException(404, "Lesson not found")
+    print("Found lesson:", lesson.title, lesson.contentBlocks)
     return lesson
 
 @module_router.put("/lessons/update/{lesson_id}", response_model=LessonResponse)

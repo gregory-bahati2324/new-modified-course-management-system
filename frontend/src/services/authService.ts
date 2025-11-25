@@ -1,8 +1,15 @@
-import apiClient, { setToken, setRefreshToken, removeTokens, handleApiError } from './api';
+import apiClient, { 
+  setToken, 
+  setRefreshToken, 
+  removeTokens, 
+  handleApiError 
+} from './api';
+
 import { API_ENDPOINTS } from '@/config/api.config';
 
 export type UserRole = 'student' | 'instructor' | 'admin';
 
+// The user object returned from the backend
 export interface UserProfile {
   id: string;
   registrationNumber: string;
@@ -13,6 +20,25 @@ export interface UserProfile {
   bio?: string;
   created_at: string;
   is_active: boolean;
+}
+
+// ---------------------------
+// AUTH REQUEST/RESPONSE TYPES
+// ---------------------------
+export interface RegisterRequest {
+  first_name: string;
+  last_name: string;
+  registrationNumber: string;
+  password: string;
+  newsletter?: boolean;
+  role?: UserRole;
+}
+
+export interface RegisterResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  user: UserProfile;
 }
 
 export interface LoginRequest {
@@ -27,18 +53,27 @@ export interface LoginResponse {
   user: UserProfile;
 }
 
+// ---------------------------
+// AUTH SERVICE CLASS
+// ---------------------------
 class AuthService {
   private currentUser: UserProfile | null = null;
 
-  async login(data: LoginRequest): Promise<UserProfile> {
+  // ---------------------------
+  // REGISTER USER (NEW)
+  // ---------------------------
+  async register(data: RegisterRequest): Promise<UserProfile> {
     try {
-      const response = await apiClient.post<LoginResponse>(API_ENDPOINTS.auth.login, data);
+      const response = await apiClient.post<RegisterResponse>(
+        API_ENDPOINTS.auth.register,
+        data
+      );
 
-      // Store tokens
+      // Save tokens
       setToken(response.data.access_token);
       setRefreshToken(response.data.refresh_token);
 
-      // Cache user locally
+      // Cache user
       this.currentUser = response.data.user;
       localStorage.setItem('user_profile', JSON.stringify(this.currentUser));
 
@@ -48,6 +83,31 @@ class AuthService {
     }
   }
 
+  // ---------------------------
+  // LOGIN
+  // ---------------------------
+  async login(data: LoginRequest): Promise<UserProfile> {
+    try {
+      const response = await apiClient.post<LoginResponse>(
+        API_ENDPOINTS.auth.login,
+        data
+      );
+
+      setToken(response.data.access_token);
+      setRefreshToken(response.data.refresh_token);
+
+      this.currentUser = response.data.user;
+      localStorage.setItem('user_profile', JSON.stringify(this.currentUser));
+
+      return response.data.user;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  // ---------------------------
+  // CURRENT USER
+  // ---------------------------
   async getCurrentUser(): Promise<UserProfile> {
     if (this.currentUser) return this.currentUser;
 
@@ -68,6 +128,9 @@ class AuthService {
     }
   }
 
+  // ---------------------------
+  // LOGOUT
+  // ---------------------------
   logout(): void {
     removeTokens();
     localStorage.removeItem('user_profile');
@@ -78,36 +141,34 @@ class AuthService {
     return !!localStorage.getItem('auth_token');
   }
 
+  // ---------------------------
+  // REFRESH TOKEN
+  // ---------------------------
   async refreshToken(): Promise<string> {
-  const refreshToken = localStorage.getItem('refresh_token');
-  if (!refreshToken) throw new Error('No refresh token found');
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) throw new Error('No refresh token found');
 
-  try {
-    const response = await apiClient.post<{ access_token: string; user: UserProfile }>(
-      API_ENDPOINTS.auth.refresh,
-      { refresh_token: refreshToken }
-    );
+    try {
+      const response = await apiClient.post<{ access_token: string; user: UserProfile }>(
+        API_ENDPOINTS.auth.refresh,
+        { refresh_token: refreshToken }
+      );
 
-    // Update tokens
-    setToken(response.data.access_token);
+      setToken(response.data.access_token);
 
-    // Optionally update cached user if backend returns user data
-    if (response.data.user) {
-      this.currentUser = response.data.user;
-      localStorage.setItem('user_profile', JSON.stringify(this.currentUser));
+      if (response.data.user) {
+        this.currentUser = response.data.user;
+        localStorage.setItem('user_profile', JSON.stringify(this.currentUser));
+      }
+
+      return response.data.access_token;
+    } catch (error) {
+      removeTokens();
+      localStorage.removeItem('user_profile');
+      this.currentUser = null;
+      throw new Error(handleApiError(error));
     }
-
-    return response.data.access_token;
-  } catch (error) {
-    removeTokens();
-    localStorage.removeItem('user_profile');
-    this.currentUser = null;
-    throw new Error(handleApiError(error));
   }
 }
-
-}
-
-
 
 export const authService = new AuthService();

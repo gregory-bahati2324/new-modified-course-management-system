@@ -44,7 +44,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { moduleService } from '@/services/moduleService';
 import { courseService } from '@/services/courseService';
 // import { lessonService } from '@/services/lessonService';
-import type { Module } from '@/services/moduleService';
+import type { Module, Lesson } from '@/services/moduleService';
 import api from '@/services/api';
 import type { Course } from '@/services/courseService';
 import { useToast } from '@/hooks/use-toast';
@@ -61,6 +61,7 @@ import {
   courseTypes,
   getDepartmentsByCollege,
 } from '@/data/universityStructure';
+import { lessonService } from '@/services/lessonService';
 import { LessonPreview } from '@/components/LessonPreview';
 
 /// -------------------------
@@ -83,6 +84,9 @@ export default function InstructorModules() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [modules, setModules] = useState<Module[]>([]);
+  // per-module lesson-loading flags
+  const [loadingLessons, setLoadingLessons] = useState<Record<string, boolean>>({});
+
   const [loading, setLoading] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -151,26 +155,89 @@ export default function InstructorModules() {
   }, [selectedCourseId]);
 
   // ================================================================
-  // LOAD MODULES
+  // LOAD MODULES + ATTACH LESSONS
   // ================================================================
   const loadModules = async () => {
     try {
       setLoading(true);
 
-      const { data } = await moduleService.getModules(selectedCourseId);
+      // fetch modules
+      const { data: modulesData } = await moduleService.getModules(selectedCourseId);
 
-      setModules(data || []);
+      // set modules quickly (lessons will be attached later)
+      setModules(modulesData || []);
+
+      // load lessons for each module (fire-and-forget; each updates modules state when done)
+      if (modulesData && modulesData.length) {
+        modulesData.forEach((m: Module) => {
+          // ensure module id exists
+          if (m?.id) loadLessonsForModule(m.id);
+        });
+      }
     } catch (error) {
       toast({
         title: 'Error',
         description: 'Failed to load modules',
         variant: 'destructive',
       });
-      console.error(error);
+      console.error('loadModules error:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const loadLessonsForModule = async (moduleId: string) => {
+    try {
+      const response = await lessonService.getLessons(moduleId);
+      console.log("Loading lessons for module:", moduleId);
+
+      // Convert heavy lessons → simple lightweight lesson objects
+      const lessons: Lesson[] = response.data.map((lesson) => ({
+        id: lesson.id,
+        title: lesson.title,
+        module_id: lesson.module_id,
+
+      }));
+
+
+
+
+      // Update the module safely with correct type
+      setModules(prev =>
+        prev.map(m =>
+          m.id === moduleId ? { ...m, lessons } : m
+        )
+      );
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handlePreviewLesson = async (lessonId: string) => {
+    try {
+      const lesson = await lessonService.getLesson(lessonId); // already Lesson object
+
+      setPreviewLesson({
+        lessonData: lesson,           // pass the full object
+        contentBlocks: lesson.contentBlocks || [],  // use raw array
+        quizQuestions: lesson.quizQuestions || [],  // use raw array
+      });
+
+      setShowPreview(true);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load lesson preview',
+        variant: 'destructive',
+      });
+      console.error(error);
+    }
+  };
+
+
+
+
 
   // ================================================================
   // CREATE MODULE AND EDIT MODULE
@@ -295,6 +362,7 @@ export default function InstructorModules() {
     (module) =>
       module.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       module.description?.toLowerCase().includes(searchQuery.toLowerCase())
+
   );
 
   return (
@@ -488,19 +556,18 @@ export default function InstructorModules() {
                           </div>
                         </div>
 
+
+
                         {module.lessons && module.lessons.length > 0 ? (
                           <div className="space-y-2">
                             {module.lessons.map((lesson, lessonIndex) => (
                               <div key={lesson.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent">
                                 <GripVertical className="h-4 w-4 text-muted-foreground" />
-                                <div className="flex items-center gap-2">{getLessonIcon(lesson.type)}<Badge variant="outline" className="text-xs">{lessonIndex + 1}</Badge></div>
                                 <div className="flex-1">
                                   <h5 className="font-medium text-sm">{lesson.title}</h5>
-                                  <p className="text-xs text-muted-foreground">{lesson.type}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm text-muted-foreground">{lesson.duration || 0} min</span>
-                                  <Button size="sm" variant="ghost" onClick={() => { setPreviewLesson(lesson); setShowPreview(true); }}><Eye className="h-4 w-4" /></Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handlePreviewLesson(lesson.id)}><Eye className="h-4 w-4" /></Button>
                                   <Button size="sm" variant="ghost" onClick={() => handleDeleteLesson(lesson.id, module.id)}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                               </div>
@@ -521,6 +588,15 @@ export default function InstructorModules() {
           </div>
         )}
       </div>
+
+      {showPreview && previewLesson && (
+        <LessonPreview
+          lessonData={previewLesson.lessonData}
+          contentBlocks={previewLesson.contentBlocks}
+          quizQuestions={previewLesson.quizQuestions}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </InstructorLayout>
   );
 }
