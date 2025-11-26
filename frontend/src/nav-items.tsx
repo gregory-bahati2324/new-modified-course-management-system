@@ -105,7 +105,7 @@ export const navItems = [
     page: <CourseLearn />,
   },
   {
-    title: "Instructor Dashboard", 
+    title: "Instructor Dashboard",
     to: "/instructor",
     icon: <BarChart3 className="h-4 w-4" />,
     page: <InstructorDashboard />,
@@ -188,6 +188,13 @@ export const navItems = [
     icon: <Plus className="h-4 w-4" />,
     page: <AddLesson />,
   },
+  {
+    title: "Edit Lesson",
+    to: "/instructor/course/:courseId/module/:moduleId/add-lesson/:lessonId",
+    icon: <Edit className="h-4 w-4" />,
+    page: <AddLesson />, // same page as Add Lesson
+  },
+
   {
     title: "Create Assignment",
     to: "/instructor/create-assignment",
@@ -280,7 +287,7 @@ export const navItems = [
   },
   {
     title: "Admin Dashboard",
-    to: "/admin/dashboard", 
+    to: "/admin/dashboard",
     icon: <Settings className="h-4 w-4" />,
     page: <AdminDashboard />,
   },
@@ -375,7 +382,7 @@ export const navItems = [
     page: <Login />,
   },
   {
-    title: "Register", 
+    title: "Register",
     to: "/auth/register",
     icon: <Users className="h-4 w-4" />,
     page: <Register />,

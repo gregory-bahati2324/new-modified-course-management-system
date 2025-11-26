@@ -1,5 +1,6 @@
 # crud/module.py
 from sqlalchemy.orm import Session
+from typing import Optional
 from models.modules import Module
 from models.lessons import Lesson
 from schemas import ModuleCreate, LessonCreate, LessonUpdate
@@ -86,8 +87,56 @@ def create_lesson(db: Session, module_id: str, data: LessonCreate) -> Lesson:
 def get_lessons_by_module(db: Session, module_id: str):
     return db.query(Lesson).filter(Lesson.module_id == module_id).all()
 
-def get_lesson(db: Session, lesson_id: str):
-    return db.query(Lesson).filter(Lesson.id == lesson_id).first()
+Base_url = "http://localhost:8000"
+
+
+def get_lesson(db: Session, lesson_id: str, base_url: Optional[str] = None):
+    # Return an ORM object or a dict with full content URLs
+    lesson_obj = db.query(Lesson).filter(Lesson.id == lesson_id).first()
+    if not lesson_obj:
+        return None
+
+    # Convert ORM to dict (only include fields you want)
+    lesson_data = {
+        "id": lesson_obj.id,
+        "module_id": lesson_obj.module_id,
+        "title": lesson_obj.title,
+        "objectives": lesson_obj.objectives,
+        "prerequisites": lesson_obj.prerequisites,
+        "estimatedDuration": lesson_obj.estimatedDuration,
+        "difficulty": lesson_obj.difficulty,
+        "tags": lesson_obj.tags or [],
+        "contentBlocks": lesson_obj.contentBlocks or [],
+        "quizQuestions": lesson_obj.quizQuestions or [],
+        "discussion": lesson_obj.discussion or {},
+        "progressSettings": lesson_obj.progressSettings or {},
+        "accessibility": lesson_obj.accessibility or {},
+        "feedbackSettings": lesson_obj.feedbackSettings or {},
+        "order": lesson_obj.order,
+        "created_at": lesson_obj.created_at,
+        "updated_at": lesson_obj.updated_at,
+    }
+
+    # If base_url provided, convert local upload paths to absolute URLs
+    if base_url:
+        cb = []
+        MEDIA_TYPES = ["image", "video", "audio", "pdf", "ppt", "pptx", "doc", "docx", "document"]
+        for block in lesson_data.get("contentBlocks", []):
+            if not block:
+                continue
+            block = block.copy()
+            content = block.get("content")
+            
+            if content and block.get("type") in MEDIA_TYPES and not content.startswith("http"):
+                # ensure leading slash for safety
+                path = content if content.startswith("/") else f"/{content}"
+                block["content"] = f"{base_url.rstrip('/')}{path}"
+            cb.append(block)
+        lesson_data["contentBlocks"] = cb
+
+    return lesson_data
+      
+  
 
 def update_lesson(db: Session, lesson_id: str, data: LessonUpdate):
     lesson = get_lesson(db, lesson_id)

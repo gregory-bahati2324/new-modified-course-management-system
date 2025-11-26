@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import Request
 from sqlalchemy.orm import Session
 from database import get_db
 from crud import (
@@ -68,12 +69,14 @@ def get_lessons_by_module_route(module_id: str, db: Session = Depends(get_db)):
     return get_lessons_by_module(db, module_id)
 
 @module_router.get("/lessons/{lesson_id}", response_model=LessonResponse)
-def get_one_lesson_route(lesson_id: str, db: Session = Depends(get_db)):
-    lesson = get_lesson(db, lesson_id)
+def get_one_lesson_route(lesson_id: str, request: Request, db: Session = Depends(get_db)):
+    base_url = str(request.base_url).rstrip("/")
+    lesson = get_lesson(db, lesson_id, base_url=base_url)
     if not lesson:
-        raise HTTPException(404, "Lesson not found")
-    print("Found lesson:", lesson.title, lesson.contentBlocks)
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
     return lesson
+
 
 @module_router.put("/lessons/update/{lesson_id}", response_model=LessonResponse)
 def update_lesson_route(lesson_id: str, data: LessonUpdate, db: Session = Depends(get_db)):
@@ -96,19 +99,20 @@ def delete_lesson_route(lesson_id: str, db: Session = Depends(get_db)):
 
 
 UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 
 @module_router.post("/lessons/uploads/{lesson_id}/file")
-def upload_lesson_file(lesson_id: str, file: UploadFile = File(...)):
+def upload_lesson_file(lesson_id: str, request: Request, file: UploadFile = File(...)):
     filename = f"{uuid.uuid4()}_{file.filename}"
     filepath = os.path.join(UPLOAD_DIR, filename)
 
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    return {"lesson_id": lesson_id, "filename": filename, "filepath": filepath}
+    # Build absolute URL using request.base_url
+    file_url = str(request.base_url).rstrip("/") + f"/uploads/{filename}"
 
-
+    return {"lesson_id": lesson_id, "filename": filename, "url": file_url, "filepath": filepath}
 # ---------------------
 # INCLUDE ALL ROUTERS
 # ---------------------

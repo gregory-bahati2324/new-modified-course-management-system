@@ -93,11 +93,7 @@ export function LessonPreview({
     const calculateQuizScore = () =>
         quizQuestions.reduce((score, q) => (selectedAnswer[q.id] === q.correctAnswer ? score + 1 : score), 0);
 
-    const getFileUrl = (block: ContentBlock) => {
-        if (!block.content) return "";
-        return block.content; // backend now provides full URL
-    };
-
+    const getFileUrl = (block: ContentBlock) => block.previewUrl || block.content;
 
     return (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
@@ -209,31 +205,33 @@ export function LessonPreview({
                                                 </pre>
                                             )}
 
-                                            {block.type === "image" && block.content && (
+                                            {block.type === 'image' && getFileUrl(block) && (
                                                 <img
-                                                    src={block.content}
-                                                    alt={block.title || "Image"}
+                                                    src={getFileUrl(block)}
+                                                    alt={block.title || 'Image'}
                                                     className="rounded-lg w-full"
                                                 />
                                             )}
 
-
-                                            {block.type === "video" && block.content && (
+                                            {block.type === 'video' && (block.previewUrl || block.content) && (
                                                 <>
-                                                    {isYouTubeUrl(block.content) ? (
+                                                    {/* YouTube URL */}
+                                                    {isYouTubeUrl(block.content) && !block.previewUrl ? (
                                                         <div className="aspect-video w-full rounded-lg overflow-hidden">
                                                             <iframe
                                                                 className="w-full h-full"
                                                                 src={`https://www.youtube.com/embed/${extractYouTubeID(block.content)}`}
                                                                 title="YouTube video"
+                                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                                                 allowFullScreen
                                                             />
                                                         </div>
                                                     ) : (
+                                                        // Uploaded or direct video URL
                                                         <video
                                                             controls
                                                             className="w-full aspect-video rounded-lg"
-                                                            src={block.content}
+                                                            src={block.previewUrl || block.content}
                                                         >
                                                             Your browser does not support the video tag.
                                                         </video>
@@ -242,28 +240,23 @@ export function LessonPreview({
                                             )}
 
 
-
-
-                                            {block.type === "audio" && block.content && (
-                                                <audio controls className="w-full" src={block.content}>
+                                            {block.type === 'audio' && getFileUrl(block) && (
+                                                <audio controls className="w-full" src={getFileUrl(block)}>
                                                     Your browser does not support the audio element.
                                                 </audio>
                                             )}
 
-
-                                            {["pdf", "ppt", "pptx", "doc", "docx", "document"].includes(block.type) &&
-                                                block.content && (
-                                                    <a
-                                                        href={block.content}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="p-4 border rounded-lg flex items-center gap-2 text-blue-600 underline"
-                                                    >
-                                                        <File className="h-5 w-5" />
-                                                        <span>{block.title || block.content.split("/").pop()}</span>
-                                                    </a>
-                                                )}
-
+                                            {['pdf', 'ppt', 'pptx', 'doc', 'docx'].includes(block.type) && getFileUrl(block) && (
+                                                <a
+                                                    href={getFileUrl(block)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="p-4 border rounded-lg flex items-center gap-2 text-blue-600 underline"
+                                                >
+                                                    <File className="h-5 w-5" />
+                                                    <span>{block.title || getFileUrl(block).split('/').pop()}</span>
+                                                </a>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 ))}

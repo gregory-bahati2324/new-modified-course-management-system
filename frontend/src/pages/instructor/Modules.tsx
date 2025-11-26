@@ -568,6 +568,14 @@ export default function InstructorModules() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Button size="sm" variant="ghost" onClick={() => handlePreviewLesson(lesson.id)}><Eye className="h-4 w-4" /></Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => navigate(`/instructor/course/${selectedCourseId}/module/${module.id}/add-lesson/${lesson.id}`)}
+                                  >
+                                    Edit
+                                  </Button>
+
                                   <Button size="sm" variant="ghost" onClick={() => handleDeleteLesson(lesson.id, module.id)}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                               </div>

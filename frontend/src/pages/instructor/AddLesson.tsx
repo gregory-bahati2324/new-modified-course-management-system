@@ -22,7 +22,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { toast } from 'sonner';
 import { lessonService } from '@/services/lessonService';
 import { InstructorLayout } from '@/components/layout/InstructorLayout';
-import { LessonPreview } from '@/components/LessonPreview';
+import { LessonPreview } from '@/components/LessonPreview2';
 
 interface ContentBlock {
   id: number;
@@ -42,7 +42,7 @@ interface QuizQuestion {
 
 export default function AddLesson() {
   const navigate = useNavigate();
-  const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>();
+  const { courseId, moduleId, lessonId } = useParams<{ courseId: string; moduleId: string, lessonId: string }>();
 
   // ---------- Lesson Overview ----------
   const [lessonData, setLessonData] = useState({
@@ -151,6 +151,59 @@ export default function AddLesson() {
     return icons[type] || FileText;
   };
 
+
+  useEffect(() => {
+    if (lessonId && moduleId) {
+      const fetchLesson = async () => {
+        try {
+          const lesson = await lessonService.getLesson(lessonId);
+          setLessonData({
+            title: lesson.title || '',
+            objectives: lesson.objectives || '',
+            prerequisites: lesson.prerequisites || '',
+            estimatedDuration: lesson.estimatedDuration || '',
+            difficulty: lesson.difficulty || 'beginner',
+            tags: lesson.tags?.join(',') || '',
+          });
+          setContentBlocks(
+            lesson.contentBlocks.map((b: any, idx: number) => ({
+              id: idx + 1,
+              type: b.type,
+              title: b.title || '',
+              content: b.content,
+              file: null,
+              previewUrl: b.content || '',
+            }))
+          );
+          setQuizQuestions(
+            lesson.quizQuestions.map((q: any, idx: number) => ({
+              id: q.id ?? idx + 1,
+              question: q.question,
+              options: q.options,
+              correctAnswer: q.correctAnswer,
+            }))
+          );
+          setDiscussionEnabled(lesson.discussion?.enabled || false);
+          setDiscussionPrompt(lesson.discussion?.prompt || '');
+          setTrackCompletion(lesson.progressSettings?.completion ?? true);
+          setTrackTime(lesson.progressSettings?.timeSpent ?? true);
+          setTrackQuiz(lesson.progressSettings?.quizScore ?? true);
+          setEnableRatings(lesson.feedbackSettings?.ratings ?? true);
+          setEnableReviews(lesson.feedbackSettings?.reviews ?? true);
+          setCustomFeedbackQuestions((lesson.feedbackSettings?.customQuestions || []).join('\n'));
+          setDarkMode(lesson.accessibility?.darkMode ?? false);
+          setFontSize(lesson.accessibility?.fontSize ?? 'medium');
+          setTranscriptEnabled(lesson.accessibility?.transcriptEnabled ?? false);
+          setTranscriptText(lesson.accessibility?.transcriptText || '');
+        } catch (err: any) {
+          toast.error('Failed to load lesson for editing');
+        }
+      };
+      fetchLesson();
+    }
+  }, [lessonId, moduleId]);
+
+
   // ---------- Submit Lesson ----------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,8 +262,13 @@ export default function AddLesson() {
     };
 
     try {
-      await lessonService.createLesson(moduleId, payload);
-      toast.success('Lesson created successfully');
+      if (lessonId) {
+        await lessonService.updateLesson(lessonId, payload);
+        toast.success('Lesson updated successfully');
+      } else {
+        await lessonService.createLesson(moduleId, payload);
+        toast.success('Lesson created successfully');
+      }
       navigate(`/instructor/course/${courseId}/manage`);
     } catch (err: any) {
       console.error('Lesson creation error:', err);
