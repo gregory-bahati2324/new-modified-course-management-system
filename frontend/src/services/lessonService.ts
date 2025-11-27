@@ -141,18 +141,21 @@ export class LessonService {
     }
   }
 
-  async reorderLessons(moduleId: string, orderData: { lesson_id: string; order: number }[]): Promise<void> {
+  async reorderLessons(moduleId: string, payload: { lessons: { lesson_id: string; order: number }[] }): Promise<void> {
     try {
       const token = localStorage.getItem('accessToken');
       await apiModuleClient.put(
-        API_ENDPOINTS.lessonRoutes.reorder(moduleId), // create a FastAPI endpoint for this
-        orderData,
-        { headers: { Authorization: `Bearer ${token}` } }
+        API_ENDPOINTS.lessonRoutes.reorder(moduleId),
+        payload, // send the object directly
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
       );
     } catch (error) {
       throw new Error(handleApiError(error));
     }
   }
+
 
 
   async deleteLesson(lessonId: string): Promise<void> {

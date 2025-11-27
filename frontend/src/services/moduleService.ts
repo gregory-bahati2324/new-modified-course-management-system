@@ -102,18 +102,19 @@ export class ModuleService {
     }
   }
 
-  async reorderModules(orderData: { module_id: string; order: number }[]): Promise<void> {
+  async reorderModules(payload: { modules: { module_id: string; order: number }[] }): Promise<void> {
     try {
       const token = localStorage.getItem('accessToken');
       await apiModuleClient.put(
-        API_ENDPOINTS.modules.reorder,   // '/modules/reorder'
-        orderData,
+        API_ENDPOINTS.modules.reorder,
+        payload, // send as-is
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
     } catch (error) {
-      throw new Error(handleApiError(error));
+      console.error('Failed to reorder modules:', error);
+      throw error;
     }
   }
 }

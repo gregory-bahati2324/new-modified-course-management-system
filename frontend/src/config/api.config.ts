@@ -54,7 +54,7 @@ export const API_ENDPOINTS = {
     get_course_module: (id: string) => `/modules/course/${id}`,
     update: (id: string) => `/modules/update/${id}`,
     delete: (id: string) => `/modules/${id}`,
-    reorder: "/api/modules/reorder",
+    reorder: "/modules/reorder",
   },
 
 

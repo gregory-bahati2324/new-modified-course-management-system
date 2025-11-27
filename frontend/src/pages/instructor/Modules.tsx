@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   Search,
+  BookOpen,
+  FileText,
+  Video,
+  FileQuestion,
+  Trash2,
+  GripVertical,
+  Eye,
   Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,11 +21,27 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { InstructorLayout } from '@/components/layout/InstructorLayout';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { InstructorLayout } from '@/components/layout/InstructorLayout';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { LessonPreview } from '@/components/LessonPreview';
 import { SortableModule } from '@/components/SortableModule';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -102,7 +125,7 @@ export default function InstructorModules() {
           });
           setCourses(courses);
           setSelectedCourseId('');
-        } catch (error) {
+        } catch {
           toast({ title: 'Error', description: 'Failed to load courses', variant: 'destructive' });
         }
       })();
@@ -132,8 +155,15 @@ export default function InstructorModules() {
   const loadLessons = async (moduleId: string) => {
     try {
       const { data } = await lessonService.getLessons(moduleId);
+      // lightweight mapping for lesson preview icons
+      const lessons: Lesson[] = data.map((lesson) => ({
+        id: lesson.id,
+        title: lesson.title,
+        module_id: lesson.module_id,
+
+      }));
       setModules((prev) =>
-        prev.map((m) => (m.id === moduleId ? { ...m, lessons: data } : m))
+        prev.map((m) => (m.id === moduleId ? { ...m, lessons } : m))
       );
     } catch (error) {
       console.error(error);
@@ -211,8 +241,8 @@ export default function InstructorModules() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    // Lessons
     if (moduleId) {
+      // Lessons reordering
       setModules((prevModules) => {
         const moduleIndex = prevModules.findIndex((m) => m.id === moduleId);
         if (moduleIndex === -1) return prevModules;
@@ -220,34 +250,56 @@ export default function InstructorModules() {
         const module = prevModules[moduleIndex];
         const oldIndex = module.lessons.findIndex((l) => l.id === active.id);
         const newIndex = module.lessons.findIndex((l) => l.id === over.id);
-
         const updatedLessons = arrayMove(module.lessons, oldIndex, newIndex);
 
-        lessonService
-          .reorderLessons(moduleId, updatedLessons.map((l, idx) => ({ lesson_id: l.id, order: idx + 1 })))
-          .catch(() => toast({ title: 'Error', description: 'Failed to reorder lessons', variant: 'destructive' }));
+        // Correct payload for backend
+        const payload = {
+          lessons: updatedLessons.map((l, idx) => ({
+            lesson_id: l.id,
+            order: idx + 1, // 1-based index if your backend expects it
+          })),
+        };
+
+        lessonService.reorderLessons(moduleId, payload)
+          .catch(() =>
+            toast({
+              title: 'Error',
+              description: 'Failed to reorder lessons',
+              variant: 'destructive',
+            })
+          );
 
         const updatedModules = [...prevModules];
         updatedModules[moduleIndex] = { ...module, lessons: updatedLessons };
         return updatedModules;
       });
-    }
-    // Modules
-    else {
+    } else {
+      // Modules reordering
       setModules((prevModules) => {
         const oldIndex = prevModules.findIndex((m) => m.id === active.id);
         const newIndex = prevModules.findIndex((m) => m.id === over.id);
-
         const updatedModules = arrayMove(prevModules, oldIndex, newIndex);
 
-        moduleService
-          .reorderModules(updatedModules.map((m, idx) => ({ module_id: m.id, order: idx + 1 })))
-          .catch(() => toast({ title: 'Error', description: 'Failed to reorder modules', variant: 'destructive' }));
+        // Correct payload for backend
+        const payload = {
+          modules: updatedModules.map((m, idx) => ({
+            module_id: m.id,
+            order: idx, // 0-based index
+          })),
+        };
+
+        moduleService.reorderModules(payload)
+          .catch(() => toast({
+            title: 'Error',
+            description: 'Failed to reorder modules',
+            variant: 'destructive'
+          }));
 
         return updatedModules;
       });
     }
   };
+
 
   const filteredModules = modules.filter(
     (m) =>
@@ -255,18 +307,19 @@ export default function InstructorModules() {
       m.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // ================================================================
+  // Render
+  // ================================================================
   return (
     <InstructorLayout>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="container mx-auto p-6 space-y-6">
           <h1 className="text-3xl font-bold">Manage Modules</h1>
 
-          {/* Filters */}
+          {/* Filters Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" /> Course Filters
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5 text-primary" /> Course Filters</CardTitle>
               <CardDescription>Select college, department, level, type & course</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -275,9 +328,7 @@ export default function InstructorModules() {
                 <Label>College</Label>
                 <Select value={selectedCollege} onValueChange={setSelectedCollege}>
                   <SelectTrigger><SelectValue placeholder="Choose a college..." /></SelectTrigger>
-                  <SelectContent>
-                    {colleges.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{colleges.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               {/* Department */}
@@ -285,9 +336,7 @@ export default function InstructorModules() {
                 <Label>Department</Label>
                 <Select value={selectedDepartment} onValueChange={setSelectedDepartment} disabled={!selectedCollege}>
                   <SelectTrigger><SelectValue placeholder="Choose department..." /></SelectTrigger>
-                  <SelectContent>
-                    {filteredDepartments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{filteredDepartments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               {/* Level */}
@@ -325,17 +374,10 @@ export default function InstructorModules() {
               <CardContent className="flex flex-col md:flex-row gap-4 pt-6">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search modules..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+                  <Input placeholder="Search modules..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
                 </div>
                 <Dialog open={isCreateModuleOpen} onOpenChange={setIsCreateModuleOpen}>
-                  <DialogTrigger asChild>
-                    <Button><Plus className="h-4 w-4 mr-2" />Add Module</Button>
-                  </DialogTrigger>
+                  <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add Module</Button></DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Create New Module</DialogTitle>
@@ -356,9 +398,18 @@ export default function InstructorModules() {
             </Card>
           )}
 
-          {/* Modules */}
+          {/* Modules List */}
           {loading ? (
-            <p className="text-center py-12 text-muted-foreground">Loading modules...</p>
+            <div className="text-center py-12"><p className="text-muted-foreground">Loading modules...</p></div>
+          ) : filteredModules.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No modules found</h3>
+                <p className="text-muted-foreground mb-4">{searchQuery ? 'Try adjusting your search' : 'Create your first module to get started'}</p>
+                {!searchQuery && <Button onClick={() => setIsCreateModuleOpen(true)}><Plus className="h-4 w-4 mr-2" />Create Module</Button>}
+              </CardContent>
+            </Card>
           ) : (
             <SortableContext items={filteredModules.map(m => m.id)} strategy={verticalListSortingStrategy}>
               {filteredModules.map((module, index) => (
@@ -376,6 +427,7 @@ export default function InstructorModules() {
             </SortableContext>
           )}
 
+          {/* Lesson Preview Modal */}
           {showPreview && previewLesson && (
             <LessonPreview
               lessonData={previewLesson.lessonData}
