@@ -16,6 +16,13 @@ class ModuleBase(BaseModel):
 class ModuleCreate(ModuleBase):
     pass
 
+class ModuleReorderItem(BaseModel):
+    module_id: str
+    order: int
+
+class ModuleReorderRequest(BaseModel):
+    modules: List[ModuleReorderItem]
+
 class ModuleResponse(ModuleBase):
     id: str
 
@@ -100,6 +107,13 @@ class LessonUpdate(BaseModel):
     accessibility: Optional[AccessibilitySettings] = None
     feedbackSettings: Optional[FeedbackSettings] = None
     order: Optional[int] = None
+    
+class LessonReorderItem(BaseModel):
+    lesson_id: str
+    order: int
+
+class LessonReorderRequest(BaseModel):
+    lessons: List[LessonReorderItem]    
 
 # -------------------------
 # Lesson Response

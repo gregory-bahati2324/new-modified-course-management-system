@@ -258,7 +258,7 @@ export default function AddLesson() {
           .split('\n')
           .filter(q => q.trim() !== ''),
       },
-      order: 1,
+      
     };
 
     try {

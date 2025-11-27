@@ -67,6 +67,7 @@ export const API_ENDPOINTS = {
     update: (lessonId: string) => `/modules/lessons/update/${lessonId}`,   // PUT
     delete: (lessonId: string) => `/modules/lessons/delete/${lessonId}`,   // DELETE
     uploadFile: (lessonId: string) => `/modules/lessons/uploads/${lessonId}/file`, // POST file
+    reorder: (moduleId: string) => `/modules/${moduleId}/lessons/reorder`, // PUT reorder lessons
   },
 
   // Assignment endpoints - maps to FastAPI /api/assignments/*

@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from models.modules import Module
 from models.lessons import Lesson
-from schemas import ModuleCreate, LessonCreate, LessonUpdate
+from schemas import ModuleCreate, LessonCreate, LessonUpdate, LessonReorderItem, ModuleReorderItem
+from typing import List
 import uuid
 
 
@@ -27,7 +28,7 @@ def get_module(db: Session, module_id: str):
     return db.query(Module).filter(Module.id == module_id).first()
 
 def get_course_modules(db: Session, course_id: str):
-    return db.query(Module).filter(Module.course_id == course_id).all()
+    return db.query(Module).filter(Module.course_id == course_id).order_by(Module.order).all()
 
 def update_module(db: Session, module_id: str, data: ModuleCreate):
     module = get_module(db, module_id)
@@ -51,6 +52,18 @@ def delete_module(db: Session, module_id: str):
     db.commit()
     return True
 
+def reorder_modules(db: Session, modules_order: List[ModuleReorderItem]):
+    """
+    Update the order of modules based on the list of { module_id, order }.
+    """
+    for item in modules_order:
+        module = db.query(Module).filter(Module.id == item.module_id).first()
+        if module:
+            module.order = item.order
+
+    db.commit()
+    return True
+
 
 # -----------------------
 # LESSON CRUD
@@ -58,8 +71,20 @@ def delete_module(db: Session, module_id: str):
 
 def create_lesson(db: Session, module_id: str, data: LessonCreate) -> Lesson:
     """
-    Create a new lesson with full nested settings support.
+    Create a new lesson with automatic ordering and full nested settings.
     """
+
+    # 1. Count existing lessons under this module
+    existing_lessons = (
+        db.query(Lesson)
+        .filter(Lesson.module_id == module_id)
+        .count()
+    )
+
+    # 2. New lesson order (1, 2, 3, ...)
+    new_order = existing_lessons + 1
+
+    # 3. Create lesson object
     lesson = Lesson(
         id=str(uuid.uuid4()),
         module_id=module_id,
@@ -75,7 +100,9 @@ def create_lesson(db: Session, module_id: str, data: LessonCreate) -> Lesson:
         progressSettings=data.progressSettings.dict() if data.progressSettings else {},
         accessibility=data.accessibility.dict() if data.accessibility else {},
         feedbackSettings=data.feedbackSettings.dict() if data.feedbackSettings else {},
-        order=data.order or 1
+        
+        # 🔥 Automatically assigned order
+        order=new_order
     )
 
     db.add(lesson)
@@ -84,8 +111,9 @@ def create_lesson(db: Session, module_id: str, data: LessonCreate) -> Lesson:
     return lesson
 
 
+
 def get_lessons_by_module(db: Session, module_id: str):
-    return db.query(Lesson).filter(Lesson.module_id == module_id).all()
+    return db.query(Lesson).filter(Lesson.module_id == module_id).order_by(Lesson.order).all()
 
 Base_url = "http://localhost:8000"
 
@@ -135,11 +163,16 @@ def get_lesson(db: Session, lesson_id: str, base_url: Optional[str] = None):
         lesson_data["contentBlocks"] = cb
 
     return lesson_data
+
+
+def get_lesson_instance(db: Session, lesson_id: str) -> Optional[Lesson]:
+    return db.query(Lesson).filter(Lesson.id == lesson_id).first()
+
       
   
 
 def update_lesson(db: Session, lesson_id: str, data: LessonUpdate):
-    lesson = get_lesson(db, lesson_id)
+    lesson = get_lesson_instance(db, lesson_id)
     if not lesson:
         return None
 
@@ -154,10 +187,23 @@ def update_lesson(db: Session, lesson_id: str, data: LessonUpdate):
     return lesson
 
 def delete_lesson(db: Session, lesson_id: str):
-    lesson = get_lesson(db, lesson_id)
+    lesson = get_lesson_instance(db, lesson_id)
     if not lesson:
         return None
 
     db.delete(lesson)
+    db.commit()
+    return True
+
+def reorder_lessons(db: Session, module_id: str, lessons_order: List[LessonReorderItem]):
+    """
+    Update the order of lessons in a module.
+    `lessons_order` is a list of { lesson_id, order }.
+    """
+    for item in lessons_order:
+        lesson = db.query(Lesson).filter(Lesson.id == item.lesson_id, Lesson.module_id == module_id).first()
+        if lesson:
+            lesson.order = item.order
+
     db.commit()
     return True

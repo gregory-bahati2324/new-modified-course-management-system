@@ -4,9 +4,11 @@ from sqlalchemy.orm import Session
 from database import get_db
 from crud import (
     create_module, get_modules, get_module, update_module, delete_module, get_course_modules,
-    create_lesson, get_lessons_by_module, get_lesson, update_lesson, delete_lesson
+    create_lesson, get_lessons_by_module, get_lesson, update_lesson, delete_lesson, reorder_lessons,
+    reorder_modules
 )
-from schemas import ModuleCreate, LessonCreate, LessonUpdate, LessonResponse
+from schemas import ( ModuleCreate, LessonCreate, LessonUpdate, LessonResponse,
+    LessonReorderRequest, ModuleReorderRequest)
 from typing import List
 import shutil
 import os
@@ -55,6 +57,12 @@ def delete_module_route(module_id: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "Module not found")
     return {"message": "Module deleted"}
 
+@module_router.put("/reorder", summary="Reorder modules in bulk")
+def reorder_modules_route(data: ModuleReorderRequest, db: Session = Depends(get_db)):
+    success = reorder_modules(db, data.modules)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to reorder modules")
+    return {"message": "Modules reordered successfully"}
 
 # ---------------------
 # LESSON ROUTES
@@ -91,6 +99,13 @@ def delete_lesson_route(lesson_id: str, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(404, "Lesson not found")
     return {"message": "Lesson deleted"}
+
+@module_router.put("/{module_id}/lessons/reorder")
+def reorder_lessons_route(module_id: str, data: LessonReorderRequest, db: Session = Depends(get_db)):
+    success = reorder_lessons(db, module_id, data.lessons)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to reorder lessons")
+    return {"message": "Lessons reordered successfully"}
 
 
 # ---------------------
