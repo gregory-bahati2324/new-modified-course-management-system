@@ -81,6 +81,8 @@ export default function InstructorModules() {
   // -------------------------
   const [isCreateModuleOpen, setIsCreateModuleOpen] = useState(false);
   const [isEditModuleOpen, setIsEditModuleOpen] = useState(false);
+  const [editingModule, setEditingModule] = useState<Module | null>(null);
+
   const [newModule, setNewModule] = useState({
     title: '',
     description: '',
@@ -198,16 +200,31 @@ export default function InstructorModules() {
     }
   };
 
-  const handleEditModule = async (moduleId: string) => {
+  const handleOpenEditModule = (module: Module) => {
+    setEditingModule(module);
+    setNewModule({
+      title: module.title,
+      description: module.description || '',
+      order: module.order || 1,
+      course_id: module.course_id,
+    });
+    setIsEditModuleOpen(true);
+  };
+
+  const handleSaveEditModule = async () => {
+    if (!editingModule) return;
     try {
-      await moduleService.updateModule(moduleId, { ...newModule, course_id: selectedCourseId });
-      toast({ title: 'Success', description: 'Module edited successfully' });
+      await moduleService.updateModule(editingModule.id, { ...newModule, course_id: selectedCourseId });
+      toast({ title: 'Success', description: 'Module updated successfully' });
       setIsEditModuleOpen(false);
+      setEditingModule(null);
       loadModules();
     } catch {
-      toast({ title: 'Error', description: 'Failed to edit module', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to update module', variant: 'destructive' });
     }
   };
+
+
 
   const handleDeleteModule = async (moduleId: string) => {
     if (!confirm('Are you sure you want to delete this module?')) return;
@@ -250,7 +267,10 @@ export default function InstructorModules() {
         const module = prevModules[moduleIndex];
         const oldIndex = module.lessons.findIndex((l) => l.id === active.id);
         const newIndex = module.lessons.findIndex((l) => l.id === over.id);
+        console.log(`Dragging lesson id=${active.id} from index=${oldIndex} to index=${newIndex}`);
+
         const updatedLessons = arrayMove(module.lessons, oldIndex, newIndex);
+        console.log('Updated lessons:', updatedLessons.map(l => ({ id: l.id, title: l.title })));
 
         // Correct payload for backend
         const payload = {
@@ -312,7 +332,12 @@ export default function InstructorModules() {
   // ================================================================
   return (
     <InstructorLayout>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter}
+        onDragEnd={(event) => {
+          // Check if lesson has moduleId
+          const moduleId = (event.active.data.current as any)?.moduleId;
+          handleDragEnd(event, moduleId);
+        }}>
         <div className="container mx-auto p-6 space-y-6">
           <h1 className="text-3xl font-bold">Manage Modules</h1>
 
@@ -394,6 +419,44 @@ export default function InstructorModules() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+
+                <Dialog open={isEditModuleOpen} onOpenChange={setIsEditModuleOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Edit Module</DialogTitle>
+                      <DialogDescription>Update module details</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Title</Label>
+                        <Input
+                          value={newModule.title}
+                          onChange={(e) => setNewModule({ ...newModule, title: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Description</Label>
+                        <Textarea
+                          value={newModule.description}
+                          onChange={(e) => setNewModule({ ...newModule, description: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Order</Label>
+                        <Input
+                          type="number"
+                          value={newModule.order}
+                          onChange={(e) => setNewModule({ ...newModule, order: parseInt(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsEditModuleOpen(false)}>Cancel</Button>
+                      <Button onClick={handleSaveEditModule}>Save</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
               </CardContent>
             </Card>
           )}
@@ -421,7 +484,7 @@ export default function InstructorModules() {
                   handlePreviewLesson={handlePreviewLesson}
                   handleDeleteLesson={handleDeleteLesson}
                   handleDeleteModule={handleDeleteModule}
-                  handleEditModule={handleEditModule}
+                  handleEditModule={handleOpenEditModule}
                 />
               ))}
             </SortableContext>

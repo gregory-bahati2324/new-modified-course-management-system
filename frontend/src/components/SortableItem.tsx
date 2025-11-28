@@ -13,7 +13,7 @@ export function SortableItem({
   handleDeleteLesson,
   onEdit,
 }: any) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id, data: { moduleId: lesson?.module_id } });
 
   const style = {
     transform: CSS.Transform.toString(transform),

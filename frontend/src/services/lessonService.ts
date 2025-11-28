@@ -83,6 +83,15 @@ export interface CreateLessonPayload {
   order?: number;
 }
 
+export interface LessonReorderItem {
+  lesson_id: string;
+  order: number;
+}
+
+export interface LessonReorderPayload {
+  lessons: LessonReorderItem[];
+}
+
 // ---------------------
 // LESSON SERVICE
 // ---------------------
@@ -141,15 +150,13 @@ export class LessonService {
     }
   }
 
-  async reorderLessons(moduleId: string, payload: { lessons: { lesson_id: string; order: number }[] }): Promise<void> {
+  async reorderLessons(moduleId: string, payload: LessonReorderPayload): Promise<void> {
     try {
       const token = localStorage.getItem('accessToken');
       await apiModuleClient.put(
-        API_ENDPOINTS.lessonRoutes.reorder(moduleId),
-        payload, // send the object directly
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        API_ENDPOINTS.lessonRoutes.reorder(moduleId), // e.g. `/modules/{module_id}/lessons/reorder`
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
     } catch (error) {
       throw new Error(handleApiError(error));

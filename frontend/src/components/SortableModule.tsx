@@ -47,6 +47,12 @@ export function SortableModule({
                 <div className="flex gap-2">
                   <Button
                     size="sm"
+                    onClick={ () => handleEditModule(module)}
+                  >
+                     Edit Module
+                  </Button>
+                  <Button
+                    size="sm"
                     onClick={() =>
                       navigate(
                         `/instructor/course/${selectedCourseId}/module/${module.id}/add-lesson`
@@ -83,6 +89,7 @@ export function SortableModule({
                           `/instructor/course/${selectedCourseId}/module/${module.id}/add-lesson/${lesson.id}`
                         )
                       }
+                      moduleId={module.id}
                     />
                   ))}
                 </SortableContext>

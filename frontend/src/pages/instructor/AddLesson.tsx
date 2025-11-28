@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { toast } from 'sonner';
-import { lessonService } from '@/services/lessonService';
+import { lessonService, Lesson } from '@/services/lessonService';
 import { InstructorLayout } from '@/components/layout/InstructorLayout';
 import { LessonPreview } from '@/components/LessonPreview2';
 
@@ -57,6 +57,12 @@ export default function AddLesson() {
   // ---------- Content & Quiz ----------
   const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([{ id: 1, type: 'text', content: '', title: 'Introduction' }]);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
+
+  // previous and next lesson
+  // ---------- Lesson Navigation ----------
+  const [moduleLessons, setModuleLessons] = useState<Lesson[]>([]);
+  const [currentLessonIndex, setCurrentLessonIndex] = useState<number>(0);
+
 
   // ---------- UI States ----------
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
@@ -200,8 +206,43 @@ export default function AddLesson() {
         }
       };
       fetchLesson();
+
+      const fetchModuleLessons = async () => {
+        try {
+          const { data } = await lessonService.getLessons(moduleId);
+          setModuleLessons(data);
+
+          // Find current lesson index in module
+          const index = data.findIndex(l => l.id === lessonId);
+          setCurrentLessonIndex(index >= 0 ? index : 0);
+        } catch (err: any) {
+          console.error('Failed to fetch module lessons:', err);
+        }
+      };
+
+      fetchModuleLessons();
     }
   }, [lessonId, moduleId]);
+
+
+  const goToPreviousLesson = () => {
+    if (currentLessonIndex > 0) {
+      const prevLesson = moduleLessons[currentLessonIndex - 1];
+      if (prevLesson) {
+        navigate(`/instructor/course/${courseId}/module/${moduleId}/add-lesson/${prevLesson.id}`);
+      }
+    }
+  };
+
+  const goToNextLesson = () => {
+    if (currentLessonIndex < moduleLessons.length - 1) {
+      const nextLesson = moduleLessons[currentLessonIndex + 1];
+      if (nextLesson) {
+        navigate(`/instructor/course/${courseId}/module/${moduleId}/add-lesson/${nextLesson.id}`);
+      }
+    }
+  };
+
 
 
   // ---------- Submit Lesson ----------
@@ -258,7 +299,7 @@ export default function AddLesson() {
           .split('\n')
           .filter(q => q.trim() !== ''),
       },
-      
+
     };
 
     try {
@@ -1019,11 +1060,11 @@ export default function AddLesson() {
                     <CardTitle className="text-base">Navigation</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <Button type="button" variant="outline" className="w-full" disabled>
+                    <Button onClick={goToPreviousLesson} disabled={currentLessonIndex===0} type="button" variant="outline" className="w-full">
                       <ArrowLeft className="h-4 w-4 mr-2" />
                       Previous Lesson
                     </Button>
-                    <Button type="button" variant="outline" className="w-full" disabled>
+                    <Button onClick={goToNextLesson} disabled={currentLessonIndex === moduleLessons.length - 1}  type="button" variant="outline" className="w-full">
                       Next Lesson
                       <ChevronRight className="h-4 w-4 ml-2" />
                     </Button>

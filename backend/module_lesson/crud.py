@@ -197,13 +197,31 @@ def delete_lesson(db: Session, lesson_id: str):
 
 def reorder_lessons(db: Session, module_id: str, lessons_order: List[LessonReorderItem]):
     """
-    Update the order of lessons in a module.
-    `lessons_order` is a list of { lesson_id, order }.
+    Ensures proper lesson reordering with flush & refresh.
+    Avoids duplicate order conflicts.
     """
+    # STEP 1 — Set a temporary order to avoid duplicates
     for item in lessons_order:
-        lesson = db.query(Lesson).filter(Lesson.id == item.lesson_id, Lesson.module_id == module_id).first()
+        lesson = db.query(Lesson).filter(
+            Lesson.id == item.lesson_id,
+            Lesson.module_id == module_id
+        ).first()
+
+        if lesson:
+            lesson.order = -1  # temporary value
+
+    db.flush()
+
+    # STEP 2 — Apply correct final order
+    for item in lessons_order:
+        lesson = db.query(Lesson).filter(
+            Lesson.id == item.lesson_id,
+            Lesson.module_id == module_id
+        ).first()
+
         if lesson:
             lesson.order = item.order
 
     db.commit()
     return True
+
