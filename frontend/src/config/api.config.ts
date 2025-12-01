@@ -21,6 +21,12 @@ export const API_CONFIG_MODULE_LESSON = {
   timeout: 30000,
 };
 
+export const API_CONFIG_ASSIGNMENT = {
+  baseURL: import.meta.env.VITE_API_ASSIGNMENT_BASE_URL || 'http://localhost:8003',
+  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  timeout: 30000,
+};
+
 export const API_ENDPOINTS = {
   // Authentication endpoints - maps to FastAPI /api/auth/*
   auth: {
@@ -72,11 +78,11 @@ export const API_ENDPOINTS = {
 
   // Assignment endpoints - maps to FastAPI /api/assignments/*
   assignments: {
-    list: '/api/assignments',
-    detail: (id: string) => `/api/assignments/${id}`,
-    create: '/api/assignments',
-    update: (id: string) => `/api/assignments/${id}`,
-    delete: (id: string) => `/api/assignments/${id}`,
+    list: '/assignments',                  // GET all assignments for logged-in instructor
+    detail: (id: string) => `/assignments/${id}`, // GET single assignment
+    create: '/assignments',                // POST create assignment
+    update: (id: string) => `/assignments/${id}`, // PUT/PATCH update assignment (to implement)
+    delete: (id: string) => `/assignments/${id}`, // DELETE assignment (to implement)
     submit: (id: string) => `/api/assignments/${id}/submit`,
     submissions: (id: string) => `/api/assignments/${id}/submissions`,
     grade: (id: string, submissionId: string) => `/api/assignments/${id}/submissions/${submissionId}/grade`,

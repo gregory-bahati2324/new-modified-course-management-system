@@ -17,7 +17,7 @@ import {
   Home,
   Users,
   FileQuestion,
-  Video,
+  Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -69,8 +69,6 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
         { title: 'Create Assignment', href: '/instructor/create-assignment' },
         { title: 'Tests & Exams', href: '/instructor/exams' },
         { title: 'Grade Submissions', href: '/instructor/grade' },
-        { title: 'Marking Dashboard', href: '/instructor/marking' },
-        { title: 'Results Overview', href: '/instructor/results-overview' },
       ],
     },
     {
@@ -78,7 +76,7 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
       icon: Users,
       children: [
         { title: 'Student List', href: '/instructor/students' },
-        { title: 'Student Reviews', href: '/instructor/student-review' },
+        { title: 'Student Reviews', href: '/instructor/review' },
         { title: 'Message Students', href: '/instructor/messages' },
       ],
     },
@@ -165,7 +163,7 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       <Header
         isAuthenticated
         user={{
@@ -175,11 +173,11 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
         }}
       />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}
         <aside
           className={cn(
-            'hidden lg:flex flex-col border-r bg-card transition-all duration-300',
+            'hidden lg:flex flex-col border-r bg-card transition-all duration-300 h-full overflow-hidden',
             sidebarOpen ? 'w-64' : 'w-16'
           )}
         >
@@ -257,12 +255,12 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-background">
-          {children}
+        <main className="flex-1 overflow-y-auto bg-background h-full">
+          <div className="h-full">
+            {children}
+          </div>
         </main>
       </div>
-
-      <Footer />
     </div>
   );
 }

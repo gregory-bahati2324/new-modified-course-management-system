@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save, FileText, Calendar, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,13 +7,38 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Link } from 'react-router-dom';
+import { assignmentService } from '@/services/assignmentService';
+import { courseService } from '@/services/courseService';
+import { moduleService } from '@/services/moduleService';
+import { useToast } from '@/hooks/use-toast';
+
+type AssignmentStatus = 'draft' | 'published' | 'closed';
+
+interface Module {
+  id: string;
+  name: string;
+}
+
+interface AssignmentData {
+  title: string;
+  type: string;
+  description: string;
+  instructions: string;
+  dueDate: string;
+  dueTime: string;
+  points: string;
+  attempts: string;
+  timeLimit: string;
+  module: string;
+  status: AssignmentStatus;
+}
 
 export default function CreateAssignment() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id: courseId } = useParams<{ id: string }>();
+  const { toast } = useToast();
 
-  const [assignmentData, setAssignmentData] = useState({
+  const [assignmentData, setAssignmentData] = useState<AssignmentData>({
     title: '',
     type: 'assignment',
     description: '',
@@ -27,34 +52,93 @@ export default function CreateAssignment() {
     status: 'draft'
   });
 
-  const assignmentTypes = [
-    { id: 'assignment', name: 'Assignment' },
-    { id: 'quiz', name: 'Quiz' },
-    { id: 'exam', name: 'Exam' },
-    { id: 'project', name: 'Project' },
-    { id: 'discussion', name: 'Discussion' }
-  ];
+  const [modules, setModules] = useState<Module[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const modules = [
-    { id: '1', name: 'Introduction to Database Systems' },
-    { id: '2', name: 'Relational Database Design' },
-    { id: '3', name: 'Query Optimization' },
-    { id: '4', name: 'Transaction Processing' }
-  ];
+  // Fetch modules from backend
+  useEffect(() => {
+    const fetchModulesForInstructor = async () => {
+      try {
+        // 1️⃣ Get all courses for the current instructor
+        const { courses } = await courseService.getCourses();
 
-  const handleSubmit = (e: React.FormEvent) => {
+        if (!courses || courses.length === 0) {
+          setModules([]);
+          return;
+        }
+
+        // 2️⃣ Fetch all modules for each course
+        const allModules: { id: string; name: string; course_id: string }[] = [];
+        for (const course of courses) {
+          const { data } = await moduleService.getModules(course.id);
+          const mappedModules = data.map((m) => ({
+            id: m.id,
+            name: m.title,     // <-- map title to name
+            course_id: m.course_id,
+          }));
+          allModules.push(...mappedModules);
+        }
+
+        // 3️⃣ Set modules state
+        setModules(allModules);
+      } catch (error: any) {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to fetch modules',
+          variant: 'destructive',
+        });
+      }
+    };
+    fetchModulesForInstructor();
+  }, [courseId, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Assignment data:', assignmentData);
-    navigate(`/instructor/course/${id}/manage`);
+    setLoading(true);
+
+    try {
+      const payload = {
+        title: assignmentData.title,
+        type: assignmentData.type,
+        description: assignmentData.description,
+        instructions: assignmentData.instructions,
+        due_date: assignmentData.dueDate ? `${assignmentData.dueDate}T${assignmentData.dueTime || '00:00'}` : null,
+        total_points: Number(assignmentData.points) || 0,
+        allowed_attempts: assignmentData.attempts === 'unlimited' ? null : Number(assignmentData.attempts),
+        time_limit: assignmentData.timeLimit ? Number(assignmentData.timeLimit) : null,
+        module: assignmentData.module,
+        status: assignmentData.status,
+        course_id: courseId
+      };
+
+      await assignmentService.createAssignment(payload);
+
+      toast({
+        title: 'Success',
+        description: 'Assignment created successfully!',
+        variant: 'default'
+      });
+
+      navigate(`/instructor/course/${courseId}/manage`);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create assignment',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="container py-8 space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(`/instructor/course/${id}/manage`)}
+          onClick={() => navigate(`/instructor/course/${courseId}/manage`)}
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -68,7 +152,9 @@ export default function CreateAssignment() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Assignment Details */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -77,6 +163,7 @@ export default function CreateAssignment() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Title & Type */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="title">Assignment Title</Label>
@@ -90,30 +177,37 @@ export default function CreateAssignment() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="type">Assignment Type</Label>
-                    <Select value={assignmentData.type} onValueChange={(value) => setAssignmentData({ ...assignmentData, type: value })}>
+                    <Select
+                      value={assignmentData.type}
+                      onValueChange={(value) => setAssignmentData({ ...assignmentData, type: value })}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                        {assignmentTypes.map(type => (
-                          <SelectItem key={type.id} value={type.id}>
-                            {type.name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="assignment">Assignment</SelectItem>
+                        <SelectItem value="quiz">Quiz</SelectItem>
+                        <SelectItem value="exam">Exam</SelectItem>
+                        <SelectItem value="project">Project</SelectItem>
+                        <SelectItem value="discussion">Discussion</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
+                {/* Module & Points */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="module">Module</Label>
-                    <Select value={assignmentData.module} onValueChange={(value) => setAssignmentData({ ...assignmentData, module: value })}>
+                    <Select
+                      value={assignmentData.module}
+                      onValueChange={(value) => setAssignmentData({ ...assignmentData, module: value })}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select module" />
                       </SelectTrigger>
                       <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                        {modules.map(module => (
+                        {modules.map((module) => (
                           <SelectItem key={module.id} value={module.id}>
                             {module.name}
                           </SelectItem>
@@ -133,6 +227,7 @@ export default function CreateAssignment() {
                   </div>
                 </div>
 
+                {/* Description */}
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
@@ -144,6 +239,7 @@ export default function CreateAssignment() {
                   />
                 </div>
 
+                {/* Instructions */}
                 <div className="space-y-2">
                   <Label htmlFor="instructions">Instructions</Label>
                   <Textarea
@@ -157,6 +253,7 @@ export default function CreateAssignment() {
               </CardContent>
             </Card>
 
+            {/* Due Date & Settings */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -190,7 +287,10 @@ export default function CreateAssignment() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="attempts">Allowed Attempts</Label>
-                    <Select value={assignmentData.attempts} onValueChange={(value) => setAssignmentData({ ...assignmentData, attempts: value })}>
+                    <Select
+                      value={assignmentData.attempts}
+                      onValueChange={(value) => setAssignmentData({ ...assignmentData, attempts: value })}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -217,6 +317,7 @@ export default function CreateAssignment() {
             </Card>
           </div>
 
+          {/* Right Column - Summary & Actions */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -245,30 +346,30 @@ export default function CreateAssignment() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Due:</span>
                   <span>
-                    {assignmentData.dueDate ?
-                      `${new Date(assignmentData.dueDate).toLocaleDateString()}${assignmentData.dueTime ? ` at ${assignmentData.dueTime}` : ''}`
+                    {assignmentData.dueDate
+                      ? `${new Date(assignmentData.dueDate).toLocaleDateString()}${assignmentData.dueTime ? ` at ${assignmentData.dueTime}` : ''}`
                       : 'Not set'}
                   </span>
                 </div>
               </CardContent>
-            </Card>
 
-            <Card>
+              {/* Actions */}
               <CardContent className="p-4 space-y-3">
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={loading}>
                   <Save className="mr-2 h-4 w-4" />
-                  Create Assignment
+                  {loading ? 'Saving...' : 'Create Assignment'}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   className="w-full"
                   onClick={() => setAssignmentData({ ...assignmentData, status: 'draft' })}
+                  disabled={loading}
                 >
                   Save as Draft
                 </Button>
                 <Button asChild variant="outline" size="sm" className="flex-1 md:flex-none">
-                  <Link to="/instructor/course/:id/assignment/:assignmentId/view">
+                  <Link to={`/instructor/course/${courseId}/assignment/:assignmentId/view`}>
                     View Assignment
                   </Link>
                 </Button>

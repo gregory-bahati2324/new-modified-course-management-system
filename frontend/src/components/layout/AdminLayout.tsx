@@ -14,7 +14,8 @@ import {
   Database,
   Bell,
   FileText,
-  Lock
+  Lock,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -53,8 +54,25 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       icon: Users,
       children: [
         { title: 'All Users', href: '/admin/users' },
+        { title: 'Add User', href: '/admin/add-user' },
         { title: 'Roles & Permissions', href: '/admin/roles' },
         { title: 'User Activity', href: '/admin/user-activity' },
+      ],
+    },
+    {
+      title: 'Course Management',
+      icon: BookOpen,
+      children: [
+        { title: 'All Courses', href: '/admin/courses' },
+        { title: 'Create Course', href: '/admin/create-course' },
+      ],
+    },
+    {
+      title: 'Data Management',
+      icon: Database,
+      children: [
+        { title: 'Bulk Import', href: '/admin/bulk-import' },
+        { title: 'Export Data', href: '/admin/export-data' },
       ],
     },
     {
@@ -153,7 +171,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       <Header
         isAuthenticated
         user={{
@@ -163,11 +181,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         }}
       />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}
         <aside
           className={cn(
-            'hidden lg:flex flex-col border-r bg-card transition-all duration-300',
+            'hidden lg:flex flex-col border-r bg-card transition-all duration-300 h-full overflow-hidden',
             sidebarOpen ? 'w-64' : 'w-16'
           )}
         >
@@ -253,12 +271,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-background">
-          {children}
+        <main className="flex-1 overflow-y-auto bg-background h-full">
+          <div className="h-full">
+            {children}
+          </div>
         </main>
       </div>
-
-      <Footer />
     </div>
   );
 }

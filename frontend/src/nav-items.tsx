@@ -54,6 +54,9 @@ import Certificates from "./pages/Certificates.tsx";
 import Login from "./pages/auth/Login.tsx";
 import Register from "./pages/auth/Register.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import StudentLayout from "./components/layout/StudentLayout.tsx";
+import { InstructorLayout } from "./components/layout/InstructorLayout.tsx";
+import { AdminLayout } from "./components/layout/AdminLayout.tsx";
 
 export const navItems = [
   {
@@ -72,37 +75,37 @@ export const navItems = [
     title: "Student Courses",
     to: "/student/courses",
     icon: <BookOpen className="h-4 w-4" />,
-    page: <StudentCourses />,
+    page: <StudentLayout><StudentCourses /></StudentLayout>,
   },
   {
     title: "Student Assignments",
     to: "/student/assignments",
     icon: <FileText className="h-4 w-4" />,
-    page: <StudentAssignments />,
+    page: <StudentLayout><StudentAssignments /></StudentLayout>,
   },
   {
     title: "Student Schedule",
     to: "/student/schedule",
     icon: <Calendar className="h-4 w-4" />,
-    page: <StudentSchedule />,
+    page: <StudentLayout><StudentSchedule /></StudentLayout>,
   },
   {
     title: "Student Grades",
     to: "/student/grades",
     icon: <Award className="h-4 w-4" />,
-    page: <StudentGrades />,
+    page: <StudentLayout><StudentGrades /></StudentLayout>,
   },
   {
     title: "Student Profile",
     to: "/student/profile",
     icon: <Users className="h-4 w-4" />,
-    page: <StudentProfile />,
+    page: <StudentLayout><StudentProfile /></StudentLayout>,
   },
   {
     title: "Course Learn",
     to: "/student/course/:courseId/learn",
     icon: <BookOpen className="h-4 w-4" />,
-    page: <CourseLearn />,
+    page: <StudentLayout><CourseLearn /></StudentLayout>,
   },
   {
     title: "Instructor Dashboard",
@@ -132,7 +135,7 @@ export const navItems = [
     title: "Create Course",
     to: "/instructor/create-course",
     icon: <BookOpen className="h-4 w-4" />,
-    page: <CreateCourse />,
+    page: <InstructorLayout><CreateCourse /></InstructorLayout>,
   },
   {
     title: "Instructor Schedule",
@@ -162,7 +165,7 @@ export const navItems = [
     title: "Instructor Analytics",
     to: "/instructor/analytics",
     icon: <BarChart3 className="h-4 w-4" />,
-    page: <InstructorAnalytics />,
+    page: <InstructorLayout><InstructorAnalytics /></InstructorLayout>,
   },
   {
     title: "Schedule Session",
@@ -199,13 +202,13 @@ export const navItems = [
     title: "Create Assignment",
     to: "/instructor/create-assignment",
     icon: <FileText className="h-4 w-4" />,
-    page: <CreateAssignment />,
+    page: <InstructorLayout><CreateAssignment /></InstructorLayout>,
   },
   {
     title: "View Assignment",
     to: "/instructor/course/:id/assignment/:assignmentId/view",
     icon: <Eye className="h-4 w-4" />,
-    page: <ViewAssignment />,
+    page: <InstructorLayout><ViewAssignment /></InstructorLayout>,
   },
   {
     title: "Grade Assignment",

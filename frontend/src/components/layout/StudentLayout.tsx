@@ -159,14 +159,14 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col w-full">
+    <div className="h-screen flex flex-col w-full overflow-hidden">
       <Header />
       
-      <div className="flex flex-1 w-full">
+      <div className="flex flex-1 w-full overflow-hidden">
         {/* Desktop Sidebar */}
         <aside
           className={cn(
-            "hidden lg:flex flex-col border-r bg-card transition-all duration-300",
+            "hidden lg:flex flex-col border-r bg-card transition-all duration-300 h-full overflow-hidden",
             sidebarOpen ? "w-64" : "w-16"
           )}
         >
@@ -228,12 +228,12 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto">
-          {children}
+        <main className="flex-1 overflow-y-auto h-full">
+          <div className="h-full">
+            {children}
+          </div>
         </main>
       </div>
-
-      <Footer />
     </div>
   );
 }
