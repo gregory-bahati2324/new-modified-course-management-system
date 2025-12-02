@@ -1,5 +1,5 @@
-import { ReactNode, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, ReactNode } from 'react';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   BookOpen,
   LayoutDashboard,
@@ -27,11 +27,6 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Header } from './Header';
-import { Footer } from './Footer';
-
-interface InstructorLayoutProps {
-  children: ReactNode;
-}
 
 interface NavItem {
   title: string;
@@ -40,9 +35,14 @@ interface NavItem {
   children?: { title: string; href: string }[];
 }
 
+interface InstructorLayoutProps {
+  children?: ReactNode;
+}
+
 export function InstructorLayout({ children }: InstructorLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const location = useLocation();
 
   const navItems: NavItem[] = [
@@ -107,12 +107,16 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
     return children?.some((child) => location.pathname === child.href);
   };
 
+  const toggleMenu = (title: string) => {
+    setOpenMenus(prev => ({ ...prev, [title]: !prev[title] }));
+  };
+
   const NavItemComponent = ({ item }: { item: NavItem }) => {
-    const [open, setOpen] = useState(isParentActive(item.children));
+    const isOpen = openMenus[item.title] ?? isParentActive(item.children);
 
     if (item.children) {
       return (
-        <Collapsible open={open} onOpenChange={setOpen}>
+        <Collapsible open={isOpen} onOpenChange={() => toggleMenu(item.title)}>
           <CollapsibleTrigger asChild>
             <button
               className={cn(
@@ -124,7 +128,7 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
                 <item.icon className="h-4 w-4" />
                 {sidebarOpen && <span>{item.title}</span>}
               </div>
-              {sidebarOpen && <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />}
+              {sidebarOpen && <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />}
             </button>
           </CollapsibleTrigger>
           {sidebarOpen && (
@@ -254,11 +258,9 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
           </>
         )}
 
-        {/* Main Content */}
+        {/* Main Content - Uses Outlet for nested routes or children */}
         <main className="flex-1 overflow-y-auto bg-background h-full">
-          <div className="h-full">
-            {children}
-          </div>
+          {children || <Outlet />}
         </main>
       </div>
     </div>

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import StudentLayout from '@/components/layout/StudentLayout';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { DiscussionList } from '@/components/DiscussionList';
@@ -102,7 +101,6 @@ const StudentDiscussions = () => {
   );
 
   return (
-    <StudentLayout>
       <div className="h-[calc(100vh-4rem)] flex flex-col">
         <div className="border-b bg-card p-4">
           <h1 className="text-2xl font-bold">My Discussions</h1>
@@ -147,7 +145,6 @@ const StudentDiscussions = () => {
           </div>
         </div>
       </div>
-    </StudentLayout>
   );
 };
 

@@ -17,7 +17,7 @@ get_current_instructor = require_role(["instructor", "admin"])
 # -------------------------------
 # CREATE ASSIGNMENT
 # -------------------------------
-@router.post("/", response_model=AssignmentResponse)
+@router.post("", response_model=AssignmentResponse)
 def create_assignment_route(
     data: AssignmentCreate,
     db: Session = Depends(get_db),
@@ -29,7 +29,7 @@ def create_assignment_route(
 # -------------------------------
 # GET ALL ASSIGNMENTS FOR LOGGED IN INSTRUCTOR
 # -------------------------------
-@router.get("/", response_model=list[AssignmentResponse])
+@router.get("", response_model=list[AssignmentResponse])
 def get_instructor_assignments(
     db: Session = Depends(get_db),
     token_data = Depends(get_current_instructor)

@@ -10,7 +10,6 @@ import {
   FileText,
   Users
 } from 'lucide-react';
-import StudentLayout from '@/components/layout/StudentLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -155,7 +154,6 @@ export default function Dashboard() {
   ];
 
   return (
-    <StudentLayout>
       <div className="container py-8 space-y-8 animate-fade-in">
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -350,6 +348,5 @@ export default function Dashboard() {
         </div>
       </div>
       </div>
-    </StudentLayout>
   );
 }

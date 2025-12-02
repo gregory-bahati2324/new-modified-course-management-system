@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Edit2, Save } from 'lucide-react';
-import StudentLayout from '@/components/layout/StudentLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -29,7 +28,6 @@ export default function StudentProfile() {
   };
 
   return (
-    <StudentLayout>
       <div className="container py-8 space-y-8 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
@@ -211,6 +209,5 @@ export default function StudentProfile() {
           </Card>
         </div>
       </div>
-    </StudentLayout>
   );
 }

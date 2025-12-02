@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { FileText, Calendar, Clock, CheckCircle2, AlertCircle, Upload } from 'lucide-react';
-import StudentLayout from '@/components/layout/StudentLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -79,7 +78,6 @@ export default function StudentAssignments() {
   };
 
   return (
-    <StudentLayout>
       <div className="container py-8 space-y-8 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
@@ -273,6 +271,5 @@ export default function StudentAssignments() {
           </TabsContent>
         </Tabs>
       </div>
-    </StudentLayout>
   );
 }

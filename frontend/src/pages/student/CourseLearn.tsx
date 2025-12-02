@@ -12,7 +12,6 @@ import {
   Lock,
   MessageSquare
 } from 'lucide-react';
-import StudentLayout from '@/components/layout/StudentLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -124,7 +123,6 @@ export default function CourseLearn() {
   };
 
   return (
-    <StudentLayout>
       <div className="h-[calc(100vh-4rem)] flex flex-col">
         {/* Top Navigation Bar */}
         <div className="border-b bg-background px-4 py-3">
@@ -381,6 +379,5 @@ export default function CourseLearn() {
           </div>
         </div>
       </div>
-    </StudentLayout>
   );
 }

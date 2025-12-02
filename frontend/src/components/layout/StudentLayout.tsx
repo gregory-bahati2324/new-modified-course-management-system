@@ -1,5 +1,5 @@
-import { ReactNode, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, ReactNode } from 'react';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 import { 
   BookOpen, 
   Home, 
@@ -19,11 +19,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Header } from './Header';
-import { Footer } from './Footer';
-
-interface StudentLayoutProps {
-  children: ReactNode;
-}
 
 interface NavItem {
   title: string;
@@ -32,9 +27,14 @@ interface NavItem {
   children?: NavItem[];
 }
 
+interface StudentLayoutProps {
+  children?: ReactNode;
+}
+
 export default function StudentLayout({ children }: StudentLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const location = useLocation();
 
   const navItems: NavItem[] = [
@@ -102,14 +102,18 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
     return false;
   };
 
+  const toggleMenu = (title: string) => {
+    setOpenMenus(prev => ({ ...prev, [title]: !prev[title] }));
+  };
+
   const NavItemComponent = ({ item, depth = 0 }: { item: NavItem; depth?: number }) => {
-    const [isOpen, setIsOpen] = useState(isParentActive(item));
     const hasChildren = item.children && item.children.length > 0;
     const Icon = item.icon;
+    const isOpen = openMenus[item.title] ?? isParentActive(item);
 
     if (hasChildren) {
       return (
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <Collapsible open={isOpen} onOpenChange={() => toggleMenu(item.title)}>
           <CollapsibleTrigger asChild>
             <button
               className={cn(
@@ -227,11 +231,9 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
           </>
         )}
 
-        {/* Main Content */}
+        {/* Main Content - Uses Outlet for nested routes or children */}
         <main className="flex-1 overflow-y-auto h-full">
-          <div className="h-full">
-            {children}
-          </div>
+          {children || <Outlet />}
         </main>
       </div>
     </div>

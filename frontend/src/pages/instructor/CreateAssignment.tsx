@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { assignmentService } from '@/services/assignmentService';
+import { assignmentService, AssignmentCreate } from '@/services/assignmentService';
 import { courseService } from '@/services/courseService';
 import { moduleService } from '@/services/moduleService';
 import { useToast } from '@/hooks/use-toast';
 
 type AssignmentStatus = 'draft' | 'published' | 'closed';
+type AssignmentType = 'assignment' | 'quiz' | 'exam' | 'project' | 'discussion';
 
 interface Module {
   id: string;
@@ -21,13 +22,13 @@ interface Module {
 
 interface AssignmentData {
   title: string;
-  type: string;
+  type: AssignmentType;
   description: string;
   instructions: string;
   dueDate: string;
   dueTime: string;
   points: string;
-  attempts: string;
+  attempts: '1' | '2' | '3' | 'unlimited';
   timeLimit: string;
   module: string;
   status: AssignmentStatus;
@@ -57,75 +58,66 @@ export default function CreateAssignment() {
 
   // Fetch modules from backend
   useEffect(() => {
-    const fetchModulesForInstructor = async () => {
+    const fetchModules = async () => {
       try {
-        // 1️⃣ Get all courses for the current instructor
         const { courses } = await courseService.getCourses();
+        if (!courses || courses.length === 0) return setModules([]);
 
-        if (!courses || courses.length === 0) {
-          setModules([]);
-          return;
-        }
+        const moduleArrays = await Promise.all(
+          courses.map(async (course) => {
+            try {
+              const res = await moduleService.getModules(course.id);
+              return res.data ?? [];
+            } catch (err: any) {
+              if ((err?.response?.status ?? err?.status) === 404) return [];
+              throw err;
+            }
+          })
+        );
 
-        // 2️⃣ Fetch all modules for each course
-        const allModules: { id: string; name: string; course_id: string }[] = [];
-        for (const course of courses) {
-          const { data } = await moduleService.getModules(course.id);
-          const mappedModules = data.map((m) => ({
-            id: m.id,
-            name: m.title,     // <-- map title to name
-            course_id: m.course_id,
-          }));
-          allModules.push(...mappedModules);
-        }
+        const allModules = moduleArrays.flat().map((m: any) => ({
+          id: m.id,
+          name: m.title ?? m.name,
+        }));
 
-        // 3️⃣ Set modules state
         setModules(allModules);
-      } catch (error: any) {
-        toast({
-          title: 'Error',
-          description: error.message || 'Failed to fetch modules',
-          variant: 'destructive',
-        });
+      } catch (err: any) {
+        console.error(err);
+        toast({ title: 'Error', description: err?.message || 'Failed to load modules', variant: 'destructive' });
+        setModules([]);
       }
     };
-    fetchModulesForInstructor();
-  }, [courseId, toast]);
+
+    fetchModules();
+  }, [toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const payload = {
+      const payload: AssignmentCreate = {
         title: assignmentData.title,
         type: assignmentData.type,
-        description: assignmentData.description,
-        instructions: assignmentData.instructions,
-        due_date: assignmentData.dueDate ? `${assignmentData.dueDate}T${assignmentData.dueTime || '00:00'}` : null,
-        total_points: Number(assignmentData.points) || 0,
-        allowed_attempts: assignmentData.attempts === 'unlimited' ? null : Number(assignmentData.attempts),
-        time_limit: assignmentData.timeLimit ? Number(assignmentData.timeLimit) : null,
-        module: assignmentData.module,
+        description: assignmentData.description || '',
+        instructions: assignmentData.instructions || '',
+        course_id: courseId!,
+        module_id: assignmentData.module || undefined,
+        due_date: assignmentData.dueDate
+          ? new Date(`${assignmentData.dueDate}T${assignmentData.dueTime || '00:00'}`).toISOString()
+          : new Date().toISOString(),
+        attempts: assignmentData.attempts === 'unlimited' ? 0 : Number(assignmentData.attempts),
+        time_limit: assignmentData.timeLimit ? Number(assignmentData.timeLimit) : undefined,
+        total_points: assignmentData.points ? Number(assignmentData.points) : 0,
         status: assignmentData.status,
-        course_id: courseId
       };
 
       await assignmentService.createAssignment(payload);
 
-      toast({
-        title: 'Success',
-        description: 'Assignment created successfully!',
-        variant: 'default'
-      });
-
+      toast({ title: 'Success', description: 'Assignment created successfully!', variant: 'default' });
       navigate(`/instructor/course/${courseId}/manage`);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create assignment',
-        variant: 'destructive'
-      });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message || 'Failed to create assignment', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -135,14 +127,8 @@ export default function CreateAssignment() {
     <div className="container py-8 space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/instructor/course/${courseId}/manage`)}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Course Management
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/instructor/course/${courseId}/manage`)} className="gap-2">
+          <ArrowLeft className="h-4 w-4" /> Back to Course Management
         </Button>
         <div>
           <h1 className="text-3xl font-bold">Create Assignment</h1>
@@ -158,8 +144,7 @@ export default function CreateAssignment() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Assignment Details
+                  <FileText className="h-5 w-5" /> Assignment Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -179,11 +164,9 @@ export default function CreateAssignment() {
                     <Label htmlFor="type">Assignment Type</Label>
                     <Select
                       value={assignmentData.type}
-                      onValueChange={(value) => setAssignmentData({ ...assignmentData, type: value })}
+                      onValueChange={(value) => setAssignmentData({ ...assignmentData, type: value as AssignmentType })}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                         <SelectItem value="assignment">Assignment</SelectItem>
                         <SelectItem value="quiz">Quiz</SelectItem>
@@ -203,14 +186,10 @@ export default function CreateAssignment() {
                       value={assignmentData.module}
                       onValueChange={(value) => setAssignmentData({ ...assignmentData, module: value })}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select module" />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select module" /></SelectTrigger>
                       <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                         {modules.map((module) => (
-                          <SelectItem key={module.id} value={module.id}>
-                            {module.name}
-                          </SelectItem>
+                          <SelectItem key={module.id} value={module.id}>{module.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -257,8 +236,7 @@ export default function CreateAssignment() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Due Date & Settings
+                  <Calendar className="h-5 w-5" /> Due Date & Settings
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -289,11 +267,9 @@ export default function CreateAssignment() {
                     <Label htmlFor="attempts">Allowed Attempts</Label>
                     <Select
                       value={assignmentData.attempts}
-                      onValueChange={(value) => setAssignmentData({ ...assignmentData, attempts: value })}
+                      onValueChange={(value) => setAssignmentData({ ...assignmentData, attempts: value as AssignmentData['attempts'] })}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
                         <SelectItem value="1">1 Attempt</SelectItem>
                         <SelectItem value="2">2 Attempts</SelectItem>
@@ -317,13 +293,12 @@ export default function CreateAssignment() {
             </Card>
           </div>
 
-          {/* Right Column - Summary & Actions */}
+          {/* Right Column */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Assignment Summary
+                  <Clock className="h-5 w-5" /> Assignment Summary
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
@@ -345,19 +320,13 @@ export default function CreateAssignment() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Due:</span>
-                  <span>
-                    {assignmentData.dueDate
-                      ? `${new Date(assignmentData.dueDate).toLocaleDateString()}${assignmentData.dueTime ? ` at ${assignmentData.dueTime}` : ''}`
-                      : 'Not set'}
-                  </span>
+                  <span>{assignmentData.dueDate ? `${new Date(assignmentData.dueDate).toLocaleDateString()}${assignmentData.dueTime ? ` at ${assignmentData.dueTime}` : ''}` : 'Not set'}</span>
                 </div>
               </CardContent>
 
-              {/* Actions */}
               <CardContent className="p-4 space-y-3">
                 <Button type="submit" className="w-full" disabled={loading}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {loading ? 'Saving...' : 'Create Assignment'}
+                  <Save className="mr-2 h-4 w-4" /> {loading ? 'Saving...' : 'Create Assignment'}
                 </Button>
                 <Button
                   type="button"
@@ -369,9 +338,7 @@ export default function CreateAssignment() {
                   Save as Draft
                 </Button>
                 <Button asChild variant="outline" size="sm" className="flex-1 md:flex-none">
-                  <Link to={`/instructor/course/${courseId}/assignment/:assignmentId/view`}>
-                    View Assignment
-                  </Link>
+                  <Link to={`/instructor/course/${courseId}/assignment/:assignmentId/view`}>View Assignment</Link>
                 </Button>
               </CardContent>
             </Card>

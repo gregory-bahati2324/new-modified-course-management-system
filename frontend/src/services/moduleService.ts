@@ -30,15 +30,21 @@ export class ModuleService {
       const token = localStorage.getItem('accessToken');
       const response = await apiModuleClient.get<Module[]>(
         API_ENDPOINTS.modules.get_course_module(courseId),
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       return { data: response.data };
-    } catch (error) {
-      throw new Error(handleApiError(error));
+
+    } catch (error: any) {
+      const status = error.response?.status;
+
+      // Throw structured error WITH status code
+      throw {
+        status,
+        message: handleApiError(error)
+      };
     }
   }
+
 
   async getModuleById(moduleId: string): Promise<Module> {
     try {

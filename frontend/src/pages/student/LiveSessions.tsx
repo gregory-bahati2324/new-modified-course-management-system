@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import StudentLayout from '@/components/layout/StudentLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Video, Calendar, Clock } from 'lucide-react';
@@ -57,7 +56,6 @@ const StudentLiveSessions = () => {
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
 
   return (
-    <StudentLayout>
       <div className="container mx-auto p-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Live Training Sessions</h1>
@@ -141,7 +139,6 @@ const StudentLiveSessions = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </StudentLayout>
   );
 };
 

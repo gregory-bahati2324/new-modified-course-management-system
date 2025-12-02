@@ -4,11 +4,14 @@ import { API_ENDPOINTS } from '@/config/api.config';
 
 export interface AssignmentCreate {
   title: string;
+  type: 'assignment' | 'quiz' | 'exam' | 'project' | 'discussion';
   description?: string;
   instructions?: string;
   course_id: string;
-  module?: string;
-  due_date?: string; // ISO string
+  module_id?: string | null;   // match backend field name
+  due_date: string;            // ISO string, required
+  attempts?: number;
+  time_limit?: number | null;
   total_points?: number;
   status?: 'draft' | 'published' | 'closed';
 }

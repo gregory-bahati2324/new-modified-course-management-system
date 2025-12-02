@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Trophy, TrendingUp, Award, Download, Eye, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
-import StudentLayout from '@/components/layout/StudentLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -73,7 +72,6 @@ export default function StudentGrades() {
   }, 0) / totalCredits;
 
   return (
-    <StudentLayout>
       <div className="container py-8 space-y-8 animate-fade-in">
         <div>
           <h1 className="text-3xl font-bold">My Grades</h1>
@@ -317,6 +315,5 @@ export default function StudentGrades() {
           </CardContent>
         </Card>
       </div>
-    </StudentLayout>
   );
 }

@@ -1,5 +1,4 @@
 import { Calendar as CalendarIcon, Clock, MapPin, Video, Users } from 'lucide-react';
-import StudentLayout from '@/components/layout/StudentLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -101,7 +100,6 @@ export default function StudentSchedule() {
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
   return (
-    <StudentLayout>
       <div className="container py-8 space-y-8 animate-fade-in">
         <div>
           <h1 className="text-3xl font-bold">My Schedule</h1>
@@ -233,6 +231,5 @@ export default function StudentSchedule() {
           </div>
         </div>
       </div>
-    </StudentLayout>
   );
 }

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Clock, Users, Star, PlayCircle, CheckCircle2 } from 'lucide-react';
-import StudentLayout from '@/components/layout/StudentLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -77,7 +76,6 @@ export default function StudentCourses() {
   ];
 
   return (
-    <StudentLayout>
       <div className="container py-8 space-y-8 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
@@ -235,6 +233,5 @@ export default function StudentCourses() {
           </TabsContent>
         </Tabs>
       </div>
-    </StudentLayout>
   );
 }

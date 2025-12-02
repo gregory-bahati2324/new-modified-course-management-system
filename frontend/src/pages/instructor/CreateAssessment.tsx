@@ -20,7 +20,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { InstructorLayout } from '@/components/layout/InstructorLayout';
 
 interface Question {
   id: number;
@@ -129,8 +128,7 @@ export default function CreateAssessment() {
   const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
 
   return (
-    <InstructorLayout>
-      <div className="container py-8 space-y-6 animate-fade-in">
+    <div className="container py-8 space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button 
@@ -586,6 +584,5 @@ export default function CreateAssessment() {
           </div>
         </form>
       </div>
-    </InstructorLayout>
   );
 }

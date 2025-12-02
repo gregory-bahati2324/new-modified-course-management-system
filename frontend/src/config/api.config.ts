@@ -83,9 +83,9 @@ export const API_ENDPOINTS = {
     create: '/assignments',                // POST create assignment
     update: (id: string) => `/assignments/${id}`, // PUT/PATCH update assignment (to implement)
     delete: (id: string) => `/assignments/${id}`, // DELETE assignment (to implement)
-    submit: (id: string) => `/api/assignments/${id}/submit`,
-    submissions: (id: string) => `/api/assignments/${id}/submissions`,
-    grade: (id: string, submissionId: string) => `/api/assignments/${id}/submissions/${submissionId}/grade`,
+    submit: (id: string) => `/assignments/${id}/submit`,
+    submissions: (id: string) => `/assignments/${id}/submissions`,
+    grade: (id: string, submissionId: string) => `assignments/${id}/submissions/${submissionId}/grade`,
   },
 
   // Grade endpoints - maps to FastAPI /api/grades/*
