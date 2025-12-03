@@ -18,6 +18,7 @@ type AssignmentType = 'assignment' | 'quiz' | 'exam' | 'project' | 'discussion';
 interface Module {
   id: string;
   name: string;
+  course_id: string;
 }
 
 interface AssignmentData {
@@ -25,13 +26,13 @@ interface AssignmentData {
   type: AssignmentType;
   description: string;
   instructions: string;
-  dueDate: string;
-  dueTime: string;
+  //dueDate: string;
+  //dueTime: string;
   points: string;
-  attempts: '1' | '2' | '3' | 'unlimited';
-  timeLimit: string;
+  //attempts: '1' | '2' | '3' | 'unlimited';
+  //timeLimit: string;
   module: string;
-  status: AssignmentStatus;
+  //status: AssignmentStatus;
 }
 
 export default function CreateAssignment() {
@@ -44,13 +45,13 @@ export default function CreateAssignment() {
     type: 'assignment',
     description: '',
     instructions: '',
-    dueDate: '',
-    dueTime: '',
+    //dueDate: '',
+    //dueTime: '',
     points: '',
-    attempts: '1',
-    timeLimit: '',
+    //attempts: '1',
+    //timeLimit: '',
     module: '',
-    status: 'draft'
+    //status: 'draft'
   });
 
   const [modules, setModules] = useState<Module[]>([]);
@@ -78,6 +79,7 @@ export default function CreateAssignment() {
         const allModules = moduleArrays.flat().map((m: any) => ({
           id: m.id,
           name: m.title ?? m.name,
+          course_id: m.course_id,
         }));
 
         setModules(allModules);
@@ -95,21 +97,27 @@ export default function CreateAssignment() {
     e.preventDefault();
     setLoading(true);
 
+    const selectedModule = modules.find(m => m.id === assignmentData.module);
+
+    if (!selectedModule) {
+      throw new Error("Module not found");
+    }
+
     try {
       const payload: AssignmentCreate = {
         title: assignmentData.title,
         type: assignmentData.type,
         description: assignmentData.description || '',
         instructions: assignmentData.instructions || '',
-        course_id: courseId!,
+        course_id: selectedModule.course_id,
         module_id: assignmentData.module || undefined,
-        due_date: assignmentData.dueDate
-          ? new Date(`${assignmentData.dueDate}T${assignmentData.dueTime || '00:00'}`).toISOString()
-          : new Date().toISOString(),
-        attempts: assignmentData.attempts === 'unlimited' ? 0 : Number(assignmentData.attempts),
-        time_limit: assignmentData.timeLimit ? Number(assignmentData.timeLimit) : undefined,
+        //due_date: assignmentData.dueDate
+        //  ? new Date(`${assignmentData.dueDate}T${assignmentData.dueTime || '00:00'}`).toISOString()
+        //  : new Date().toISOString(),
+        //attempts: assignmentData.attempts === 'unlimited' ? 0 : Number(assignmentData.attempts),
+        //time_limit: assignmentData.timeLimit ? Number(assignmentData.timeLimit) : undefined,
         total_points: assignmentData.points ? Number(assignmentData.points) : 0,
-        status: assignmentData.status,
+        //status: assignmentData.status,
       };
 
       await assignmentService.createAssignment(payload);

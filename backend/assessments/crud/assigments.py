@@ -8,20 +8,20 @@ def create_assignment(db: Session, data: AssignmentCreate, instructor_id: str):
     module_id = data.module_id if data.module_id not in ("", None) else None
 
     # ensure attempts
-    attempts = 0 if data.attempts is not None and data.attempts == 0 else data.attempts
+    #attempts = 0 if data.attempts is not None and data.attempts == 0 else data.attempts
 
     # time_limit
-    time_limit = data.time_limit if data.time_limit not in (None, '') else None
+    #time_limit = data.time_limit if data.time_limit not in (None, '') else None
 
     # total_points
     total_points = data.total_points if data.total_points not in (None, '') else 0
 
     # due_date: convert from str to datetime if needed
-    due_date = data.due_date
+    """due_date = data.due_date
     if isinstance(due_date, str):
         from datetime import datetime
         due_date = datetime.fromisoformat(due_date)
-
+"""
     assignment = Assignment(
         title=data.title,
         type=data.type,
@@ -29,11 +29,11 @@ def create_assignment(db: Session, data: AssignmentCreate, instructor_id: str):
         instructions=data.instructions,
         course_id=data.course_id,
         module_id=module_id,
-        due_date=due_date,
-        attempts=attempts,
-        time_limit=time_limit,
+        #due_date=due_date,
+        #attempts=attempts,
+        #time_limit=time_limit,
         total_points=total_points,
-        status=data.status,
+        #status=data.status,
         instructor_id=instructor_id
     )
     db.add(assignment)

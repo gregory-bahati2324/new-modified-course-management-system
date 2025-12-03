@@ -9,25 +9,25 @@ export interface AssignmentCreate {
   instructions?: string;
   course_id: string;
   module_id?: string | null;   // match backend field name
-  due_date: string;            // ISO string, required
-  attempts?: number;
-  time_limit?: number | null;
+  //due_date: string;            // ISO string, required
+  //attempts?: number;
+  //time_limit?: number | null;
   total_points?: number;
-  status?: 'draft' | 'published' | 'closed';
+  //status?: 'draft' | 'published' | 'closed';
 }
 
 export interface Assignment {
-  id: string;
+  //id: string;
   title: string;
   description: string;
   instructions?: string;
   course_id: string;
   module?: string;
-  due_date?: string;
-  total_points?: number;
-  submitted: boolean;
-  graded: boolean;
-  status: 'draft' | 'published' | 'closed';
+  //due_date?: string;
+  //total_points?: number;
+  //submitted: boolean;
+  //graded: boolean;
+  //status: 'draft' | 'published' | 'closed';
   created_at: string;
   updated_at: string;
 }
