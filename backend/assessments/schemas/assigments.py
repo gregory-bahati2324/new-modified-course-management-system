@@ -12,11 +12,11 @@ class AssignmentBase(BaseModel):
     instructions: Optional[str] = ""
     course_id: Optional[str]
     module_id: Optional[str] = None  # frontend may send empty string
-    #due_date: Union[datetime, str]
-    #attempts: Union[int, str] = 1    # accept number or string ('1','2','unlimited')
-    #time_limit: Optional[Union[int, str]] = None  # accept number or string
+    due_date: Union[datetime, str]
+    attempts: Union[int, str] = 1    # accept number or string ('1','2','unlimited')
+    time_limit: Optional[Union[int, str]] = None  # accept number or string
     total_points: Optional[Union[int, str]] = 0
-    #status: str = "draft"  # accept string directly from frontend
+    status: str = "draft"  # accept string directly from frontend
 
 # -------------------------------
 # Create Schema
@@ -29,8 +29,8 @@ class AssignmentCreate(AssignmentBase):
 # -------------------------------
 class AssignmentResponse(AssignmentBase):
     id: str
-    #graded: bool = False
-    #submitted: bool = False
+    graded: bool = False
+    submitted: bool = False
     instructor_id: str
 
     class Config:

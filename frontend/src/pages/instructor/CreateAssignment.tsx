@@ -26,13 +26,13 @@ interface AssignmentData {
   type: AssignmentType;
   description: string;
   instructions: string;
-  //dueDate: string;
-  //dueTime: string;
+  dueDate: string;
+  dueTime: string;
   points: string;
-  //attempts: '1' | '2' | '3' | 'unlimited';
-  //timeLimit: string;
+  attempts: '1' | '2' | '3' | 'unlimited';
+  timeLimit: string;
   module: string;
-  //status: AssignmentStatus;
+  status: AssignmentStatus;
 }
 
 export default function CreateAssignment() {
@@ -45,13 +45,13 @@ export default function CreateAssignment() {
     type: 'assignment',
     description: '',
     instructions: '',
-    //dueDate: '',
-    //dueTime: '',
+    dueDate: '',
+    dueTime: '',
     points: '',
-    //attempts: '1',
-    //timeLimit: '',
+    attempts: '1',
+    timeLimit: '',
     module: '',
-    //status: 'draft'
+    status: 'draft'
   });
 
   const [modules, setModules] = useState<Module[]>([]);
@@ -111,13 +111,13 @@ export default function CreateAssignment() {
         instructions: assignmentData.instructions || '',
         course_id: selectedModule.course_id,
         module_id: assignmentData.module || undefined,
-        //due_date: assignmentData.dueDate
-        //  ? new Date(`${assignmentData.dueDate}T${assignmentData.dueTime || '00:00'}`).toISOString()
-        //  : new Date().toISOString(),
-        //attempts: assignmentData.attempts === 'unlimited' ? 0 : Number(assignmentData.attempts),
-        //time_limit: assignmentData.timeLimit ? Number(assignmentData.timeLimit) : undefined,
+        due_date: assignmentData.dueDate
+          ? new Date(`${assignmentData.dueDate}T${assignmentData.dueTime || '00:00'}`).toISOString()
+          : new Date().toISOString(),
+        attempts: assignmentData.attempts === 'unlimited' ? 0 : Number(assignmentData.attempts),
+        time_limit: assignmentData.timeLimit ? Number(assignmentData.timeLimit) : undefined,
         total_points: assignmentData.points ? Number(assignmentData.points) : 0,
-        //status: assignmentData.status,
+        status: assignmentData.status,
       };
 
       await assignmentService.createAssignment(payload);

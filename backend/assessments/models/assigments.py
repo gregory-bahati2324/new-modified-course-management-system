@@ -19,14 +19,14 @@ class Assignment(Base):
 
     # Settings
     due_date = Column(DateTime, nullable=False)
-    #attempts = Column(Integer, default=1)
-    #time_limit = Column(Integer, nullable=True)
+    attempts = Column(Integer, default=1)
+    time_limit = Column(Integer, nullable=True)
     total_points = Column(Integer, default=0)
     status = Column(String, default="draft")          # draft, published, closed
 
     # Tracking
-    #graded = Column(Boolean, default=False)
-    #submitted = Column(Boolean, default=False)
+    graded = Column(Boolean, default=False)
+    submitted = Column(Boolean, default=False)
 
     # Ownership
     instructor_id = Column(String, nullable=False)
