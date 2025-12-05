@@ -68,6 +68,8 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
         { title: 'Assignments', href: '/instructor/assignments' },
         { title: 'Create Assignment', href: '/instructor/create-assignment' },
         { title: 'Tests & Exams', href: '/instructor/exams' },
+        { title: 'Create Test/Exam', href: '/instructor/create-exam' },
+        {title: 'Marking Assessments', href: '/instructor/marking' },
         { title: 'Grade Submissions', href: '/instructor/grade' },
       ],
     },

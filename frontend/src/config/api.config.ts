@@ -87,6 +87,17 @@ export const API_ENDPOINTS = {
     submissions: (id: string) => `/assignments/${id}/submissions`,
     grade: (id: string, submissionId: string) => `assignments/${id}/submissions/${submissionId}/grade`,
   },
+  // Assessment endpoints - maps to FastAPI /api/assessments/*
+  assessments: {
+    list: '/assessments',
+    detail: (id: string) => `/assessments/${id}`,
+    create: '/assessments',
+    update: (id: string) => `/assessments/${id}`,
+    delete: (id: string) => `/assessments/${id}`,
+    submit: (id: string) => `/assessments/${id}/submit`,
+    submissions: (id: string) => `/assessments/${id}/submissions`,
+    grade: (id: string, submissionId: string) => `assessments/${id}/submissions/${submissionId}/grade`,
+  },
 
   // Grade endpoints - maps to FastAPI /api/grades/*
   grades: {

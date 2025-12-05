@@ -206,15 +206,15 @@ export const navItems = [
   },
   {
     title: "View Assignment",
-    to: "/instructor/course/:id/assignment/:assignmentId/view",
+    to: "/instructor/assignment/:assignmentId/view",
     icon: <Eye className="h-4 w-4" />,
     page: <InstructorLayout><ViewAssignment /></InstructorLayout>,
   },
   {
     title: "Grade Assignment",
-    to: "/instructor/course/:id/assignment/:assignmentId/submission/:submissionId/grade",
+    to: "/instructor/assignment/:assignmentId/grade",
     icon: <Edit className="h-4 w-4" />,
-    page: <GradeAssignment />,
+    page: <InstructorLayout><GradeAssignment /></InstructorLayout>,
   },
   {
     title: "Tests & Exams",
@@ -226,7 +226,7 @@ export const navItems = [
     title: "Create Assessment",
     to: "/instructor/create-assessment",
     icon: <Plus className="h-4 w-4" />,
-    page: <CreateAssessment />,
+    page: <InstructorLayout><CreateAssessment /></InstructorLayout>,
   },
   {
     title: "Grade Submissions",

@@ -17,7 +17,7 @@ export interface AssignmentCreate {
 }
 
 export interface Assignment {
-  //id: string;
+  id: string;
   title: string;
   description: string;
   instructions?: string;

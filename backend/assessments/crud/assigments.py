@@ -20,7 +20,9 @@ def create_assignment(db: Session, data: AssignmentCreate, instructor_id: str):
     due_date = data.due_date
     if isinstance(due_date, str):
         from datetime import datetime
-        due_date = datetime.fromisoformat(due_date)
+        # Parse "YYYY-MM-DD HH:MM:SS"
+        due_date = datetime.strptime(due_date, "%Y-%m-%d %H:%M:%S")
+
 
     assignment = Assignment(
         title=data.title,

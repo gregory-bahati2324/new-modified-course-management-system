@@ -35,6 +35,22 @@ interface AssignmentData {
   status: AssignmentStatus;
 }
 
+function convertTo24Hour(time12h: string) {
+  const [time, modifier] = time12h.split(" "); // "01:01", "AM"
+  let [hours, minutes] = time.split(":");
+
+  if (hours === "12") {
+    hours = "00";
+  }
+
+  if (modifier === "PM") {
+    hours = String(Number(hours) + 12);
+  }
+
+  return `${hours}:${minutes}`;
+}
+
+
 export default function CreateAssignment() {
   const navigate = useNavigate();
   const { id: courseId } = useParams<{ id: string }>();
@@ -99,6 +115,9 @@ export default function CreateAssignment() {
 
     const selectedModule = modules.find(m => m.id === assignmentData.module);
 
+    const time24 = convertTo24Hour(assignmentData.dueTime);
+    const dueDateString = `${assignmentData.dueDate} ${time24}:00`;
+
     if (!selectedModule) {
       throw new Error("Module not found");
     }
@@ -111,9 +130,7 @@ export default function CreateAssignment() {
         instructions: assignmentData.instructions || '',
         course_id: selectedModule.course_id,
         module_id: assignmentData.module || undefined,
-        due_date: assignmentData.dueDate
-          ? new Date(`${assignmentData.dueDate}T${assignmentData.dueTime || '00:00'}`).toISOString()
-          : new Date().toISOString(),
+        due_date: dueDateString,
         attempts: assignmentData.attempts === 'unlimited' ? 0 : Number(assignmentData.attempts),
         time_limit: assignmentData.timeLimit ? Number(assignmentData.timeLimit) : undefined,
         total_points: assignmentData.points ? Number(assignmentData.points) : 0,
@@ -122,7 +139,14 @@ export default function CreateAssignment() {
 
       await assignmentService.createAssignment(payload);
 
-      toast({ title: 'Success', description: 'Assignment created successfully!', variant: 'default' });
+      toast({
+        title: 'Success',
+        description:
+          assignmentData.status === 'draft'
+            ? 'Assignment saved as draft'
+            : 'Assignment created successfully',
+        variant: 'default',
+      });
       navigate(`/instructor/course/${courseId}/manage`);
     } catch (err: any) {
       toast({ title: 'Error', description: err?.message || 'Failed to create assignment', variant: 'destructive' });
@@ -333,18 +357,25 @@ export default function CreateAssignment() {
               </CardContent>
 
               <CardContent className="p-4 space-y-3">
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading}
+                  onClick={() => setAssignmentData({ ...assignmentData, status: 'published' })}
+                >
                   <Save className="mr-2 h-4 w-4" /> {loading ? 'Saving...' : 'Create Assignment'}
                 </Button>
+
                 <Button
-                  type="button"
+                  type="submit"
                   variant="outline"
                   className="w-full"
-                  onClick={() => setAssignmentData({ ...assignmentData, status: 'draft' })}
                   disabled={loading}
+                  onClick={() => setAssignmentData((prev) => ({ ...prev, status: 'draft' }))}
                 >
                   Save as Draft
                 </Button>
+
                 <Button asChild variant="outline" size="sm" className="flex-1 md:flex-none">
                   <Link to={`/instructor/course/${courseId}/assignment/:assignmentId/view`}>View Assignment</Link>
                 </Button>
