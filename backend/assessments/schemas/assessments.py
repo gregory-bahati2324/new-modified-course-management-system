@@ -21,7 +21,6 @@ class AssessmentCreate(BaseModel):
     course_id: Optional[str] = None
     module_id: Optional[str] = None
     due_date: Optional[datetime] = None
-    due_time: Optional[str] = None
     time_limit: Optional[int] = None
     attempts: Optional[str] = "1"
     passing_score: Optional[int] = 70

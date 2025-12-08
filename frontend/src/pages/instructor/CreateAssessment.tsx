@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Save, FileQuestion, Plus, Trash2, Clock,
@@ -21,6 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import AssessmentPreview from '@/components/AssessmentPreview';
+import { courseService } from "@/services/courseService";
 import { assessmentService, AssessmentCreate, QuestionCreate } from '@/services/assessmentService';
 
 interface Question {
@@ -35,6 +37,21 @@ interface Question {
   reference_file?: File | null;
   matching_pairs?: { left: string; right: string }[];
   correct_order?: string[];
+}
+
+function convertTo24Hour(time12h: string) {
+  const [time, modifier] = time12h.split(" "); // "01:01", "AM"
+  let [hours, minutes] = time.split(":");
+
+  if (hours === "12") {
+    hours = "00";
+  }
+
+  if (modifier === "PM") {
+    hours = String(Number(hours) + 12);
+  }
+
+  return `${hours}:${minutes}`;
 }
 
 export default function CreateAssessment() {
@@ -81,17 +98,7 @@ export default function CreateAssessment() {
     { id: 'final', name: 'Final Exam' }
   ];
 
-  const courses = [
-    { id: '1', name: 'Database Systems' },
-    { id: '2', name: 'Web Development' },
-    { id: '3', name: 'Data Structures' }
-  ];
-
-  const modules = [
-    { id: '1', name: 'Introduction to Databases' },
-    { id: '2', name: 'Relational Database Design' },
-    { id: '3', name: 'Query Optimization' }
-  ];
+  const [courses, setCourses] = useState<{ id: string; title: string }[]>([]);
 
   const addQuestion = () => {
     const newQuestion: Question = {
@@ -100,9 +107,82 @@ export default function CreateAssessment() {
       question_text: '',
       points: 1,
       options: ['', '', '', ''],
-      correct_answer: 0
+      correct_answer: 0,
+      test_cases: [],
+      matching_pairs: [],
+      correct_order: []
     };
     setQuestions([...questions, newQuestion]);
+  };
+
+
+  // Add test case for coding questions
+  const addTestCase = (questionId: number) => {
+    setQuestions(prevQuestions => prevQuestions.map(q => {
+      if (q.id === questionId) {
+        const newTestCases = [...(q.test_cases || []), { input: '', expectedOutput: '' }];
+        return { ...q, test_cases: newTestCases };
+      }
+      return q;
+    }));
+  };
+
+  // Update test case
+  const updateTestCase = (questionId: number, index: number, field: 'input' | 'expectedOutput', value: string) => {
+    setQuestions(prevQuestions => prevQuestions.map(q => {
+      if (q.id === questionId && q.test_cases) {
+        const newTestCases = [...q.test_cases];
+        newTestCases[index] = { ...newTestCases[index], [field]: value };
+        return { ...q, test_cases: newTestCases };
+      }
+      return q;
+    }));
+  };
+
+  // Add matching pair
+  const addMatchingPair = (questionId: number) => {
+    setQuestions(prevQuestions => prevQuestions.map(q => {
+      if (q.id === questionId) {
+        const newPairs = [...(q.matching_pairs || []), { left: '', right: '' }];
+        return { ...q, matching_pairs: newPairs };
+      }
+      return q;
+    }));
+  };
+
+  // Update matching pair
+  const updateMatchingPair = (questionId: number, index: number, field: 'left' | 'right', value: string) => {
+    setQuestions(prevQuestions => prevQuestions.map(q => {
+      if (q.id === questionId && q.matching_pairs) {
+        const newPairs = [...q.matching_pairs];
+        newPairs[index] = { ...newPairs[index], [field]: value };
+        return { ...q, matching_pairs: newPairs };
+      }
+      return q;
+    }));
+  };
+
+  // Add ordering item
+  const addOrderItem = (questionId: number) => {
+    setQuestions(prevQuestions => prevQuestions.map(q => {
+      if (q.id === questionId) {
+        const newOrder = [...(q.correct_order || []), ''];
+        return { ...q, correct_order: newOrder };
+      }
+      return q;
+    }));
+  };
+
+  // Update ordering item
+  const updateOrderItem = (questionId: number, index: number, value: string) => {
+    setQuestions(prevQuestions => prevQuestions.map(q => {
+      if (q.id === questionId && q.correct_order) {
+        const newOrder = [...q.correct_order];
+        newOrder[index] = value;
+        return { ...q, correct_order: newOrder };
+      }
+      return q;
+    }));
   };
 
   const removeQuestion = (id: number) => {
@@ -126,77 +206,29 @@ export default function CreateAssessment() {
     }));
   };
 
-  // Add test case for coding questions
-  const addTestCase = (questionId: number) => {
-    setQuestions(questions.map(q => {
-      if (q.id === questionId) {
-        const newTestCases = [...(q.test_cases || []), { input: '', expectedOutput: '' }];
-        return { ...q, testCases: newTestCases };
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const { courses } = await courseService.getCourses();
+        setCourses(
+          courses.map((c) => ({
+            id: c.id,
+            title: c.title
+          }))
+        );
+      } catch (error) {
+        toast.error("Failed to load courses");
       }
-      return q;
-    }));
-  };
+    };
+    fetchCourses();
+  }, []);
 
-  // Update test case
-  const updateTestCase = (questionId: number, index: number, field: 'input' | 'expectedOutput', value: string) => {
-    setQuestions(questions.map(q => {
-      if (q.id === questionId && q.test_cases) {
-        const newTestCases = [...q.test_cases];
-        newTestCases[index] = { ...newTestCases[index], [field]: value };
-        return { ...q, testCases: newTestCases };
-      }
-      return q;
-    }));
-  };
-
-  // Add matching pair
-  const addMatchingPair = (questionId: number) => {
-    setQuestions(questions.map(q => {
-      if (q.id === questionId) {
-        const newPairs = [...(q.matching_pairs || []), { left: '', right: '' }];
-        return { ...q, matchingPairs: newPairs };
-      }
-      return q;
-    }));
-  };
-
-  // Update matching pair
-  const updateMatchingPair = (questionId: number, index: number, field: 'left' | 'right', value: string) => {
-    setQuestions(questions.map(q => {
-      if (q.id === questionId && q.matching_pairs) {
-        const newPairs = [...q.matching_pairs];
-        newPairs[index] = { ...newPairs[index], [field]: value };
-        return { ...q, matchingPairs: newPairs };
-      }
-      return q;
-    }));
-  };
-
-  // Add ordering item
-  const addOrderItem = (questionId: number) => {
-    setQuestions(questions.map(q => {
-      if (q.id === questionId) {
-        const newOrder = [...(q.correct_order || []), ''];
-        return { ...q, correctOrder: newOrder };
-      }
-      return q;
-    }));
-  };
-
-  // Update ordering item
-  const updateOrderItem = (questionId: number, index: number, value: string) => {
-    setQuestions(questions.map(q => {
-      if (q.id === questionId && q.correct_order) {
-        const newOrder = [...q.correct_order];
-        newOrder[index] = value;
-        return { ...q, correctOrder: newOrder };
-      }
-      return q;
-    }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const time24 = convertTo24Hour(assessmentData.dueTime);
+    const dueDateString = `${assessmentData.dueDate} ${time24}:00`;
 
     try {
       // Transform frontend state to backend payload
@@ -206,7 +238,7 @@ export default function CreateAssessment() {
         description: assessmentData.description,
         course_id: assessmentData.course,
         module_id: assessmentData.module || null,
-        due_date: assessmentData.dueDate ? `${assessmentData.dueDate}T${assessmentData.dueTime || '00:00'}:00` : undefined,
+        due_date: dueDateString || null,
         time_limit: assessmentData.timeLimit ? parseInt(assessmentData.timeLimit) : null,
         attempts: assessmentData.attempts,
         passing_score: parseInt(assessmentData.passingScore),
@@ -328,30 +360,14 @@ export default function CreateAssessment() {
                       <SelectContent>
                         {courses.map(course => (
                           <SelectItem key={course.id} value={course.id}>
-                            {course.name}
+                            {course.title}
                           </SelectItem>
                         ))}
+
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="module">Module (Optional)</Label>
-                    <Select
-                      value={assessmentData.module}
-                      onValueChange={(value) => setAssessmentData({ ...assessmentData, module: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select module" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {modules.map(module => (
-                          <SelectItem key={module.id} value={module.id}>
-                            {module.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  
                 </div>
 
                 <div className="space-y-2">

@@ -14,8 +14,7 @@ class Assessment(Base):
     course_id = Column(String, nullable=True)
     module_id = Column(String, nullable=True)
     instructor_id = Column(String, nullable=False)
-    due_date = Column(Date, nullable=True)
-    due_time = Column(Time, nullable=True)
+    due_date = Column(DateTime, nullable=True)
     time_limit = Column(Integer, nullable=True)
     attempts = Column(String, default="1")  # can be "1", "2", "unlimited"
     passing_score = Column(Integer, default=70)

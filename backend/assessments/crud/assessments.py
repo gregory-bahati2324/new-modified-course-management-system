@@ -3,14 +3,18 @@ from models.assessments import Assessment, Question
 from schemas.assessments import AssessmentCreate
 
 def create_assessment(db: Session, data: AssessmentCreate, instructor_id: str):
+    due_date = data.due_date
+    if isinstance(due_date, str):
+        from datetime import datetime
+        # Parse "YYYY-MM-DD HH:MM:SS"
+        due_date = datetime.strptime(due_date, "%Y-%m-%d %H:%M:%S")
     assessment = Assessment(
         title=data.title,
         type=data.type,
         description=data.description,
         course_id=data.course_id,
         module_id=data.module_id,
-        due_date=data.due_date,
-        due_time=data.due_time,
+        due_date=due_date,
         time_limit=data.time_limit,
         attempts=data.attempts,
         passing_score=data.passing_score,

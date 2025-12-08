@@ -22,7 +22,6 @@ export interface AssessmentCreate {
   course_id: string;
   module_id?: string | null;
   due_date?: string;    // ISO
-  due_time?: string;
   time_limit?: number | null;
   attempts?: string;
   passing_score?: number;
