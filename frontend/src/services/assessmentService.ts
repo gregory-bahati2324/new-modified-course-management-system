@@ -34,14 +34,29 @@ export interface AssessmentCreate {
 export interface Assessment {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
   type: string;
   course_id: string;
-  module_id?: string;
+  module_id?: string | null;
+  instructor_id: string;
+
+  // Date + Time
+  due_date?: string | null;   // "2025-01-20"
+  due_time?: string | null;   // "14:30:00"
+
+  time_limit?: number | null;
+  attempts?: string;
+  passing_score?: number;
+  shuffle_questions?: boolean;
+  show_answers?: boolean;
   status: string;
+
+  questions: QuestionCreate[];  // include questions
+
   created_at: string;
   updated_at: string;
 }
+
 
 class AssessmentService {
   async createAssessment(data: AssessmentCreate): Promise<Assessment> {
@@ -65,6 +80,36 @@ class AssessmentService {
       const token = localStorage.getItem('accessToken');
       const response = await apiAssessmentClient.get<Assessment[]>(
         API_ENDPOINTS.assessments.list,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  async getAssessmentDetail(id: string): Promise<Assessment> {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await apiAssessmentClient.get<Assessment>(
+        API_ENDPOINTS.assessments.detail(id),
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+  async assessmentUpdate(id: string, data: AssessmentCreate): Promise<Assessment> {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await apiAssessmentClient.put<Assessment>(
+        API_ENDPOINTS.assessments.update(id),
+        data,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

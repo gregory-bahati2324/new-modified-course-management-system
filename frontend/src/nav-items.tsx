@@ -229,6 +229,13 @@ export const navItems = [
     page: <InstructorLayout><CreateAssessment /></InstructorLayout>,
   },
   {
+    title: "Edit Assessment",
+    to: "/instructor/exam/:examId/edit",
+    icon: <Edit className="h-4 w-4" />,
+    page: <InstructorLayout><CreateAssessment /></InstructorLayout>,
+  },
+
+  {
     title: "Grade Submissions",
     to: "/instructor/grade",
     icon: <Edit className="h-4 w-4" />,

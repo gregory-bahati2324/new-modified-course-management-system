@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useParams } from "react-router-dom";
+
 import {
   ArrowLeft, Save, FileQuestion, Plus, Trash2, Clock,
   CheckCircle, Calendar, Settings, Eye
@@ -54,8 +56,27 @@ function convertTo24Hour(time12h: string) {
   return `${hours}:${minutes}`;
 }
 
+function convertTo12Hour(time24: string) {
+  let [hours, minutes] = time24.split(":");
+  let modifier = "AM";
+
+  if (Number(hours) >= 12) {
+    modifier = "PM";
+    if (Number(hours) > 12) hours = String(Number(hours) - 12);
+  }
+
+  if (hours === "00") hours = "12";
+
+  return `${hours}:${minutes} ${modifier}`;
+}
+
+
 export default function CreateAssessment() {
   const navigate = useNavigate();
+  const { examId } = useParams<{ examId: string }>();
+  const isEditMode = Boolean(examId);
+
+
 
   const [assessmentData, setAssessmentData] = useState({
     title: '',
@@ -88,6 +109,8 @@ export default function CreateAssessment() {
   ]);
 
   const [showPreview, setShowPreview] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'published' | 'draft'>('published');
+
 
 
   const assessmentTypes = [
@@ -223,6 +246,61 @@ export default function CreateAssessment() {
     fetchCourses();
   }, []);
 
+  useEffect(() => {
+    if (!isEditMode) return;
+    console.log("Edit mode, id:", examId);
+
+    const fetchAssessment = async () => {
+      try {
+        const data = await assessmentService.getAssessmentDetail(examId);
+        console.log("Fetched assessment data:", data);
+
+
+        // 1. Fill main assessment details
+        setAssessmentData({
+          title: data.title,
+          type: data.type,
+          description: data.description,
+          course: data.course_id,
+          module: data.module_id || '',
+          dueDate: data.due_date?.split(" ")[0] || '',
+          dueTime: data.due_date ? convertTo12Hour(data.due_date.split(" ")[1]) : '',
+          timeLimit: data.time_limit ? String(data.time_limit) : '',
+          attempts: String(data.attempts),
+          passingScore: String(data.passing_score),
+          shuffleQuestions: data.shuffle_questions,
+          showAnswers: data.show_answers,
+          status: data.status,
+        });
+
+        // 2. Fill questions
+        const formattedQuestions = data.questions.map((q: any, index: number) => ({
+          id: index + 1,
+          type: q.type,
+          question_text: q.question_text,
+          points: q.points,
+          options: q.options || [],
+          correct_answer: q.correct_answer,
+          model_answer: q.model_answer,
+          test_cases: q.test_cases || [],
+          reference_file: null,
+          matching_pairs: q.matching_pairs || [],
+          correct_order: q.correct_order || []
+        }));
+
+        console.log("Formatted questions:", formattedQuestions);
+
+        setQuestions(formattedQuestions);
+
+      } catch (err: any) {
+        console.error(err);
+      }
+    };
+
+    fetchAssessment();
+  }, [examId]);
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,42 +308,52 @@ export default function CreateAssessment() {
     const time24 = convertTo24Hour(assessmentData.dueTime);
     const dueDateString = `${assessmentData.dueDate} ${time24}:00`;
 
-    try {
-      // Transform frontend state to backend payload
-      const payload: AssessmentCreate = {
-        title: assessmentData.title,
-        type: assessmentData.type as any,
-        description: assessmentData.description,
-        course_id: assessmentData.course,
-        module_id: assessmentData.module || null,
-        due_date: dueDateString || null,
-        time_limit: assessmentData.timeLimit ? parseInt(assessmentData.timeLimit) : null,
-        attempts: assessmentData.attempts,
-        passing_score: parseInt(assessmentData.passingScore),
-        shuffle_questions: assessmentData.shuffleQuestions,
-        show_answers: assessmentData.showAnswers,
-        status: assessmentData.status as any,
-        questions: questions.map((q): QuestionCreate => ({
-          type: q.type,
-          question_text: q.question_text,
-          points: q.points,
-          options: q.options,
-          correct_answer: q.correct_answer,
-          model_answer: q.model_answer,
-          test_cases: q.test_cases,
-          reference_file: q.reference_file ? q.reference_file.name : undefined,
-          matching_pairs: q.matching_pairs,
-          correct_order: q.correct_order,
-        })),
-      };
+    const payload: AssessmentCreate = {
+      title: assessmentData.title,
+      type: assessmentData.type as any,
+      description: assessmentData.description,
+      course_id: assessmentData.course,
+      module_id: assessmentData.module || null,
+      due_date: dueDateString,
+      time_limit: assessmentData.timeLimit ? parseInt(assessmentData.timeLimit) : null,
+      attempts: assessmentData.attempts,
+      passing_score: parseInt(assessmentData.passingScore),
+      shuffle_questions: assessmentData.shuffleQuestions,
+      show_answers: assessmentData.showAnswers,
+      status: submitStatus,
+      questions: questions.map(q => ({
+        type: q.type,
+        question_text: q.question_text,
+        points: q.points,
+        options: q.options,
+        correct_answer: q.correct_answer,
+        model_answer: q.model_answer,
+        test_cases: q.test_cases,
+        matching_pairs: q.matching_pairs,
+        correct_order: q.correct_order,
+      }))
+    };
 
-      await assessmentService.createAssessment(payload);
-      toast.success('Assessment created successfully!');
+    try {
+      if (isEditMode) {
+        await assessmentService.assessmentUpdate(examId, payload);
+        toast.success("Assessment updated successfully!");
+      } else {
+        await assessmentService.createAssessment(payload);
+        toast.success(
+          submitStatus === "draft"
+            ? "Draft saved successfully!"
+            : "Assessment created!"
+        );
+      }
+
       navigate('/instructor/exams');
+
     } catch (err: any) {
-      toast.error(`Failed to create assessment: ${err.message}`);
+      toast.error(err.message || "Something went wrong");
     }
   };
+
 
   const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
 
@@ -283,8 +371,13 @@ export default function CreateAssessment() {
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Create Assessment</h1>
-            <p className="text-muted-foreground">Create a new test, quiz, or exam</p>
+            <h1 className="text-3xl font-bold">
+              {isEditMode ? "Edit Assessment" : "Create Assessment"}
+            </h1>
+            <p className="text-muted-foreground">
+              {isEditMode ? "Update this test, quiz, or exam" : "Create a new test, quiz, or exam"}
+            </p>
+
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -367,7 +460,7 @@ export default function CreateAssessment() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                 </div>
 
                 <div className="space-y-2">
@@ -751,18 +844,28 @@ export default function CreateAssessment() {
                   <span className="font-medium">{assessmentData.passingScore}%</span>
                 </div>
                 <Separator />
-                <Button type="submit" className="w-full gap-2">
-                  <Save className="h-4 w-4" />
-                  Create Assessment
-                </Button>
                 <Button
-                  type="button"
+                  type="submit"
+                  className="w-full gap-2"
+                  onClick={() => setSubmitStatus("published")}
+                >
+                  <Save className="h-4 w-4" />
+                  {isEditMode ? "Save Changes" : "Create Assessment"}
+                </Button>
+
+                <Button
+                  type="submit"
                   variant="outline"
                   className="w-full"
-                  onClick={() => toast.info('Saved as draft')}
+                  onClick={() => {
+                    setSubmitStatus("draft");
+                    toast.info("Saved as draft");
+                  }}
                 >
                   Save as Draft
                 </Button>
+
+
               </CardContent>
             </Card>
           </div>

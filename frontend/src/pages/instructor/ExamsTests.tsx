@@ -33,6 +33,7 @@ import {
 
 import { assessmentService } from '@/services/assessmentService';
 import { courseService } from '@/services/courseService';
+import AssessmentPreview from '@/components/AssessmentPreview';
 
 export default function ExamsTests() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,6 +43,11 @@ export default function ExamsTests() {
   const [examsTests, setExamsTests] = useState<any[]>([]);
   const [courseMap, setCourseMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAssessment, setPreviewAssessment] = useState(null);
+  const [previewQuestions, setPreviewQuestions] = useState([]);
+
 
   // Load courses
   useEffect(() => {
@@ -93,7 +99,7 @@ export default function ExamsTests() {
 
   const filteredExams = examsTests.filter((exam) => {
     const matchesSearch = exam.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         exam.course.toLowerCase().includes(searchQuery.toLowerCase());
+      exam.course.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = filterType === 'all' || exam.type === filterType;
     const matchesStatus = filterStatus === 'all' || exam.status === filterStatus;
     return matchesSearch && matchesType && matchesStatus;
@@ -181,7 +187,7 @@ export default function ExamsTests() {
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="published">Scheduled</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
@@ -232,11 +238,43 @@ export default function ExamsTests() {
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link to={`/instructor/exam/${exam.id}`}>
-                              <Eye className="h-4 w-4" />
-                            </Link>
+                          <Button
+                            variant="ghost"
+                            onClick={async () => {
+                              try {
+                                const data = await assessmentService.getAssessmentDetail(exam.id);
+
+                                setPreviewAssessment({
+                                  title: data.title,
+                                  type: data.type,
+                                  description: data.description,
+                                  course: data.course_id,
+                                  module: data.module_id,
+                                  dueDate: data.due_date?.split("T")[0],
+                                  dueTime: data.due_date
+                                    ? new Date(data.due_date).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
+                                    : "",
+                                  timeLimit: data.time_limit,
+                                  attempts: data.attempts,
+                                  passingScore: data.passing_score,
+                                  shuffleQuestions: data.shuffle_questions,
+                                  showAnswers: data.show_answers,
+                                });
+
+                                setPreviewQuestions(data.questions || []);
+
+                                setPreviewOpen(true);
+                              } catch (error) {
+                                console.error("Failed to load assessment", error);
+                              }
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
                           </Button>
+
 
                           <Button size="sm" variant="ghost" asChild>
                             <Link to={`/instructor/exam/${exam.id}/edit`}>
@@ -254,6 +292,14 @@ export default function ExamsTests() {
           </CardContent>
         </Card>
       </div>
+
+      <AssessmentPreview
+  isOpen={previewOpen}
+  onClose={() => setPreviewOpen(false)}
+  assessmentData={previewAssessment}
+  questions={previewQuestions}
+/>
+
     </InstructorLayout>
   );
 }
