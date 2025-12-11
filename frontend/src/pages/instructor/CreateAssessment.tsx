@@ -25,10 +25,12 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import AssessmentPreview from '@/components/AssessmentPreview';
 import { courseService } from "@/services/courseService";
-import { assessmentService, AssessmentCreate, QuestionCreate } from '@/services/assessmentService';
+import { assessmentService, AssessmentMetadata, QuestionCreate } from '@/services/assessmentService';
+import { questionService, QuestionUpdate } from '@/services/questionsService';
+
 
 interface Question {
-  id: number;
+  id?: number;
   type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'coding' | 'file-upload' | 'matching' | 'ordering';
   question_text: string;
   points: number;
@@ -39,6 +41,7 @@ interface Question {
   reference_file?: File | null;
   matching_pairs?: { left: string; right: string }[];
   correct_order?: string[];
+  tempId?: number; // for new questions without an ID
 }
 
 function convertTo24Hour(time12h: string) {
@@ -110,6 +113,8 @@ export default function CreateAssessment() {
 
   const [showPreview, setShowPreview] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'published' | 'draft'>('published');
+  const [deletedQuestionIds, setDeletedQuestionIds] = useState<number[]>([]);
+
 
 
 
@@ -125,7 +130,7 @@ export default function CreateAssessment() {
 
   const addQuestion = () => {
     const newQuestion: Question = {
-      id: questions.length + 1,
+      tempId: Date.now(), // Temporary ID for React key
       type: 'multiple-choice',
       question_text: '',
       points: 1,
@@ -208,11 +213,11 @@ export default function CreateAssessment() {
     }));
   };
 
-  const removeQuestion = (id: number) => {
-    if (questions.length > 1) {
-      setQuestions(questions.filter(q => q.id !== id));
-    }
+  const removeQuestion = (id?: number, tempId?: number) => {
+    setQuestions(questions.filter(q => q.id !== id && q.tempId !== tempId));
+    if (id) setDeletedQuestionIds([...deletedQuestionIds, id]);
   };
+
 
   const updateQuestion = (id: number, updates: Partial<Question>) => {
     setQuestions(questions.map(q => q.id === id ? { ...q, ...updates } : q));
@@ -255,6 +260,36 @@ export default function CreateAssessment() {
         const data = await assessmentService.getAssessmentDetail(examId);
         console.log("Fetched assessment data:", data);
 
+        let dueDate = "";
+        let dueTime = "";
+
+        if (data.due_date && typeof data.due_date === "string") {
+
+          console.log("due_date RAW VALUE:", data.due_date);
+
+          let datePart = "";
+          let timePart = "";
+
+          if (data.due_date.includes("T")) {
+            // ISO format: 2025-12-12T08:40:00
+            [datePart, timePart] = data.due_date.split("T");
+          } else if (data.due_date.includes(" ")) {
+            // MySQL format: 2025-12-15 16:06:00.000000
+            const parts = data.due_date.split(" ");
+            datePart = parts[0];
+            timePart = parts[1];
+          } else {
+            console.warn("Unknown date format:", data.due_date);
+          }
+
+          if (timePart) {
+            // Remove milliseconds if present
+            const cleanTime = timePart.split(".")[0].slice(0, 5); // HH:MM
+            dueTime = convertTo12Hour(cleanTime);
+          }
+
+          dueDate = datePart;
+        }
 
         // 1. Fill main assessment details
         setAssessmentData({
@@ -263,8 +298,8 @@ export default function CreateAssessment() {
           description: data.description,
           course: data.course_id,
           module: data.module_id || '',
-          dueDate: data.due_date?.split(" ")[0] || '',
-          dueTime: data.due_date ? convertTo12Hour(data.due_date.split(" ")[1]) : '',
+          dueDate,
+          dueTime,
           timeLimit: data.time_limit ? String(data.time_limit) : '',
           attempts: String(data.attempts),
           passingScore: String(data.passing_score),
@@ -274,8 +309,9 @@ export default function CreateAssessment() {
         });
 
         // 2. Fill questions
-        const formattedQuestions = data.questions.map((q: any, index: number) => ({
-          id: index + 1,
+        const formattedQuestions = await questionService.listQuestions(examId);
+        const mappedQuestions = formattedQuestions.map((q, index) => ({
+          id: Number(q.id),
           type: q.type,
           question_text: q.question_text,
           points: q.points,
@@ -287,10 +323,8 @@ export default function CreateAssessment() {
           matching_pairs: q.matching_pairs || [],
           correct_order: q.correct_order || []
         }));
+        setQuestions(mappedQuestions);
 
-        console.log("Formatted questions:", formattedQuestions);
-
-        setQuestions(formattedQuestions);
 
       } catch (err: any) {
         console.error(err);
@@ -308,7 +342,8 @@ export default function CreateAssessment() {
     const time24 = convertTo24Hour(assessmentData.dueTime);
     const dueDateString = `${assessmentData.dueDate} ${time24}:00`;
 
-    const payload: AssessmentCreate = {
+    // 1. Prepare assessment metadata payload (no questions field)
+    const payload: AssessmentMetadata = {
       title: assessmentData.title,
       type: assessmentData.type as any,
       description: assessmentData.description,
@@ -321,25 +356,71 @@ export default function CreateAssessment() {
       shuffle_questions: assessmentData.shuffleQuestions,
       show_answers: assessmentData.showAnswers,
       status: submitStatus,
-      questions: questions.map(q => ({
-        type: q.type,
-        question_text: q.question_text,
-        points: q.points,
-        options: q.options,
-        correct_answer: q.correct_answer,
-        model_answer: q.model_answer,
-        test_cases: q.test_cases,
-        matching_pairs: q.matching_pairs,
-        correct_order: q.correct_order,
-      }))
     };
 
     try {
+      let assessmentId: string;
+
       if (isEditMode) {
-        await assessmentService.assessmentUpdate(examId, payload);
-        toast.success("Assessment updated successfully!");
+        // 1️⃣ Update assessment metadata
+        const updatedAssessment = await assessmentService.assessmentUpdate(examId, payload);
+        assessmentId = updatedAssessment.id;
+
+        // 2️⃣ Delete removed questions
+        for (const delId of deletedQuestionIds) {
+          await questionService.deleteQuestion(String(delId));
+        }
+
+        // 3️⃣ Update existing & create new questions
+        for (const q of questions) {
+          if (q.id) {
+            await questionService.updateQuestion(String(q.id), {
+              type: q.type,
+              question_text: q.question_text,
+              points: q.points,
+              options: q.options,
+              correct_answer: q.correct_answer,
+              model_answer: q.model_answer,
+              test_cases: q.test_cases,
+              matching_pairs: q.matching_pairs,
+              correct_order: q.correct_order,
+            });
+          } else {
+            await questionService.createQuestion(assessmentId, {
+              type: q.type,
+              question_text: q.question_text,
+              points: q.points,
+              options: q.options,
+              correct_answer: q.correct_answer,
+              model_answer: q.model_answer,
+              test_cases: q.test_cases,
+              matching_pairs: q.matching_pairs,
+              correct_order: q.correct_order,
+            });
+          }
+        }
+
+
       } else {
-        await assessmentService.createAssessment(payload);
+        // Create assessment metadata first (no questions)
+        const createdAssessment = await assessmentService.createAssessment(payload);
+        assessmentId = createdAssessment.id;
+
+        // Then create questions one by one for the new assessment
+        for (const q of questions) {
+          await questionService.createQuestion(assessmentId, {
+            type: q.type,
+            question_text: q.question_text,
+            points: q.points,
+            options: q.options,
+            correct_answer: q.correct_answer,
+            model_answer: q.model_answer,
+            test_cases: q.test_cases,
+            matching_pairs: q.matching_pairs,
+            correct_order: q.correct_order,
+          });
+        }
+
         toast.success(
           submitStatus === "draft"
             ? "Draft saved successfully!"
@@ -348,11 +429,14 @@ export default function CreateAssessment() {
       }
 
       navigate('/instructor/exams');
-
     } catch (err: any) {
       toast.error(err.message || "Something went wrong");
     }
   };
+
+
+
+
 
 
   const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
@@ -495,7 +579,7 @@ export default function CreateAssessment() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {questions.map((question, index) => (
-                  <div key={question.id} className="space-y-4 p-4 border rounded-lg">
+                  <div key={question.id || question.tempId} className="space-y-4 p-4 border rounded-lg">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 space-y-4">
                         <div className="flex items-center gap-4">
@@ -716,7 +800,7 @@ export default function CreateAssessment() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => removeQuestion(question.id)}
+                        onClick={() => removeQuestion(question.id, question.tempId)}
                         disabled={questions.length === 1}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />

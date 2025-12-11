@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import Base, engine
 from routers.assigments import router as assignment_router
 from routers.assessments import router as assessment_router
+from routers import questions as questions_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,3 +25,4 @@ app.add_middleware(
 
 app.include_router(assignment_router)
 app.include_router(assessment_router)
+app.include_router(questions_router.router)

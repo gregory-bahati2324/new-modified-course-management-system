@@ -2,12 +2,24 @@ from sqlalchemy.orm import Session
 from models.assessments import Assessment, Question
 from schemas.assessments import AssessmentCreate
 
+# crud/assessments.py
+from sqlalchemy.orm import Session
+from models.assessments import Assessment
+from schemas.assessments import AssessmentCreate
+from datetime import datetime
+
 def create_assessment(db: Session, data: AssessmentCreate, instructor_id: str):
+
+    # Normalize due_date input
     due_date = data.due_date
     if isinstance(due_date, str):
-        from datetime import datetime
-        # Parse "YYYY-MM-DD HH:MM:SS"
-        due_date = datetime.strptime(due_date, "%Y-%m-%d %H:%M:%S")
+        try:
+            due_date = datetime.strptime(due_date, "%Y-%m-%d %H:%M:%S")
+        except:
+            # Accept browser ISO format: 2025-12-12T08:40:00
+            due_date = datetime.fromisoformat(due_date)
+
+    # Create assessment only (questions handled separately)
     assessment = Assessment(
         title=data.title,
         type=data.type,
@@ -23,29 +35,13 @@ def create_assessment(db: Session, data: AssessmentCreate, instructor_id: str):
         status=data.status,
         instructor_id=instructor_id
     )
+
     db.add(assessment)
     db.commit()
     db.refresh(assessment)
 
-    # create questions if any
-    for q in data.questions or []:
-        question = Question(
-            assessment_id=assessment.id,
-            type=q.type,
-            question_text=q.question_text,
-            points=q.points or 1,
-            options=q.options,
-            correct_answer=q.correct_answer,
-            model_answer=q.model_answer,
-            test_cases=q.test_cases,
-            reference_file=q.reference_file,
-            matching_pairs=q.matching_pairs,
-            correct_order=q.correct_order
-        )
-        db.add(question)
-    db.commit()
-    db.refresh(assessment)
     return assessment
+
 
 def get_assessments_for_instructor(db: Session, instructor_id: str):
     return db.query(Assessment).filter(Assessment.instructor_id == instructor_id).all()
@@ -56,13 +52,23 @@ def get_assessment(db: Session, assessment_id: int, instructor_id: str):
         Assessment.instructor_id == instructor_id
     ).first()
 
-def update_assessment(db: Session, assessment_id: int, instructor_id: str, data: dict):
+# crud/assessments.py (excerpt)
+def update_assessment(db: Session, assessment_id: int, instructor_id: str, data):
     assessment = get_assessment(db, assessment_id, instructor_id)
     if not assessment:
         return None
-    for key, value in data.items():
-        if value is not None:
+
+    # data may be a pydantic model or dict — ensure we get a dict
+    update_data = data.dict(exclude_unset=True) if hasattr(data, "dict") else dict(data)
+
+    # DO NOT set questions directly (they should be managed via question CRUD)
+    update_data.pop("questions", None)
+
+    for key, value in update_data.items():
+        if hasattr(assessment, key) and value is not None:
             setattr(assessment, key, value)
+
     db.commit()
     db.refresh(assessment)
     return assessment
+

@@ -1,3 +1,4 @@
+# schemas/assessments.py
 from pydantic import BaseModel
 from typing import List, Optional, Union
 from datetime import datetime
@@ -13,6 +14,10 @@ class QuestionCreate(BaseModel):
     reference_file: Optional[str] = None
     matching_pairs: Optional[List[dict]] = None
     correct_order: Optional[List[str]] = None
+
+class QuestionUpdate(QuestionCreate):
+    # optional id for existing questions
+    id: Optional[int] = None
 
 class AssessmentCreate(BaseModel):
     title: str

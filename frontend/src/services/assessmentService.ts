@@ -2,6 +2,7 @@
 import { apiAssessmentClient, handleApiError } from './assessmentsapi';
 import { API_ENDPOINTS } from '@/config/api.config';
 
+// Only define question structure for typing purposes; not sent directly in assessment CRUD
 export interface QuestionCreate {
   type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'coding' | 'file-upload' | 'matching' | 'ordering';
   question_text: string;
@@ -15,20 +16,20 @@ export interface QuestionCreate {
   correct_order?: string[];
 }
 
-export interface AssessmentCreate {
+// New type: assessment metadata only (omit questions)
+export interface AssessmentMetadata {
   title: string;
   type: 'quiz' | 'exam' | 'test' | 'midterm' | 'final';
   description?: string;
   course_id: string;
   module_id?: string | null;
-  due_date?: string;    // ISO
+  due_date?: string;    // ISO string
   time_limit?: number | null;
   attempts?: string;
   passing_score?: number;
   shuffle_questions?: boolean;
   show_answers?: boolean;
   status?: 'draft' | 'published' | 'closed';
-  questions: QuestionCreate[];
 }
 
 export interface Assessment {
@@ -40,9 +41,8 @@ export interface Assessment {
   module_id?: string | null;
   instructor_id: string;
 
-  // Date + Time
-  due_date?: string | null;   // "2025-01-20"
-  due_time?: string | null;   // "14:30:00"
+  due_date?: string | null;
+  due_time?: string | null;
 
   time_limit?: number | null;
   attempts?: string;
@@ -51,23 +51,21 @@ export interface Assessment {
   show_answers?: boolean;
   status: string;
 
-  questions: QuestionCreate[];  // include questions
+  questions: QuestionCreate[];  // fetched separately
 
   created_at: string;
   updated_at: string;
 }
 
-
 class AssessmentService {
-  async createAssessment(data: AssessmentCreate): Promise<Assessment> {
+  // Create assessment (metadata only)
+  async createAssessment(data: AssessmentMetadata): Promise<Assessment> {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await apiAssessmentClient.post<Assessment>(
         API_ENDPOINTS.assessments.create,
-        data,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        data,  // no questions here
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       return response.data;
     } catch (error) {
@@ -80,9 +78,7 @@ class AssessmentService {
       const token = localStorage.getItem('accessToken');
       const response = await apiAssessmentClient.get<Assessment[]>(
         API_ENDPOINTS.assessments.list,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       return response.data;
     } catch (error) {
@@ -95,24 +91,22 @@ class AssessmentService {
       const token = localStorage.getItem('accessToken');
       const response = await apiAssessmentClient.get<Assessment>(
         API_ENDPOINTS.assessments.detail(id),
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       return response.data;
     } catch (error) {
       throw new Error(handleApiError(error));
     }
   }
-  async assessmentUpdate(id: string, data: AssessmentCreate): Promise<Assessment> {
+
+  // Update assessment (metadata only)
+  async assessmentUpdate(id: string, data: AssessmentMetadata): Promise<Assessment> {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await apiAssessmentClient.put<Assessment>(
         API_ENDPOINTS.assessments.update(id),
-        data,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        data,  // no questions here
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       return response.data;
     } catch (error) {

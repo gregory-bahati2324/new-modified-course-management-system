@@ -46,7 +46,10 @@ def update_assessment_route(
     token_data = Depends(get_current_instructor)
 ):
     instructor_id = token_data.sub
-    assessment = update_assessment(db, assessment_id, instructor_id, data.dict())
+    assessment = update_assessment(db, assessment_id, instructor_id, data)
+
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
+
     return assessment
+

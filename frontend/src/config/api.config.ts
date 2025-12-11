@@ -94,10 +94,20 @@ export const API_ENDPOINTS = {
     create: '/assessments',
     update: (id: string) => `/assessments/${id}`,
     delete: (id: string) => `/assessments/${id}`,
+    // remove questions from these endpoints — questions handled separately
     submit: (id: string) => `/assessments/${id}/submit`,
     submissions: (id: string) => `/assessments/${id}/submissions`,
     grade: (id: string, submissionId: string) => `assessments/${id}/submissions/${submissionId}/grade`,
   },
+  // Add a new “questions” group for question-related endpoints
+  questions: {
+    list: (assessmentId: string) => `/questions/assessments/${assessmentId}`,
+    create: (assessmentId: string) => `/questions/assessments/${assessmentId}`,
+    update: (questionId: string) => `/questions/${questionId}`,
+    delete: (questionId: string) => `/questions/${questionId}`,
+    sync: (assessmentId: string) => `/questions/assessments/${assessmentId}/sync`,
+  },
+
 
   // Grade endpoints - maps to FastAPI /api/grades/*
   grades: {

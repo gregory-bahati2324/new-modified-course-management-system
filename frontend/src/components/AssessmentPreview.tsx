@@ -18,7 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 
 interface Question {
-  id: number;
+  id?: number;
   type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'coding' | 'file-upload' | 'matching' | 'ordering';
   question_text: string;
   points: number;
