@@ -3,6 +3,10 @@ from sqlalchemy.orm import Session
 from models.assessments import Question, Assessment
 from schemas.assessments import QuestionCreate, QuestionUpdate
 from typing import List, Dict, Any
+from sqlalchemy.sql import func
+import os
+from fastapi import HTTPException
+from datetime import datetime
 
 def create_question(db: Session, assessment_id: int, q: QuestionCreate) -> Question:
     question = Question(
@@ -124,3 +128,46 @@ def sync_questions_for_assessment(db: Session, assessment_id: int, questions: Li
     # refresh results
     final = db.query(Question).filter(Question.assessment_id == assessment_id).all()
     return final
+
+
+UPLOAD_DIR = "uploads/questions"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+def upload_question_file(db: Session, question_id: int, file) -> Question:
+    question = db.query(Question).filter(Question.id == question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+
+    if question.reference_file and os.path.exists(question.reference_file):
+        os.remove(question.reference_file)
+
+    # Use Python datetime for filename
+    file_ext = os.path.splitext(file.filename)[1]
+    timestamp = int(datetime.utcnow().timestamp())
+    filename = f"question_{question_id}_{timestamp}{file_ext}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    with open(file_path, "wb") as f:
+        f.write(file.file.read())
+
+    question.reference_file = file_path
+    db.commit()
+    db.refresh(question)
+    return question
+
+def delete_question_file(db: Session, question_id: int) -> bool:
+    """
+    Delete the file associated with a question.
+    """
+    question = db.query(Question).filter(Question.id == question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+
+    if question.reference_file and os.path.exists(question.reference_file):
+        os.remove(question.reference_file)
+        question.reference_file = None
+        db.commit()
+        db.refresh(question)
+        return True
+
+    return False

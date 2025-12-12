@@ -38,7 +38,8 @@ interface Question {
   correct_answer?: number | string | string[];
   model_answer?: string;
   test_cases?: { input: string; expectedOutput: string }[];
-  reference_file?: File | null;
+  reference_file?: File | null;       // for new upload
+  reference_file_url?: string | null; // for already uploaded file
   matching_pairs?: { left: string; right: string }[];
   correct_order?: string[];
   tempId?: number; // for new questions without an ID
@@ -214,9 +215,21 @@ export default function CreateAssessment() {
   };
 
   const removeQuestion = (id?: number, tempId?: number) => {
-    setQuestions(questions.filter(q => q.id !== id && q.tempId !== tempId));
-    if (id) setDeletedQuestionIds([...deletedQuestionIds, id]);
+    // Remove question from frontend state immediately
+    setQuestions(prev => prev.filter(q => {
+      if (id !== undefined) return q.id !== id;       // Existing question
+      if (tempId !== undefined) return q.tempId !== tempId; // New question
+      return true;
+    }));
+
+    // Only track deleted IDs for existing questions
+    if (id !== undefined) {
+      setDeletedQuestionIds(prev => [...prev, id]);
+    }
   };
+
+
+
 
 
   const updateQuestion = (id: number, updates: Partial<Question>) => {
@@ -233,6 +246,23 @@ export default function CreateAssessment() {
       return q;
     }));
   };
+
+  const uploadFileForQuestion = async (question: Question, assessmentId: string) => {
+    if (!question.reference_file || !question.id) return null; // only for existing questions
+
+    try {
+      const uploaded = await questionService.uploadQuestionFile(
+        String(question.id),
+        question.reference_file
+      );
+      toast.success(`File uploaded for question ${question.id}`);
+      return uploaded;
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload file");
+      return null;
+    }
+  };
+
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -368,13 +398,26 @@ export default function CreateAssessment() {
 
         // 2️⃣ Delete removed questions
         for (const delId of deletedQuestionIds) {
-          await questionService.deleteQuestion(String(delId));
+          try {
+            // Delete uploaded file if exists
+            await questionService.deleteQuestionFile(String(delId));
+          } catch (err) {
+            console.warn(`Failed to delete file for question ${delId}`, err);
+          }
+
+          try {
+            // Delete question itself
+            await questionService.deleteQuestion(String(delId));
+          } catch (err) {
+            console.warn(`Failed to delete question ${delId}`, err);
+          }
         }
 
         // 3️⃣ Update existing & create new questions
         for (const q of questions) {
+          let createdOrUpdatedQuestion;
           if (q.id) {
-            await questionService.updateQuestion(String(q.id), {
+            createdOrUpdatedQuestion = await questionService.updateQuestion(String(q.id), {
               type: q.type,
               question_text: q.question_text,
               points: q.points,
@@ -386,7 +429,7 @@ export default function CreateAssessment() {
               correct_order: q.correct_order,
             });
           } else {
-            await questionService.createQuestion(assessmentId, {
+            createdOrUpdatedQuestion = await questionService.createQuestion(assessmentId, {
               type: q.type,
               question_text: q.question_text,
               points: q.points,
@@ -397,8 +440,16 @@ export default function CreateAssessment() {
               matching_pairs: q.matching_pairs,
               correct_order: q.correct_order,
             });
+            // For newly created question, set the returned id
+            q.id = Number(createdOrUpdatedQuestion.id);
+          }
+
+          // Upload file if it exists
+          if (q.reference_file) {
+            await uploadFileForQuestion(q, assessmentId);
           }
         }
+
 
 
       } else {
@@ -579,7 +630,7 @@ export default function CreateAssessment() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {questions.map((question, index) => (
-                  <div key={question.id || question.tempId} className="space-y-4 p-4 border rounded-lg">
+                  <div key={question.id ? `db-${question.id}` : `new-${question.tempId}`} className="space-y-4 p-4 border rounded-lg">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 space-y-4">
                         <div className="flex items-center gap-4">
@@ -727,9 +778,13 @@ export default function CreateAssessment() {
                             <Label>Reference/Sample Solution (Optional)</Label>
                             <Input
                               type="file"
-                              onChange={(e) => updateQuestion(question.id, { reference_file: e.target.files?.[0] || null })}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0] || null;
+                                updateQuestion(question.id, { reference_file: file });
+                              }}
                               className="cursor-pointer"
                             />
+
                             <p className="text-xs text-muted-foreground">
                               Upload a reference file or sample solution for comparison
                             </p>

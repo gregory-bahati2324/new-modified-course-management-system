@@ -56,6 +56,25 @@ class CourseService {
     }
   }
 
+  async getCourseNameById(courseId: string): Promise<string> {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const response = await apiCourseClient.get<Course>(
+        API_ENDPOINTS.courses.getCourse(courseId),
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data.title;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
   async getMyCourses(params?: {
     college?: string;
     department?: string;

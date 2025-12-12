@@ -56,7 +56,7 @@ def list_my_filtered_courses(
     return [schemas.CourseOut.from_orm(c) for c in courses]
 
 
-@router.get("/{course_id}", response_model=schemas.CourseOut)
+@router.get("/{course_id}/detail", response_model=schemas.CourseOut)
 def get_course(course_id: str, db: Session = Depends(database.get_db)):
     c = crud.get_course(db, course_id)
     if not c:

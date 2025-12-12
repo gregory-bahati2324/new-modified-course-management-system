@@ -45,6 +45,7 @@ export const API_ENDPOINTS = {
     getMycourse: (category: string, department: string, level: string, type: string) => `/api/courses/${category}/${department}/${level}/${type}`,
     detail: (id: string) => `/api/courses/${id}`,
     create: '/api/courses',
+    getCourse: (id: string) => `/api/courses/${id}/detail`,
     update: (id: string) => `/api/courses/${id}`,
     delete: (id: string) => `/api/courses/${id}`,
     enroll: (id: string) => `/api/courses/${id}/enroll`,
@@ -106,6 +107,8 @@ export const API_ENDPOINTS = {
     update: (questionId: string) => `/questions/${questionId}`,
     delete: (questionId: string) => `/questions/${questionId}`,
     sync: (assessmentId: string) => `/questions/assessments/${assessmentId}/sync`,
+    uploadFile: (questionId: string) => `/questions/${questionId}/upload`,
+    deleteFile: (questionId: string) => `/questions/${questionId}/delete`,
   },
 
 

@@ -99,6 +99,46 @@ class QuestionService {
       throw new Error(handleApiError(error));
     }
   }
+
+  // Upload a file for a question
+  async uploadQuestionFile(questionId: string, file: File): Promise<QuestionResponse> {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await apiAssessmentClient.post<QuestionResponse>(
+        API_ENDPOINTS.questions.uploadFile(questionId),
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  } 
+  // Delete a file associated with a question
+  async deleteQuestionFile(questionId: string): Promise<{ ok: boolean }> {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await apiAssessmentClient.delete<{ ok: boolean }>(
+        API_ENDPOINTS.questions.deleteFile(questionId),
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  } 
 }
 
 export const questionService = new QuestionService();

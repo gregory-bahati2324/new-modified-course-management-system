@@ -51,35 +51,33 @@ export default function ExamsTests() {
 
   // Load courses
   useEffect(() => {
-    const loadCourses = async () => {
+    const loadData = async () => {
       try {
-        const { courses } = await courseService.getCourses();
-        const map: Record<string, string> = {};
-        courses.forEach((c) => (map[c.id] = c.title));
-        setCourseMap(map);
-      } catch (error) {
-        console.error("Failed to load courses", error);
-      }
-    };
-    loadCourses();
-  }, []);
+         // 1️⃣ Load courses and create local map
+        const coursesResponse = await courseService.getCourses();
+        const courseMapping: Record<string, string> = {};
+        coursesResponse.courses.forEach((course) => {
+          courseMapping[course.id] = course.title;
+        });
+        setCourseMap(courseMapping);
 
-  // Load assessments
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
+        // 2️⃣ Load assessments
         const assessments = await assessmentService.getAssessments();
 
+        // 3️⃣ Map assessments using local map (100% ready)
         const mapped = assessments.map((a: any) => ({
           id: a.id,
           title: a.title,
-          course: courseMap[a.course_id] || a.course_id,
+          course: courseMapping[a.course_id] || 'Unknown Course',
           type: a.type,
           duration: a.time_limit ? `${a.time_limit} min` : "N/A",
           totalMarks: a.passing_score || 0,
           date: a.due_date ? a.due_date.split("T")[0] : "—",
           time: a.due_date
-            ? new Date(a.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            ? new Date(a.due_date).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
             : "",
           students: 0,
           status: a.status,
@@ -88,14 +86,15 @@ export default function ExamsTests() {
 
         setExamsTests(mapped);
       } catch (error) {
-        console.error("Failed to fetch assessments:", error);
+        console.error("Failed loading data", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [courseMap]);
+    loadData();
+  }, []);
+
 
   const filteredExams = examsTests.filter((exam) => {
     const matchesSearch = exam.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -294,11 +293,11 @@ export default function ExamsTests() {
       </div>
 
       <AssessmentPreview
-  isOpen={previewOpen}
-  onClose={() => setPreviewOpen(false)}
-  assessmentData={previewAssessment}
-  questions={previewQuestions}
-/>
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        assessmentData={previewAssessment}
+        questions={previewQuestions}
+      />
 
     </InstructorLayout>
   );

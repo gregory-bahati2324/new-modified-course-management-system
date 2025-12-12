@@ -1,5 +1,5 @@
 # routers/questions.py
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, UploadFile, File
 from sqlalchemy.orm import Session
 from database import get_db
 from schemas.assessments import QuestionCreate, QuestionUpdate, QuestionResponse
@@ -66,3 +66,24 @@ def sync_questions_route(
 ):
     updated_list = questions_crud.sync_questions_for_assessment(db, assessment_id, questions)
     return updated_list
+
+
+@router.post("/{question_id}/upload", response_model=QuestionResponse)
+def upload_question_file_route(
+    question_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    token_data = Depends(get_current_instructor),
+):
+    return questions_crud.upload_question_file(db, question_id, file)
+
+@router.delete("/{question_id}/delete", response_model=dict)
+def delete_question_file_route(
+    question_id: int,
+    db: Session = Depends(get_db),
+    token_data = Depends(get_current_instructor),
+):
+    ok = questions_crud.delete_question_file(db, question_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="No file to delete")
+    return {"ok": True}
