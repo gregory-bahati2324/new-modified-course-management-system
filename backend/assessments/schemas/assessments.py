@@ -36,6 +36,8 @@ class AssessmentCreate(BaseModel):
 
 class QuestionResponse(QuestionCreate):
     id: int
+    reference_file: Optional[str] = None
+    reference_file_url: Optional[str] = None
 
     class Config:
         orm_mode = True

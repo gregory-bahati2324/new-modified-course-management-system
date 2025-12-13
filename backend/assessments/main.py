@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from database import Base, engine
 from routers.assigments import router as assignment_router
@@ -22,7 +23,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+app.mount("/static/questions", StaticFiles(directory="uploads/questions"), name="question_files")
 app.include_router(assignment_router)
 app.include_router(assessment_router)
 app.include_router(questions_router.router)

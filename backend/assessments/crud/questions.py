@@ -1,13 +1,45 @@
 # crud/questions.py
 from sqlalchemy.orm import Session
-from models.assessments import Question, Assessment
+from fastapi import UploadFile
+from models.assessments import Question
 from schemas.assessments import QuestionCreate, QuestionUpdate
 from typing import List, Dict, Any
-from sqlalchemy.sql import func
 import os
-from fastapi import HTTPException
-from datetime import datetime
+import shutil
+import time
 
+# ===============================
+# CONFIG
+# ===============================
+UPLOAD_DIR = "uploads/questions"
+BASE_FILE_URL = "/static/questions"
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# ===============================
+# HELPERS
+# ===============================
+def attach_file_url(question: Question) -> Question:
+    """
+    Attach public URL for reference file (not stored in DB)
+    """
+    if question.reference_file:
+        question.reference_file_url = f"{BASE_FILE_URL}/{question.reference_file}"
+    else:
+        question.reference_file_url = None
+    return question
+
+
+def delete_physical_file(filename: str | None):
+    if not filename:
+        return
+    path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(path):
+        os.remove(path)
+
+# ===============================
+# CRUD
+# ===============================
 def create_question(db: Session, assessment_id: int, q: QuestionCreate) -> Question:
     question = Question(
         assessment_id=assessment_id,
@@ -18,89 +50,132 @@ def create_question(db: Session, assessment_id: int, q: QuestionCreate) -> Quest
         correct_answer=q.correct_answer,
         model_answer=q.model_answer,
         test_cases=q.test_cases,
-        reference_file=q.reference_file,
+        reference_file=None,
         matching_pairs=q.matching_pairs,
-        correct_order=q.correct_order
+        correct_order=q.correct_order,
     )
     db.add(question)
     db.commit()
     db.refresh(question)
-    return question
+    return attach_file_url(question)
+
 
 def get_question(db: Session, question_id: int) -> Question | None:
-    return db.query(Question).filter(Question.id == question_id).first()
+    q = db.query(Question).filter(Question.id == question_id).first()
+    return attach_file_url(q) if q else None
+
+
+def list_questions_for_assessment(db: Session, assessment_id: int):
+    questions = db.query(Question).filter(
+        Question.assessment_id == assessment_id
+    ).all()
+    return [attach_file_url(q) for q in questions]
+
 
 def update_question(db: Session, question_id: int, qdata: Dict[str, Any]) -> Question | None:
-    question = get_question(db, question_id)
+    question = db.query(Question).filter(Question.id == question_id).first()
     if not question:
         return None
+
     for key, val in qdata.items():
-        # only set attributes that exist in model
         if hasattr(question, key) and val is not None:
             setattr(question, key, val)
+
     db.commit()
     db.refresh(question)
-    return question
+    return attach_file_url(question)
+
 
 def delete_question(db: Session, question_id: int) -> bool:
-    question = get_question(db, question_id)
+    """
+    Deletes BOTH:
+    - DB record
+    - Uploaded file (if exists)
+    """
+    question = db.query(Question).filter(Question.id == question_id).first()
     if not question:
         return False
+
+    delete_physical_file(question.reference_file)
+
     db.delete(question)
     db.commit()
     return True
 
-def list_questions_for_assessment(db: Session, assessment_id: int) -> List[Question]:
-    return db.query(Question).filter(Question.assessment_id == assessment_id).all()
 
-def sync_questions_for_assessment(db: Session, assessment_id: int, questions: List[QuestionUpdate]) -> List[Question]:
-    """
-    Synchronize questions for an assessment:
-     - If an item has id -> update that question
-     - If no id -> create new question
-     - Any existing DB questions not listed -> delete
-    Returns the resulting list of Question ORM objects.
-    """
-    # load existing
-    existing = db.query(Question).filter(Question.assessment_id == assessment_id).all()
-    existing_by_id = {q.id: q for q in existing}
+# ===============================
+# FILE UPLOAD
+# ===============================
+def upload_question_file(db: Session, question_id: int, file: UploadFile):
+    question = db.query(Question).filter(Question.id == question_id).first()
+    if not question:
+        return None
 
+    # Delete old file
+    delete_physical_file(question.reference_file)
+
+    ext = os.path.splitext(file.filename)[1]
+    filename = f"question_{question_id}_{int(time.time())}{ext}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    question.reference_file = filename
+    db.commit()
+    db.refresh(question)
+
+    return attach_file_url(question)
+
+
+def delete_question_file(db: Session, question_id: int) -> bool:
+    question = db.query(Question).filter(Question.id == question_id).first()
+    if not question or not question.reference_file:
+        return False
+
+    delete_physical_file(question.reference_file)
+
+    question.reference_file = None
+    db.commit()
+    db.refresh(question)
+
+    return True
+
+
+# ===============================
+# SYNC (SAFE)
+# ===============================
+def sync_questions_for_assessment(
+    db: Session,
+    assessment_id: int,
+    questions: List[QuestionUpdate]
+):
+    """
+    SAFE sync:
+    - Updates existing
+    - Creates new
+    - Deletes missing (and files)
+    """
+
+    existing = db.query(Question).filter(
+        Question.assessment_id == assessment_id
+    ).all()
+
+    existing_map = {q.id: q for q in existing}
     incoming_ids = set()
-    result = []
+    results = []
 
-    # process incoming: update or create
     for q in questions or []:
-        if getattr(q, "id", None):
+        if q.id and q.id in existing_map:
             incoming_ids.add(q.id)
-            qobj = existing_by_id.get(q.id)
-            if qobj:
-                # update fields
-                update_fields = q.dict(exclude_unset=True, exclude={"id"})
-                for k, v in update_fields.items():
-                    if hasattr(qobj, k):
-                        setattr(qobj, k, v)
-                result.append(qobj)
-            else:
-                # incoming referenced id not found -> ignore or create new
-                # here we create new without id
-                new_q = Question(
-                    assessment_id=assessment_id,
-                    type=q.type,
-                    question_text=q.question_text,
-                    points=q.points or 1,
-                    options=q.options,
-                    correct_answer=q.correct_answer,
-                    model_answer=q.model_answer,
-                    test_cases=q.test_cases,
-                    reference_file=q.reference_file,
-                    matching_pairs=q.matching_pairs,
-                    correct_order=q.correct_order
-                )
-                db.add(new_q)
-                db.flush()  # ensure id assigned
-                result.append(new_q)
+            obj = existing_map[q.id]
+
+            for k, v in q.dict(exclude_unset=True, exclude={"id"}).items():
+                setattr(obj, k, v)
+
+            results.append(obj)
+
         else:
-            # new question
             new_q = Question(
                 assessment_id=assessment_id,
                 type=q.type,
@@ -110,64 +185,24 @@ def sync_questions_for_assessment(db: Session, assessment_id: int, questions: Li
                 correct_answer=q.correct_answer,
                 model_answer=q.model_answer,
                 test_cases=q.test_cases,
-                reference_file=q.reference_file,
+                reference_file=None,
                 matching_pairs=q.matching_pairs,
-                correct_order=q.correct_order
+                correct_order=q.correct_order,
             )
             db.add(new_q)
             db.flush()
-            result.append(new_q)
+            results.append(new_q)
 
-    # delete DB questions that were not present in incoming list
-    to_delete = [q for q in existing if q.id not in incoming_ids]
-    for q in to_delete:
-        db.delete(q)
+    # Delete removed questions + files
+    for q in existing:
+        if q.id not in incoming_ids:
+            delete_physical_file(q.reference_file)
+            db.delete(q)
 
     db.commit()
 
-    # refresh results
-    final = db.query(Question).filter(Question.assessment_id == assessment_id).all()
-    return final
+    final = db.query(Question).filter(
+        Question.assessment_id == assessment_id
+    ).all()
 
-
-UPLOAD_DIR = "uploads/questions"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-def upload_question_file(db: Session, question_id: int, file) -> Question:
-    question = db.query(Question).filter(Question.id == question_id).first()
-    if not question:
-        raise HTTPException(status_code=404, detail="Question not found")
-
-    if question.reference_file and os.path.exists(question.reference_file):
-        os.remove(question.reference_file)
-
-    # Use Python datetime for filename
-    file_ext = os.path.splitext(file.filename)[1]
-    timestamp = int(datetime.utcnow().timestamp())
-    filename = f"question_{question_id}_{timestamp}{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-
-    with open(file_path, "wb") as f:
-        f.write(file.file.read())
-
-    question.reference_file = file_path
-    db.commit()
-    db.refresh(question)
-    return question
-
-def delete_question_file(db: Session, question_id: int) -> bool:
-    """
-    Delete the file associated with a question.
-    """
-    question = db.query(Question).filter(Question.id == question_id).first()
-    if not question:
-        raise HTTPException(status_code=404, detail="Question not found")
-
-    if question.reference_file and os.path.exists(question.reference_file):
-        os.remove(question.reference_file)
-        question.reference_file = None
-        db.commit()
-        db.refresh(question)
-        return True
-
-    return False
+    return [attach_file_url(q) for q in final]

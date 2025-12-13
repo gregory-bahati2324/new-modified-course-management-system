@@ -247,21 +247,34 @@ export default function CreateAssessment() {
     }));
   };
 
-  const uploadFileForQuestion = async (question: Question, assessmentId: string) => {
-    if (!question.reference_file || !question.id) return null; // only for existing questions
+  const uploadFileForQuestion = async (question: Question) => {
+    if (!question.reference_file || !question.id) return;
 
     try {
-      const uploaded = await questionService.uploadQuestionFile(
+      const updatedQuestion = await questionService.uploadQuestionFile(
         String(question.id),
         question.reference_file
       );
-      toast.success(`File uploaded for question ${question.id}`);
-      return uploaded;
+
+      // ✅ Update URL after upload
+      setQuestions(prev =>
+        prev.map(q =>
+          q.id === question.id
+            ? {
+              ...q,
+              reference_file: null,
+              reference_file_url: updatedQuestion.reference_file_url
+            }
+            : q
+        )
+      );
+
+      toast.success("File uploaded successfully");
     } catch (err: any) {
       toast.error(err.message || "Failed to upload file");
-      return null;
     }
   };
+
 
 
   useEffect(() => {
@@ -350,6 +363,7 @@ export default function CreateAssessment() {
           model_answer: q.model_answer,
           test_cases: q.test_cases || [],
           reference_file: null,
+          reference_file_url: q.reference_file_url || null,
           matching_pairs: q.matching_pairs || [],
           correct_order: q.correct_order || []
         }));
@@ -446,7 +460,7 @@ export default function CreateAssessment() {
 
           // Upload file if it exists
           if (q.reference_file) {
-            await uploadFileForQuestion(q, assessmentId);
+            await uploadFileForQuestion(q);
           }
         }
 
@@ -776,11 +790,26 @@ export default function CreateAssessment() {
                         {question.type === 'file-upload' && (
                           <div className="space-y-2">
                             <Label>Reference/Sample Solution (Optional)</Label>
+
+                            {question.reference_file_url && !question.reference_file && (
+                              <p className="text-sm text-muted-foreground">
+                                Previously uploaded:{" "}
+                                <a
+                                  href={question.reference_file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 underline"
+                                >
+                                  View File
+                                </a>
+                              </p>
+                            )}
+
                             <Input
                               type="file"
                               onChange={(e) => {
                                 const file = e.target.files?.[0] || null;
-                                updateQuestion(question.id, { reference_file: file });
+                                updateQuestion(question.id, { reference_file: file, reference_file_url: null });
                               }}
                               className="cursor-pointer"
                             />
@@ -790,6 +819,7 @@ export default function CreateAssessment() {
                             </p>
                           </div>
                         )}
+
 
                         {question.type === 'matching' && (
                           <div className="space-y-2">

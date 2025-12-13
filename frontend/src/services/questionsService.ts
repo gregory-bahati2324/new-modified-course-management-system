@@ -11,6 +11,7 @@ export interface QuestionCreate {
   model_answer?: string;
   test_cases?: { input: string; expectedOutput: string }[];
   reference_file?: string;
+  reference_file_url?: string;
   matching_pairs?: { left: string; right: string }[];
   correct_order?: string[];
 }
