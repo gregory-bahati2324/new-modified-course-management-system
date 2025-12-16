@@ -1,15 +1,17 @@
-import { 
-  BookOpen, 
-  Calendar, 
-  Trophy, 
-  Clock, 
-  TrendingUp, 
+import {
+  BookOpen,
+  Calendar,
+  Trophy,
+  Clock,
+  TrendingUp,
   Bell,
   PlayCircle,
   CheckCircle2,
   FileText,
   Users
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { authService, UserProfile } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -17,7 +19,10 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function Dashboard() {
-  const user = {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const user_mock = {
     name: "John Doe",
     studentId: "MUST/CS/2024/001",
     program: "Computer Science",
@@ -153,18 +158,43 @@ export default function Dashboard() {
     }
   ];
 
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const me = await authService.getCurrentUser();
+        setUser(me);
+      } catch (error) {
+        console.error('Failed to load user', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+
   return (
-      <div className="container py-8 space-y-8 animate-fade-in">
+    <div className="container py-8 space-y-8 animate-fade-in">
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Welcome back, {user.name}! 👋</h1>
+          <h1 className="text-3xl font-bold">Welcome back, {user?.first_name} {user?.last_name} </h1>
           <div className="flex items-center gap-4 text-muted-foreground">
-            <span>{user.studentId}</span>
+            <span>{user?.registrationNumber}</span>
             <span>•</span>
-            <span>{user.program}</span>
+            <span>{user_mock.program}</span>
             <span>•</span>
-            <span>{user.level}</span>
+            <span>{user_mock.level}</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -256,12 +286,11 @@ export default function Dashboard() {
               <div className="space-y-4">
                 {recentActivity.map((activity, index) => (
                   <div key={index} className="flex items-start gap-3 pb-3 border-b last:border-0">
-                    <div className={`p-2 rounded-full ${
-                      activity.type === 'assignment' ? 'bg-primary-subtle' :
+                    <div className={`p-2 rounded-full ${activity.type === 'assignment' ? 'bg-primary-subtle' :
                       activity.type === 'quiz' ? 'bg-success-subtle' :
-                      activity.type === 'discussion' ? 'bg-warning-subtle' :
-                      'bg-accent'
-                    }`}>
+                        activity.type === 'discussion' ? 'bg-warning-subtle' :
+                          'bg-accent'
+                      }`}>
                       {activity.type === 'assignment' && <FileText className="h-4 w-4" />}
                       {activity.type === 'quiz' && <CheckCircle2 className="h-4 w-4" />}
                       {activity.type === 'discussion' && <Users className="h-4 w-4" />}
@@ -294,7 +323,7 @@ export default function Dashboard() {
                 <div key={index} className="space-y-2 p-3 rounded-lg bg-card-subtle">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-medium">{deadline.title}</h4>
-                    <Badge 
+                    <Badge
                       variant={deadline.priority === 'high' ? 'destructive' : 'secondary'}
                       className="text-xs"
                     >
@@ -347,6 +376,6 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
-      </div>
+    </div>
   );
 }

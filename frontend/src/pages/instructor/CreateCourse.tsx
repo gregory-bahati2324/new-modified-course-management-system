@@ -29,6 +29,8 @@ export default function CreateCourse() {
     level: '',
     course_type: '',
     duration: '',
+    year_of_study: undefined,
+    semester: undefined,
     max_students: undefined,
     prerequisites: '',
     learning_outcomes: '',
@@ -54,7 +56,26 @@ export default function CreateCourse() {
     e.preventDefault();
 
     try {
-      const payload = { ...courseData, tags };
+      let duration = courseData.duration;
+
+      // ✅ Build duration for NORMAL courses
+      if (courseData.course_type === 'normal' &&
+        courseData.year_of_study &&
+        courseData.semester) {
+        duration = `Year ${courseData.year_of_study} - Semester ${courseData.semester}`;
+      }
+
+      // ✅ Build duration for SHORT courses
+      if (courseData.course_type === 'short' && courseData.duration) {
+        duration = `${courseData.duration} weeks`;
+      }
+
+      const payload = {
+        ...courseData,
+        duration,
+        tags,
+      };
+
       console.debug('Submitting course payload:', payload);
 
       const newCourse = await courseService.createCourse(payload);
@@ -144,7 +165,7 @@ export default function CreateCourse() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* College Selector */}
                   <div className="space-y-2">
@@ -236,15 +257,21 @@ export default function CreateCourse() {
                   </Select>
 
                 </div>
-                {/* Course Type and Duration Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {/* Course Type Section */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                   <div className="space-y-2">
                     <Label>Course Type *</Label>
                     <Select
                       value={courseData.course_type}
                       onValueChange={(value) => {
                         setCourseType(value);
-                        setCourseData({ ...courseData, course_type: value }); // reset duration when type changes
+                        setCourseData({
+                          ...courseData,
+                          course_type: value,
+                          duration: '',
+                          year_of_study: undefined,
+                          semester: undefined,
+                        });
                       }}
                     >
                       <SelectTrigger>
@@ -257,22 +284,66 @@ export default function CreateCourse() {
                     </Select>
                   </div>
 
-                  {/* Conditionally render duration */}
-                  {courseType && (
+                  {/* NORMAL COURSE */}
+                  {courseType === 'normal' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Year of Study *</Label>
+                        <Select
+                          value={courseData.year_of_study?.toString() || ''}
+                          onValueChange={(value) =>
+                            setCourseData({ ...courseData, year_of_study: Number(value) })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select year" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
+                            <SelectItem value="1">Year 1</SelectItem>
+                            <SelectItem value="2">Year 2</SelectItem>
+                            <SelectItem value="3">Year 3</SelectItem>
+                            <SelectItem value="4">Year 4</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Semester *</Label>
+                        <Select
+                          value={courseData.semester || ''}
+                          onValueChange={(value) =>
+                            setCourseData({ ...courseData, semester: value as '1' | '2' })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select semester" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
+                            <SelectItem value="1">Semester 1</SelectItem>
+                            <SelectItem value="2">Semester 2</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* SHORT COURSE */}
+                  {courseType === 'short' && (
                     <div className="space-y-2">
-                      <Label>
-                        Duration ({courseType === 'normal' ? 'years' : 'weeks'}) *
-                      </Label>
+                      <Label>Duration (Weeks) *</Label>
                       <Input
                         type="number"
-                        placeholder={courseType === 'normal' ? 'e.g., 3 (years)' : 'e.g., 8 (weeks)'}
+                        placeholder="e.g., 8 weeks"
                         value={courseData.duration}
-                        onChange={e => setCourseData({ ...courseData, duration: e.target.value })}
+                        onChange={(e) =>
+                          setCourseData({ ...courseData, duration: e.target.value })
+                        }
                         required
                       />
                     </div>
                   )}
                 </div>
+
               </div>
             </CardContent>
           </Card>

@@ -55,6 +55,35 @@ def list_my_filtered_courses(
     )
     return [schemas.CourseOut.from_orm(c) for c in courses]
 
+@router.get("/student", response_model=List[schemas.CourseOut])
+def student_filtered_courses(
+    db: Session = Depends(database.get_db),
+    category: str | None = Query(None),
+    department: str | None = Query(None),
+    level: str | None = Query(None),
+    type: str | None = Query(None),
+    duration: str | None = Query(None),
+    skip: int = 0,
+    limit: int = 50,
+):
+    courses = crud.student_filtered_courses(
+        db=db,
+        category=category,
+        department=department,
+        level=level,
+        course_type=type,
+        duration=duration,
+        skip=skip,
+        limit=limit,
+    )
+    return [schemas.CourseOut.from_orm(c) for c in courses]
+
+
+@router.get("/all", response_model=List[schemas.CourseOut])
+def get_all_courses(db: Session = Depends(database.get_db)):
+    courses = crud.get_all_courses(db)
+    return [schemas.CourseOut.from_orm(c) for c in courses]
+
 
 @router.get("/{course_id}/detail", response_model=schemas.CourseOut)
 def get_course(course_id: str, db: Session = Depends(database.get_db)):

@@ -7,9 +7,11 @@ export interface CreateCourseRequest {
   title: string;
   description?: string;
   category?: string;
-  department?:string;
+  department?: string;
   level?: string;
   course_type?: string;
+  year_of_study?: number;
+  semester?: '1' | '2';
   duration?: string;
   max_students?: number;
   prerequisites?: string;
@@ -101,11 +103,63 @@ class CourseService {
     }
   }
 
+  //get all courses
+  async getAllCourses(): Promise<{ courses: Course[] }> {
+    try {
+      const token = localStorage.getItem('accessToken');
 
-  
+      const response = await apiCourseClient.get<Course[]>(
+        API_ENDPOINTS.courses.list,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return { courses: response.data };
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  // Filter courses for students
+  async getStudentFilteredCourses(params: {
+    category?: string;
+    department?: string;
+    level?: string;
+    type?: string;
+    duration?: string;
+  }): Promise<{ courses: Course[] }> {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const response = await apiCourseClient.get<Course[]>(
+        API_ENDPOINTS.courses.studentCourseFilter, // 👈 no params in URL
+        {
+          params: {
+            category: params.category || undefined,
+            department: params.department || undefined,
+            level: params.level || undefined,
+            type: params.type || undefined,
+            duration: params.duration || undefined,
+          },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return { courses: response.data };
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
+
 }
 
-export interface Course {
+export interface Course extends CreateCourseRequest {
   id: string;
   code: string;
   title: string;
@@ -116,6 +170,10 @@ export interface Course {
   level: string;
   duration: string;
   students_enrolled: number;
+  max_students?: number;
+  course_type: string;
+  year_of_study?: number;
+  semester?: '1' | '2';
   rating: number;
   image_url?: string;
   created_at: string;

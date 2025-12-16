@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard.tsx";
 import Profile from "./pages/Profile.tsx";
 import SettingsPage from "./pages/Settings.tsx";
 import StudentCourses from "./pages/student/Courses.tsx";
+import Enrollment from "./pages/student/Enrollment.tsx";
 import StudentAssignments from "./pages/student/Assignments.tsx";
 import StudentSchedule from "./pages/student/Schedule.tsx";
 import StudentGrades from "./pages/student/Grades.tsx";
@@ -57,6 +58,7 @@ import NotFound from "./pages/NotFound.tsx";
 import StudentLayout from "./components/layout/StudentLayout.tsx";
 import { InstructorLayout } from "./components/layout/InstructorLayout.tsx";
 import { AdminLayout } from "./components/layout/AdminLayout.tsx";
+import { title } from "process";
 
 export const navItems = [
   {
@@ -69,13 +71,19 @@ export const navItems = [
     title: "Student Dashboard",
     to: "/dashboard",
     icon: <BarChart3 className="h-4 w-4" />,
-    page: <Dashboard />,
+    page: <StudentLayout><Dashboard /></StudentLayout>,
   },
   {
     title: "Student Courses",
     to: "/student/courses",
     icon: <BookOpen className="h-4 w-4" />,
     page: <StudentLayout><StudentCourses /></StudentLayout>,
+  },
+  {
+    title: "Student Enrollment",
+    to: "/student/enrollment",
+    icon: <Users className="h-4 w-4" />,
+    page: <StudentLayout><Enrollment /></StudentLayout>,
   },
   {
     title: "Student Assignments",

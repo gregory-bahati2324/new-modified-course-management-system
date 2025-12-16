@@ -44,6 +44,11 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
       icon: Home,
     },
     {
+      title: 'Enrollment',
+      href: '/student/enrollment',
+      icon: GraduationCap,
+    },
+    {
       title: 'My Courses',
       icon: BookOpen,
       children: [

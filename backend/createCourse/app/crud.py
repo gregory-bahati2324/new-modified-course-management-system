@@ -77,9 +77,37 @@ def list_my_filtered_courses(
 
     return query.offset(skip).limit(limit).all()
 
+def student_filtered_courses(
+    db: Session,
+    category: str | None,
+    department: str | None,
+    level: str | None,
+    course_type: str | None,
+    duration: str | None,
+    skip: int = 0,
+    limit: int = 50
+):
+    query = db.query(models.Course).filter(models.Course.is_published == True)
+
+    if category:
+        query = query.filter(models.Course.category == category)
+    if department:
+        query = query.filter(models.Course.department == department)
+    if level:
+        query = query.filter(models.Course.level == level)
+    if course_type:
+        query = query.filter(models.Course.course_type == course_type)
+    if duration:
+        query = query.filter(models.Course.duration == duration)
+
+    return query.offset(skip).limit(limit).all()    
+
 
 def list_my_courses(db: Session, instructor_id: str,  skip: int = 0, limit: int = 50):
     return db.query(models.Course).filter(models.Course.instructor_id == instructor_id).offset(skip).limit(limit).all()
+
+def get_all_courses(db: Session):
+    return db.query(models.Course).all()
 
 def update_course(db: Session, course_id: str, data: schemas.CourseUpdate):
     course = get_course(db, course_id)
