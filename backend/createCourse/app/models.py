@@ -25,3 +25,15 @@ class Course(Base):
     tags = Column(Text, nullable=True)  # store as comma-separated or JSON string
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+
+class Enrollment(Base):
+    __tablename__ = "enrollments"
+
+    id = Column(String, primary_key=True, index=True)  # uuid string
+    course_id = Column(String, nullable=False, index=True)
+    student_id = Column(String, nullable=False, index=True)
+    enrolled_at = Column(DateTime(timezone=True), server_default=func.now())
+    progress = Column(Integer, default=0)  # percentage of course completed
+    completed = Column(Boolean, default=False)
+    certificate_issued = Column(Boolean, default=False)

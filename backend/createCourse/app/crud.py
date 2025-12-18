@@ -129,3 +129,45 @@ def delete_course(db: Session, course_id: str):
     db.delete(course)
     db.commit()
     return True
+
+def create_enrollment(db: Session, enrollment_in: schemas.EnrollmentCreate):
+    new = models.Enrollment(
+        id=str(uuid.uuid4()),
+        course_id=enrollment_in.course_id,
+        student_id=enrollment_in.student_id,
+        progress=enrollment_in.progress or 0,
+        completed=enrollment_in.completed or False,
+        certificate_issued=enrollment_in.certificate_issued or False,
+    )
+    db.add(new)
+    db.commit()
+    db.refresh(new)
+    return new
+
+def get_enrollment(db: Session, enrollment_id: str):
+    return db.query(models.Enrollment).filter(models.Enrollment.id == enrollment_id).first()
+
+def list_enrollments_by_course(db: Session, course_id: str, skip: int = 0, limit: int = 50):
+    return db.query(models.Enrollment).filter(models.Enrollment.course_id == course_id).offset(skip).limit(limit).all()
+
+def list_enrollments_by_student(db: Session, student_id: str, skip: int = 0, limit: int = 50):
+    return db.query(models.Enrollment).filter(models.Enrollment.student_id == student_id).offset(skip).limit(limit).all()
+def update_enrollment(db: Session, enrollment_id: str, data: schemas.EnrollmentBase):
+    enrollment = get_enrollment(db, enrollment_id)
+    if not enrollment:
+        return None
+    for k, v in data.dict(exclude_unset=True).items():
+        setattr(enrollment, k, v)
+    db.commit()
+    db.refresh(enrollment)
+    return enrollment
+
+def delete_enrollment(db: Session, enrollment_id: str):
+    enrollment = get_enrollment(db, enrollment_id)
+    if not enrollment:
+        return False
+    db.delete(enrollment)
+    db.commit()
+    return True
+
+

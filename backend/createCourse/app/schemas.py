@@ -45,3 +45,20 @@ class CourseOut(CourseBase):
             except:
                 return []
         return v
+    
+class EnrollmentBase(BaseModel):
+    course_id: str
+    student_id: str
+    progress: Optional[int] = 0
+    completed: Optional[bool] = False
+    certificate_issued: Optional[bool] = False
+    
+class EnrollmentCreate(EnrollmentBase):
+    pass
+
+class EnrollmentOut(EnrollmentBase):
+    id: str
+    enrolled_at: datetime
+
+    class Config:
+        from_attributes = True        
