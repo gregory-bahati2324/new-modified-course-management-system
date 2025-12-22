@@ -128,11 +128,12 @@ def enroll_in_course(course_id: str, db: Session = Depends(database.get_db),
     enrollment = crud.create_enrollment(db, enrollment_in)
     return schemas.EnrollmentOut.from_orm(enrollment)
 
-@router.get("/enrollments/{student_id}", response_model=List[schemas.EnrollmentOut],
+@router.get("/enrollments/student", response_model=List[schemas.EnrollmentOut],
             dependencies=[Depends(auth_utils.require_role(["student", "instructor", "admin"]))])
-def list_enrollments(student_id: str, db: Session = Depends(database.get_db),
+def list_enrollments(db: Session = Depends(database.get_db),
                      token=Depends(auth_utils.get_current_user_token)): 
     # students can only see their own enrollments
+    student_id = token.sub
     if token.role == "student" and token.sub != student_id:
         raise HTTPException(status_code=403, detail="Not allowed to view these enrollments")
     enrollments = crud.list_enrollments_by_student(db, student_id)      
@@ -150,6 +151,23 @@ def list_course_enrollments(course_id: str, db: Session = Depends(database.get_d
         raise HTTPException(status_code=403, detail="Not allowed to view enrollments for this course")
     enrollments = crud.list_enrollments_by_course(db, course_id)
     return [schemas.EnrollmentOut.from_orm(e) for e in enrollments]
+
+@router.get("/enrollments/detail/{course_id}/{student_id}", response_model=schemas.EnrollmentOut,
+            dependencies=[Depends(auth_utils.require_role(["student", "instructor", "admin"]))])
+def get_enrollment_detail(course_id: str, student_id: str, db: Session = Depends(database.get_db),
+                          token=Depends(auth_utils.get_current_user_token)):
+    enrollment = crud.get_student_enrollment(db, course_id, student_id)
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    # students can only view their own enrollment
+    if token.role == "student" and enrollment.student_id != token.sub:
+        raise HTTPException(status_code=403, detail="Not allowed to view this enrollment")
+    # instructors can only view enrollments for their courses
+    if token.role == "instructor":
+        course = crud.get_course(db, enrollment.course_id)
+        if course.instructor_id != token.sub:
+            raise HTTPException(status_code=403, detail="Not allowed to view this enrollment")
+    return schemas.EnrollmentOut.from_orm(enrollment)
 
 @router.put("/enrollments/{enrollment_id}", response_model=schemas.EnrollmentOut,
             dependencies=[Depends(auth_utils.require_role(["student", "instructor", "admin"]))])

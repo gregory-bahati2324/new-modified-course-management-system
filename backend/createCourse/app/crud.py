@@ -1,5 +1,6 @@
 # app/crud.py
 import uuid
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from . import models
@@ -131,6 +132,17 @@ def delete_course(db: Session, course_id: str):
     return True
 
 def create_enrollment(db: Session, enrollment_in: schemas.EnrollmentCreate):
+    existing = db.query(models.Enrollment).filter(
+        models.Enrollment.course_id == enrollment_in.course_id,
+        models.Enrollment.student_id == enrollment_in.student_id
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="Student already enrolled in this course"
+        )
+
     new = models.Enrollment(
         id=str(uuid.uuid4()),
         course_id=enrollment_in.course_id,
@@ -139,10 +151,17 @@ def create_enrollment(db: Session, enrollment_in: schemas.EnrollmentCreate):
         completed=enrollment_in.completed or False,
         certificate_issued=enrollment_in.certificate_issued or False,
     )
+
     db.add(new)
     db.commit()
     db.refresh(new)
     return new
+
+def get_student_enrollment(db: Session, course_id: str, student_id: str):
+    return db.query(models.Enrollment).filter(
+        models.Enrollment.course_id == course_id,
+        models.Enrollment.student_id == student_id
+    ).first()
 
 def get_enrollment(db: Session, enrollment_id: str):
     return db.query(models.Enrollment).filter(models.Enrollment.id == enrollment_id).first()

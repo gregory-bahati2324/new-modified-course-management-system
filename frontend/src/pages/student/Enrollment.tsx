@@ -126,6 +126,24 @@ export default function Enrollment() {
         return getDepartmentsByCollege(selectedCollege);
     }, [selectedCollege]);
 
+    useEffect(() => {
+        const fetchEnrollments = async () => {
+            try {
+                const enrollments = await courseService.getStudentEnrollments();
+
+                // Store only course IDs
+                const courseIds = enrollments.map(e => e.course_id);
+
+                setEnrolledCourses(courseIds);
+            } catch (error) {
+                console.error("Failed to fetch enrollments", error);
+            }
+        };
+
+        fetchEnrollments();
+    }, []);
+
+
     // Filter courses based on all criteria
     useEffect(() => {
         const fetchCourses = async () => {
@@ -167,22 +185,28 @@ export default function Enrollment() {
     };
 
     // Handle enrollment
-    const handleEnroll = (courseId: string, courseTitle: string) => {
-        if (enrolledCourses.includes(courseId)) {
+    const handleEnroll = async (courseId: string, courseTitle: string) => {
+        if (enrolledCourses.includes(courseId)) return;
+
+        try {
+            await courseService.createEnrollment(courseId);
+
+            setEnrolledCourses(prev => [...prev, courseId]);
+
             toast({
-                title: "Already Enrolled",
-                description: `You are already enrolled in ${courseTitle}.`,
+                title: "Enrollment Successful",
+                description: `You are enrolled in ${courseTitle}`,
+            });
+        } catch (error: any) {
+            toast({
+                title: "Enrollment Failed",
+                description: error.message,
                 variant: "destructive",
             });
-            return;
         }
-
-        setEnrolledCourses(prev => [...prev, courseId]);
-        toast({
-            title: "Enrollment Successful!",
-            description: `You have successfully enrolled in ${courseTitle}.`,
-        });
     };
+
+
 
     // Clear all filters
     const clearFilters = () => {

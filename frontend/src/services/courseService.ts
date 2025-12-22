@@ -29,6 +29,17 @@ export interface CourseOut extends CreateCourseRequest {
   updated_at: string;
 }
 
+export interface Enrollment {
+  id: string;
+  course_id: string;
+  student_id: string;
+  enrolled_at: string;
+  progress: number;
+  completed: boolean;
+  certificate_issued: boolean;
+}
+
+
 class CourseService {
   async createCourse(data: CreateCourseRequest): Promise<CourseOut> {
     try {
@@ -155,6 +166,37 @@ class CourseService {
       throw new Error(handleApiError(error));
     }
   }
+
+  async createEnrollment(courseId: string): Promise<void> {
+    try {
+      const token = localStorage.getItem('accessToken');
+      await apiCourseClient.post(
+        API_ENDPOINTS.courses.enroll(courseId),
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  async getStudentEnrollments(): Promise<Enrollment[]> {
+    const token = localStorage.getItem('accessToken');
+
+    const response = await apiCourseClient.get<Enrollment[]>(
+      API_ENDPOINTS.courses.getStudentsenrollments,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return response.data;
+  }
+
 
 
 }
