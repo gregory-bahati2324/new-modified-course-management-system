@@ -197,6 +197,19 @@ class CourseService {
     return response.data;
   }
 
+  async getEnrolledCourses(): Promise<Course[]> {
+    const token = localStorage.getItem('accessToken');
+
+    const response = await apiCourseClient.get<Course[]>(
+      API_ENDPOINTS.courses.getEnrolledCourses,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return response.data;
+  }
+
 
 
 }

@@ -152,6 +152,13 @@ def list_course_enrollments(course_id: str, db: Session = Depends(database.get_d
     enrollments = crud.list_enrollments_by_course(db, course_id)
     return [schemas.EnrollmentOut.from_orm(e) for e in enrollments]
 
+@router.get("/enrollments/student/courses", response_model=List[schemas.CourseOut],
+            dependencies=[Depends(auth_utils.require_role(["student", "admin"]))])
+def get_enrolled_courses(db: Session = Depends(database.get_db),
+                         token=Depends(auth_utils.get_current_user_token)):
+    courses = crud.get_enrolled_courses_by_student(db, token.sub)
+    return [schemas.CourseOut.from_orm(c) for c in courses]
+
 @router.get("/enrollments/detail/{course_id}/{student_id}", response_model=schemas.EnrollmentOut,
             dependencies=[Depends(auth_utils.require_role(["student", "instructor", "admin"]))])
 def get_enrollment_detail(course_id: str, student_id: str, db: Session = Depends(database.get_db),

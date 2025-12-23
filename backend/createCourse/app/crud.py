@@ -171,6 +171,13 @@ def list_enrollments_by_course(db: Session, course_id: str, skip: int = 0, limit
 
 def list_enrollments_by_student(db: Session, student_id: str, skip: int = 0, limit: int = 50):
     return db.query(models.Enrollment).filter(models.Enrollment.student_id == student_id).offset(skip).limit(limit).all()
+
+def get_enrolled_courses_by_student(db: Session, student_id: str):
+    enrollments = db.query(models.Enrollment).filter(models.Enrollment.student_id == student_id).all()
+    course_ids = [enrollment.course_id for enrollment in enrollments]
+    courses = db.query(models.Course).filter(models.Course.id.in_(course_ids)).all()
+    return courses
+
 def update_enrollment(db: Session, enrollment_id: str, data: schemas.EnrollmentBase):
     enrollment = get_enrollment(db, enrollment_id)
     if not enrollment:

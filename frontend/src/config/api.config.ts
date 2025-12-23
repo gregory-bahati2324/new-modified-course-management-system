@@ -51,6 +51,7 @@ export const API_ENDPOINTS = {
     delete: (id: string) => `/api/courses/${id}`,
     enroll: (id: string) => `/api/courses/${id}/enroll`,
     getStudentsenrollments: '/api/courses/enrollments/student',
+    getEnrolledCourses: '/api/courses/enrollments/student/courses',
     unenroll: (id: string) => `/api/courses/${id}/unenroll`,
     students: (id: string) => `/api/courses/${id}/students`,
     analytics: (id: string) => `/api/courses/${id}/analytics`,

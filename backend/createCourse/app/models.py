@@ -37,3 +37,4 @@ class Enrollment(Base):
     progress = Column(Integer, default=0)  # percentage of course completed
     completed = Column(Boolean, default=False)
     certificate_issued = Column(Boolean, default=False)
+    
