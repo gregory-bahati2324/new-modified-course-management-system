@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -10,190 +10,181 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { CourseModuleNav, Module } from '@/components/student/CourseModuleNav';
+import { CourseModuleNav } from '@/components/student/CourseModuleNav';
 import { LessonViewer } from '@/components/student/LessonViewer';
+import { moduleService } from '@/services/moduleService';
+import { lessonService } from '@/services/lessonService';
+import { Course, courseService } from '@/services/courseService';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+export interface Module {
+  id: string;
+  title: string;
+  lessons: Lesson[];
+  completed: boolean;
+  locked?: boolean;
+}
+export interface Lesson {
+  id: number;
+  title: string;
+  duration: string;
+  type: 'video' | 'reading' | 'quiz' | 'assignment' | 'lab';
+  completed: boolean;
+}
 
 export default function CourseLearn() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const [currentModuleId, setCurrentModuleId] = useState(1);
-  const [currentLessonId, setCurrentLessonId] = useState(1);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [currentModuleId, setCurrentModuleId] = useState<string | null>(null);
+  const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
+  const [course, setCourse] = useState<Course | null>(null);
   const [moduleNavOpen, setModuleNavOpen] = useState(true);
 
-  // Mock course data
-  const course = {
-    id: courseId,
-    title: "Advanced Database Systems",
-    instructor: "Dr. Sarah Johnson",
-    progress: 75,
-    totalModules: 12,
-    completedModules: 9
-  };
+  useEffect(() => {
+    if (!courseId) return;
 
-  // Mock modules with lessons
-  const modules: Module[] = [
-    {
-      id: 1,
-      title: "Introduction to Advanced Databases",
-      lessons: [
-        { id: 1, title: "Course Overview", duration: "15 min", type: "video", completed: true },
-        { id: 2, title: "Database Fundamentals Review", duration: "30 min", type: "video", completed: true },
-        { id: 3, title: "Advanced SQL Concepts", duration: "45 min", type: "video", completed: true },
-        { id: 4, title: "Quiz: Introduction", duration: "10 min", type: "quiz", completed: true }
-      ],
-      completed: true
-    },
-    {
-      id: 2,
-      title: "Normalization & Optimization",
-      lessons: [
-        { id: 1, title: "Normal Forms Deep Dive", duration: "40 min", type: "video", completed: true },
-        { id: 2, title: "Query Optimization Techniques", duration: "35 min", type: "video", completed: false },
-        { id: 3, title: "Index Design Best Practices", duration: "30 min", type: "reading", completed: false },
-        { id: 4, title: "Lab: Optimize Sample Database", duration: "60 min", type: "lab", completed: false }
-      ],
-      completed: false
-    },
-    {
-      id: 3,
-      title: "Transaction Management",
-      lessons: [
-        { id: 1, title: "ACID Properties", duration: "25 min", type: "video", completed: false },
-        { id: 2, title: "Concurrency Control", duration: "40 min", type: "video", completed: false },
-        { id: 3, title: "Deadlock Prevention", duration: "30 min", type: "reading", completed: false },
-        { id: 4, title: "Assignment: Transaction Handling", duration: "90 min", type: "assignment", completed: false }
-      ],
-      completed: false,
-      locked: false
-    },
-    {
-      id: 4,
-      title: "Distributed Databases",
-      lessons: [
-        { id: 1, title: "Distributed Architecture", duration: "35 min", type: "video", completed: false },
-        { id: 2, title: "Data Fragmentation", duration: "30 min", type: "video", completed: false },
-        { id: 3, title: "Replication Strategies", duration: "40 min", type: "reading", completed: false }
-      ],
-      completed: false,
-      locked: true
-    }
-  ];
+    const loadModules = async () => {
+      try {
+        const { data } = await moduleService.getModules(courseId);
 
-  const currentModule = modules.find(m => m.id === currentModuleId) || modules[0];
-  const currentLesson = currentModule.lessons.find(l => l.id === currentLessonId) || currentModule.lessons[0];
+        // Attach empty lessons initially
+        const modulesWithLessons = data.map(m => ({
+          ...m,
+          lessons: [],
+          completed: false
+        }));
 
-  // Mock lesson content based on current lesson
-  const lessonData = useMemo(() => ({
-    title: currentLesson.title,
-    objectives: `Understand the key concepts of ${currentLesson.title}\nApply knowledge to real-world scenarios\nRecognize common patterns and anti-patterns\nPractice with hands-on examples`,
-    prerequisites: currentModuleId > 1 ? `Complete Module ${currentModuleId - 1}` : '',
-    estimatedDuration: currentLesson.duration,
-    difficulty: currentModuleId <= 2 ? 'Beginner' : currentModuleId === 3 ? 'Intermediate' : 'Advanced',
-    tags: ['Database', 'SQL', course.title.split(' ')[0]]
-  }), [currentLesson, currentModuleId, course.title]);
+        setModules(modulesWithLessons);
 
-  const contentBlocks = useMemo(() => {
-    if (currentLesson.type === 'video') {
-      return [
-        {
-          id: 1,
-          type: 'video' as const,
-          content: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-          title: currentLesson.title
-        },
-        {
-          id: 2,
-          type: 'text' as const,
-          content: `In this lesson, you'll learn about ${currentLesson.title.toLowerCase()}. We'll cover the key concepts, practical applications, and best practices that industry professionals use daily.\n\nThis is an essential topic for anyone working with database systems and forms the foundation for more advanced concepts we'll explore later in this course.`,
-          title: 'Lesson Overview'
+        // Auto-select first module
+        if (modulesWithLessons.length > 0) {
+          setCurrentModuleId(modulesWithLessons[0].id);
         }
-      ];
-    }
-    if (currentLesson.type === 'reading') {
-      return [
-        {
-          id: 1,
-          type: 'text' as const,
-          content: `This reading material covers important concepts in ${currentLesson.title.toLowerCase()}. Take your time to read through the content and make notes of key points.\n\nKey Topics:\n• Core principles and foundations\n• Best practices and methodologies\n• Real-world applications\n• Common challenges and solutions\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.`,
-          title: 'Reading Material'
-        }
-      ];
-    }
-    return [
-      {
-        id: 1,
-        type: 'text' as const,
-        content: `Complete the ${currentLesson.type} for ${currentLesson.title}. Follow the instructions carefully and submit your work when ready.`,
-        title: 'Instructions'
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to load modules');
       }
-    ];
-  }, [currentLesson]);
+    };
 
-  const quizQuestions = useMemo(() => {
-    if (currentLesson.type === 'quiz') {
-      return [
-        {
-          id: 1,
-          question: 'What is the primary purpose of database normalization?',
-          options: [
-            'To increase data redundancy',
-            'To eliminate data redundancy and ensure data integrity',
-            'To make queries slower',
-            'To increase storage requirements'
-          ],
-          correctAnswer: 1
-        },
-        {
-          id: 2,
-          question: 'Which normal form eliminates transitive dependencies?',
-          options: ['1NF', '2NF', '3NF', 'BCNF'],
-          correctAnswer: 2
+    loadModules();
+  }, [courseId]);
+
+  useEffect(() => {
+    if (!currentModuleId) return;
+
+    const loadLessons = async () => {
+      try {
+        const { data } = await lessonService.getLessons(currentModuleId);
+
+        setModules(prev =>
+          prev.map(m =>
+            m.id === currentModuleId
+              ? {
+                ...m,
+                lessons: data.map((lesson: any) => ({
+                  id: lesson.id,
+                  title: lesson.title,
+                  duration: lesson.duration || '0 min', // fallback if missing
+                  type: lesson.type || 'text',          // fallback
+                  completed: lesson.completed || false  // default
+                }))
+              }
+              : m
+          )
+        );
+
+        // Auto-select first lesson
+        if (data.length > 0) {
+          setCurrentLessonId(data[0].id);
         }
-      ];
-    }
-    return [];
-  }, [currentLesson]);
+      } catch (err) {
+        toast.error('Failed to load lessons');
+      }
+    };
 
-  const handleSelectLesson = (moduleId: number, lessonId: number) => {
+    loadLessons();
+  }, [currentModuleId]);
+
+  useEffect(() => {
+    if (!courseId) return;
+
+    const loadCourse = async () => {
+      try {
+
+        const courseData = await courseService.getCourseNameById(courseId); // currently returns only title
+        // better: create a getCourseById method that returns full Course object
+        setCourse(courseData);
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to load course');
+      }
+    };
+
+    loadCourse();
+  }, [courseId]);
+
+
+  const currentModule = useMemo(
+    () => modules.find(m => m.id === currentModuleId),
+    [modules, currentModuleId]
+  );
+
+  const currentLesson = useMemo(
+    () => currentModule?.lessons?.find(l => String(l.id) === currentLessonId),
+    [currentModule, currentLessonId]
+  );
+
+  const handleSelectLesson = (moduleId: string, lessonId: string) => {
     setCurrentModuleId(moduleId);
     setCurrentLessonId(lessonId);
   };
 
+
   const goToNextLesson = () => {
-    const currentLessonIndex = currentModule.lessons.findIndex(l => l.id === currentLessonId);
-    if (currentLessonIndex < currentModule.lessons.length - 1) {
-      setCurrentLessonId(currentModule.lessons[currentLessonIndex + 1].id);
-    } else {
-      const nextModule = modules.find(m => m.id === currentModuleId + 1);
-      if (nextModule && !nextModule.locked) {
-        setCurrentModuleId(nextModule.id);
-        setCurrentLessonId(nextModule.lessons[0].id);
-      }
+    if (!currentModule || !currentLesson) return;
+
+    const index = currentModule.lessons.findIndex(l => l.id === currentLesson.id);
+
+    if (index < currentModule.lessons.length - 1) {
+      setCurrentLessonId(String(currentModule.lessons[index + 1].id));
+      return;
+    }
+
+    const moduleIndex = modules.findIndex(m => m.id === currentModule.id);
+    const nextModule = modules[moduleIndex + 1];
+
+    if (nextModule) {
+      setCurrentModuleId(nextModule.id);
     }
   };
 
+
   const goToPreviousLesson = () => {
-    const currentLessonIndex = currentModule.lessons.findIndex(l => l.id === currentLessonId);
-    if (currentLessonIndex > 0) {
-      setCurrentLessonId(currentModule.lessons[currentLessonIndex - 1].id);
-    } else if (currentModuleId > 1) {
-      const prevModule = modules.find(m => m.id === currentModuleId - 1);
-      if (prevModule) {
-        setCurrentModuleId(prevModule.id);
-        setCurrentLessonId(prevModule.lessons[prevModule.lessons.length - 1].id);
-      }
+    if (!currentModule || !currentLesson) return;
+
+    const index = currentModule.lessons.findIndex(l => l.id === currentLesson.id);
+
+    if (index > 0) {
+      setCurrentLessonId(String(currentModule.lessons[index - 1].id));
+      return;
+    }
+
+    const moduleIndex = modules.findIndex(m => m.id === currentModule.id);
+    const prevModule = modules[moduleIndex - 1];
+
+    if (prevModule) {
+      setCurrentModuleId(prevModule.id);
     }
   };
+
 
   const handleMarkComplete = () => {
     toast.success('Lesson marked as complete!');
   };
 
-  const isFirstLesson = currentModuleId === 1 && currentLessonId === 1;
-  const isLastLesson = currentModuleId === modules.length && 
-    currentLessonId === modules[modules.length - 1].lessons.length;
+  const isFirstLesson = Number(currentModuleId) === 1 && Number(currentLessonId) === 1;
+  const isLastLesson = Number(currentModuleId) === modules.length &&
+    Number(currentLessonId) === modules[modules.length - 1].lessons.length;
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
@@ -208,7 +199,7 @@ export default function CourseLearn() {
             <Separator orientation="vertical" className="h-6" />
             <div className="hidden sm:block">
               <h1 className="font-semibold text-sm">{course.title}</h1>
-              <p className="text-xs text-muted-foreground">by {course.instructor}</p>
+              <p className="text-xs text-muted-foreground">by {course.instructor_name || "Gregory"}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -271,11 +262,8 @@ export default function CourseLearn() {
           {/* Lesson Viewer */}
           <div className="flex-1 overflow-hidden">
             <LessonViewer
-              lessonData={lessonData}
-              contentBlocks={contentBlocks}
-              quizQuestions={quizQuestions}
+              lesson={currentLesson}
               onComplete={handleMarkComplete}
-              isCompleted={currentLesson.completed}
             />
           </div>
 

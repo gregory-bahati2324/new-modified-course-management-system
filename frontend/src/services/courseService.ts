@@ -69,7 +69,7 @@ class CourseService {
     }
   }
 
-  async getCourseNameById(courseId: string): Promise<string> {
+  async getCourseNameById(courseId: string): Promise<Course> {
     try {
       const token = localStorage.getItem('accessToken');
 

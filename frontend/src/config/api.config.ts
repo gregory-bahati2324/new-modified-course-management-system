@@ -3,6 +3,8 @@
  * Toggle between mock data and real backend
  */
 
+import { get } from "http";
+
 export const API_CONFIG = {
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
   useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
@@ -26,6 +28,17 @@ export const API_CONFIG_ASSIGNMENT = {
   useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
   timeout: 30000,
 };
+
+export const API_CONFIG_PROGRESS = {
+  baseURL: import.meta.env.VITE_API_PROGRESS_BASE_URL || 'http://localhost:8004',
+  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  timeout: 30000,
+};
+
+/**
+ * API Endpoints
+ * Define all API endpoints used in the application
+ */   
 
 export const API_ENDPOINTS = {
   // Authentication endpoints - maps to FastAPI /api/auth/*
@@ -78,6 +91,14 @@ export const API_ENDPOINTS = {
     delete: (lessonId: string) => `/modules/lessons/delete/${lessonId}`,   // DELETE
     uploadFile: (lessonId: string) => `/modules/lessons/uploads/${lessonId}/file`, // POST file
     reorder: (moduleId: string) => `/modules/${moduleId}/lessons/reorder`, // PUT reorder lessons
+  },
+
+  progress: {
+    lessonStart: (lessonId: string) => `/progress/lessons/${lessonId}/start`,
+    lessonComplete: (lessonId: string) => `/progress/lessons/${lessonId}/complete`,
+    resetLessonProgress: (lessonId: string) => `/progress/lessons/${lessonId}/reset`,
+    getModuleProgress: (moduleId: string) => `/progress/modules/${moduleId}`,
+    getCourseLessonsProgress: (courseId: string) => `/progress/courses/${courseId}/lessons`,
   },
 
   // Assignment endpoints - maps to FastAPI /api/assignments/*
