@@ -17,33 +17,10 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { Lesson } from '@/types/lesson';
 
-interface ContentBlock {
-  id: string;
-  type: 'text' | 'video' | 'image' | 'pdf' | 'ppt' | 'audio' | 'code' | 'doc';
-  title?: string;
-  content: string;
-}
 
-interface QuizQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  correct_answer: number;
-}
 
-interface Lesson {
-  id: string;
-  title: string;
-  duration_minutes?: number;
-  difficulty?: string;
-  objectives?: string[];
-  prerequisites?: string;
-  tags?: string[];
-  content_blocks: ContentBlock[];
-  quiz_questions?: QuizQuestion[];
-  is_completed?: boolean;
-}
 
 interface LessonViewerProps {
   lesson: Lesson;
@@ -137,7 +114,7 @@ export function LessonViewer({
           </div>
 
           {/* Objectives */}
-          {lesson.objectives?.length > 0 && (
+          {lesson.objectives && lesson.objectives.trim().length > 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -146,14 +123,13 @@ export function LessonViewer({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  {lesson.objectives.map((obj, idx) => (
-                    <li key={idx}>{obj}</li>
-                  ))}
-                </ul>
+                <p className="whitespace-pre-wrap text-muted-foreground">
+                  {lesson.objectives}
+                </p>
               </CardContent>
             </Card>
           )}
+
 
 
           {/* Prerequisites */}
@@ -253,94 +229,94 @@ export function LessonViewer({
       <div className="max-w-4xl mx-auto p-6 space-y-6">
 
 
-      {/* Quiz */}
-      {quizQuestions.length > 0 && (
-        <>
-          <Separator />
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Knowledge Check</h3>
-            {quizQuestions.map((question, qIdx) => (
-              <Card key={question.id}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">
-                    Question {qIdx + 1}: {question.question}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {question.options.map((option, optIdx) => {
-                    const isSelected = selectedAnswer[question.id] === optIdx;
-                    const isCorrect = showResults && optIdx === question.correct_answer;
-                    const isWrong = showResults && isSelected && optIdx !== question.correct_answer;
+        {/* Quiz */}
+        {quizQuestions.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">Knowledge Check</h3>
+              {quizQuestions.map((question, qIdx) => (
+                <Card key={question.id}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">
+                      Question {qIdx + 1}: {question.question}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {question.options.map((option, optIdx) => {
+                      const isSelected = selectedAnswer[question.id] === optIdx;
+                      const isCorrect = showResults && optIdx === question.correct_answer;
+                      const isWrong = showResults && isSelected && optIdx !== question.correct_answer;
 
-                    return (
-                      <div
-                        key={optIdx}
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted'
-                          } ${isCorrect ? 'border-green-500 bg-green-500/10' : ''} ${isWrong ? 'border-red-500 bg-red-500/10' : ''
-                          }`}
-                        onClick={() => handleOptionSelect(Number(question.id), optIdx)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
-                              } ${isCorrect ? 'border-green-500 bg-green-500' : ''} ${isWrong ? 'border-red-500 bg-red-500' : ''
-                              }`}
-                          >
-                            {(isSelected || isCorrect) && (
-                              <div className="w-2 h-2 rounded-full bg-white" />
-                            )}
+                      return (
+                        <div
+                          key={optIdx}
+                          className={`p-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted'
+                            } ${isCorrect ? 'border-green-500 bg-green-500/10' : ''} ${isWrong ? 'border-red-500 bg-red-500/10' : ''
+                            }`}
+                          onClick={() => handleOptionSelect(Number(question.id), optIdx)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
+                                } ${isCorrect ? 'border-green-500 bg-green-500' : ''} ${isWrong ? 'border-red-500 bg-red-500' : ''
+                                }`}
+                            >
+                              {(isSelected || isCorrect) && (
+                                <div className="w-2 h-2 rounded-full bg-white" />
+                              )}
+                            </div>
+                            <span>{option}</span>
                           </div>
-                          <span>{option}</span>
                         </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            ))}
-            {!showResults && Object.keys(selectedAnswer).length === quizQuestions.length && (
-              <Button onClick={submitQuiz}>
-                Submit Quiz
-              </Button>
-            )}
-            {showResults && (
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="pt-6">
-                  <div className="text-lg font-semibold text-center">
-                    Score: {calculateQuizScore()} / {quizQuestions.length}
-                    <p className="text-sm font-normal text-muted-foreground mt-1">
-                      {calculateQuizScore() === quizQuestions.length
-                        ? 'Perfect score! Great job!'
-                        : 'Review the correct answers above.'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Lesson Progress */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="font-medium">Lesson Progress</span>
-              <span className="text-muted-foreground">{quizProgress}%</span>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              ))}
+              {!showResults && Object.keys(selectedAnswer).length === quizQuestions.length && (
+                <Button onClick={submitQuiz}>
+                  Submit Quiz
+                </Button>
+              )}
+              {showResults && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="pt-6">
+                    <div className="text-lg font-semibold text-center">
+                      Score: {calculateQuizScore()} / {quizQuestions.length}
+                      <p className="text-sm font-normal text-muted-foreground mt-1">
+                        {calculateQuizScore() === quizQuestions.length
+                          ? 'Perfect score! Great job!'
+                          : 'Review the correct answers above.'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
-            <Progress value={quizProgress} />
-            {onComplete && !lesson.is_completed && (
-              <Button onClick={onComplete} className="w-full mt-4">
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Mark as Complete
-              </Button>
-            )}
+          </>
+        )}
 
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        {/* Lesson Progress */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Lesson Progress</span>
+                <span className="text-muted-foreground">{quizProgress}%</span>
+              </div>
+              <Progress value={quizProgress} />
+              {onComplete && !lesson.is_completed && (
+                <Button onClick={onComplete} className="w-full mt-4">
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Mark as Complete
+                </Button>
+              )}
+
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </ScrollArea >
   );
 }

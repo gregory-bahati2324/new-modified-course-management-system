@@ -15,30 +15,18 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Module } from '@/types/module';
+import { Lesson, ContentBlock } from '@/types/lesson';
 
-export interface Lesson {
-  id: number;
-  title: string;
-  duration: string;
-  type: 'video' | 'reading' | 'quiz' | 'assignment' | 'lab';
-  completed: boolean;
-}
-
-export interface Module {
-  id: number;
-  title: string;
-  lessons: Lesson[];
-  completed: boolean;
-  locked?: boolean;
-}
 
 interface CourseModuleNavProps {
   modules: Module[];
-  currentModuleId: number;
-  currentLessonId: number;
-  onSelectLesson: (moduleId: number, lessonId: number) => void;
+  currentModuleId: string | null;
+  currentLessonId: string | null;
+  onSelectLesson: (moduleId: string, lessonId: string) => void;
   courseProgress?: number;
 }
+
 
 export function CourseModuleNav({
   modules,
@@ -47,39 +35,50 @@ export function CourseModuleNav({
   onSelectLesson,
   courseProgress = 0
 }: CourseModuleNavProps) {
-  const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>(() => {
-    // Auto-expand current module
-    return { [currentModuleId]: true };
-  });
+  const [expandedModules, setExpandedModules] =
+    useState<Record<string, boolean>>(() => (
+      currentModuleId ? { [currentModuleId]: true } : {}
+    ));
 
-  const toggleModule = (moduleId: number) => {
+
+  const toggleModule = (moduleId: string) => {
     setExpandedModules(prev => ({
       ...prev,
       [moduleId]: !prev[moduleId]
     }));
   };
 
-  const getLessonIcon = (type: string, completed: boolean) => {
-    if (completed) return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-    
-    switch (type) {
-      case 'video':
-        return <PlayCircle className="h-4 w-4 text-blue-500" />;
-      case 'reading':
-        return <BookOpen className="h-4 w-4 text-amber-500" />;
-      case 'quiz':
-        return <ClipboardCheck className="h-4 w-4 text-purple-500" />;
-      case 'assignment':
-        return <FileText className="h-4 w-4 text-orange-500" />;
-      case 'lab':
-        return <Beaker className="h-4 w-4 text-cyan-500" />;
-      default:
-        return <FileText className="h-4 w-4 text-muted-foreground" />;
+
+  const getLessonIcon = (lesson: Lesson) => {
+    if (lesson.is_completed) {
+      return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     }
+
+    const blocks = lesson.content_blocks ?? [];
+    const quizQuestions = lesson.quiz_questions ?? [];
+
+    if (blocks.some(b => b.type === 'video')) {
+      return <PlayCircle className="h-4 w-4 text-blue-500" />;
+    }
+
+    if (quizQuestions.length > 0) {
+      return <ClipboardCheck className="h-4 w-4 text-purple-500" />;
+    }
+
+    if (blocks.some(b => b.type === 'code')) {
+      return <Beaker className="h-4 w-4 text-cyan-500" />;
+    }
+
+    if (blocks.some(b => b.type === 'text')) {
+      return <BookOpen className="h-4 w-4 text-amber-500" />;
+    }
+
+    return <FileText className="h-4 w-4 text-muted-foreground" />;
   };
 
+
   const getModuleProgress = (module: Module) => {
-    const completedLessons = module.lessons.filter(l => l.completed).length;
+    const completedLessons = module.lessons.filter(l => l.is_completed).length;
     return Math.round((completedLessons / module.lessons.length) * 100);
   };
 
@@ -126,7 +125,7 @@ export function CourseModuleNav({
                   ) : (
                     <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   )}
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium text-muted-foreground">
@@ -139,7 +138,7 @@ export function CourseModuleNav({
                     <div className="flex items-center gap-2 mt-1">
                       <Progress value={moduleProgress} className="h-1 flex-1" />
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {module.lessons.filter(l => l.completed).length}/{module.lessons.length}
+                        {module.lessons.filter(l => l.is_completed).length}/{module.lessons.length}
                       </span>
                     </div>
                   </div>
@@ -154,6 +153,7 @@ export function CourseModuleNav({
                         <button
                           key={lesson.id}
                           onClick={() => !module.locked && onSelectLesson(module.id, lesson.id)}
+
                           disabled={module.locked}
                           className={cn(
                             "w-full flex items-center gap-2 py-2 px-3 -ml-[1px] text-left text-sm rounded-r-lg transition-colors",
@@ -162,10 +162,10 @@ export function CourseModuleNav({
                             !isCurrentLesson && "border-l-2 border-transparent"
                           )}
                         >
-                          {getLessonIcon(lesson.type, lesson.completed)}
+                          {getLessonIcon(lesson)}
                           <span className="flex-1 truncate">{lesson.title}</span>
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            {lesson.duration}
+                            {lesson.duration_minutes}
                           </Badge>
                         </button>
                       );

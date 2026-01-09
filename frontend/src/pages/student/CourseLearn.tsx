@@ -15,6 +15,7 @@ import { LessonViewer } from '@/components/student/LessonViewer';
 import { moduleService } from '@/services/moduleService';
 import { lessonService } from '@/services/lessonService';
 import { Course, courseService } from '@/services/courseService';
+import { Lesson } from '@/types/lesson';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -24,13 +25,6 @@ export interface Module {
   lessons: Lesson[];
   completed: boolean;
   locked?: boolean;
-}
-export interface Lesson {
-  id: number;
-  title: string;
-  duration: string;
-  type: 'video' | 'reading' | 'quiz' | 'assignment' | 'lab';
-  completed: boolean;
 }
 
 export default function CourseLearn() {
@@ -48,6 +42,7 @@ export default function CourseLearn() {
     const loadModules = async () => {
       try {
         const { data } = await moduleService.getModules(courseId);
+        console.log(data)
 
         // Attach empty lessons initially
         const modulesWithLessons = data.map(m => ({
@@ -83,12 +78,21 @@ export default function CourseLearn() {
               ? {
                 ...m,
                 lessons: data.map((lesson: any) => ({
-                  id: lesson.id,
+                  id: String(lesson.id),
                   title: lesson.title,
-                  duration: lesson.duration || '0 min', // fallback if missing
-                  type: lesson.type || 'text',          // fallback
-                  completed: lesson.completed || false  // default
+
+                  duration_minutes: lesson.duration_minutes ?? 0,
+                  difficulty: lesson.difficulty ?? undefined,
+                  objectives: lesson.objectives ?? '',
+                  prerequisites: lesson.prerequisites ?? '',
+                  tags: lesson.tags ?? [],
+
+                  content_blocks: lesson.contentBlocks ?? [],   // ✅ REQUIRED
+                  quiz_questions: lesson.quizQuestions ?? [],
+
+                  is_completed: lesson.completed ?? false,
                 }))
+
               }
               : m
           )
@@ -182,9 +186,31 @@ export default function CourseLearn() {
     toast.success('Lesson marked as complete!');
   };
 
-  const isFirstLesson = Number(currentModuleId) === 1 && Number(currentLessonId) === 1;
-  const isLastLesson = Number(currentModuleId) === modules.length &&
-    Number(currentLessonId) === modules[modules.length - 1].lessons.length;
+  if (!course || !currentModule || !currentLesson) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Loading course...</p>
+      </div>
+    );
+  }
+
+  const isFirstLesson =
+    currentModule.lessons[0]?.id === currentLesson.id &&
+    modules[0]?.id === currentModule.id;
+
+  const isLastLesson = (() => {
+    const lastModule = modules[modules.length - 1];
+    if (!lastModule) return false;
+
+    const lastLesson = lastModule.lessons[lastModule.lessons.length - 1];
+    if (!lastLesson) return false;
+
+    return (
+      lastModule.id === currentModule.id &&
+      lastLesson.id === currentLesson.id
+    );
+  })();
+
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
@@ -230,7 +256,7 @@ export default function CourseLearn() {
               currentModuleId={currentModuleId}
               currentLessonId={currentLessonId}
               onSelectLesson={handleSelectLesson}
-              courseProgress={course.progress}
+
             />
           )}
         </div>

@@ -39,8 +39,6 @@ def get_module_route(module_id: str, db: Session = Depends(get_db)):
 @module_router.get("/course/{course_id}")
 def query_course_modules(course_id: str, db: Session = Depends(get_db)):
     modules = get_course_modules(course_id=course_id, db=db)
-    if not modules:
-        raise HTTPException(404, "No Module found")
     return modules
 
 @module_router.put("/update/{module_id}", summary="Update module")

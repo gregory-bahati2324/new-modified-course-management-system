@@ -82,7 +82,7 @@ class CourseService {
         }
       );
 
-      return response.data.title;
+      return response.data
     } catch (error) {
       throw new Error(handleApiError(error));
     }
