@@ -53,9 +53,9 @@ export default function CourseLearn() {
         }));
 
         // Sort modules by order if not already sorted by backend
-      const sortedModules = [...modulesWithLessons].sort((a, b) => 
-        (a.order || 0) - (b.order || 0)
-      );
+        const sortedModules = [...modulesWithLessons].sort((a, b) =>
+          (a.order || 0) - (b.order || 0)
+        );
 
         setModules(modulesWithLessons);
 
@@ -79,9 +79,9 @@ export default function CourseLearn() {
         const { data } = await lessonService.getLessons(currentModuleId);
 
         // Sort lessons by order before setting them
-      const sortedLessons = [...data].sort((a: any, b: any) => 
-        (a.order || 0) - (b.order || 0)
-      );
+        const sortedLessons = [...data].sort((a: any, b: any) =>
+          (a.order || 0) - (b.order || 0)
+        );
 
         setModules(prev =>
           prev.map(m =>
