@@ -70,9 +70,14 @@ def reorder_modules_route(data: ModuleReorderRequest, db: Session = Depends(get_
 def create_lesson_route(data: LessonCreate, module_id: str, db: Session = Depends(get_db)):
     return create_lesson(db, module_id, data)
 
-@module_router.get("/lessons/{module_id}/lessons", response_model=List[LessonResponse])
-def get_lessons_by_module_route(module_id: str, db: Session = Depends(get_db)):
-    return get_lessons_by_module(db, module_id)
+@module_router.get("/{module_id}/lessons", response_model=List[LessonResponse])
+def get_lessons_by_module_route(module_id: str, request: Request, db: Session = Depends(get_db)):
+    # ✅ Add request to get base_url
+    base_url = str(request.base_url).rstrip("/")
+    
+    # ✅ Use the updated CRUD function with base_url
+    lessons = get_lessons_by_module(db, module_id, base_url=base_url)
+    return lessons
 
 @module_router.get("/lessons/{lesson_id}", response_model=LessonResponse)
 def get_one_lesson_route(lesson_id: str, request: Request, db: Session = Depends(get_db)):

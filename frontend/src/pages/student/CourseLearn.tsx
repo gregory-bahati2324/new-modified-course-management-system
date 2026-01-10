@@ -25,6 +25,7 @@ export interface Module {
   lessons: Lesson[];
   completed: boolean;
   locked?: boolean;
+  order?: number;
 }
 
 export default function CourseLearn() {
@@ -51,6 +52,11 @@ export default function CourseLearn() {
           completed: false
         }));
 
+        // Sort modules by order if not already sorted by backend
+      const sortedModules = [...modulesWithLessons].sort((a, b) => 
+        (a.order || 0) - (b.order || 0)
+      );
+
         setModules(modulesWithLessons);
 
         // Auto-select first module
@@ -71,6 +77,11 @@ export default function CourseLearn() {
     const loadLessons = async () => {
       try {
         const { data } = await lessonService.getLessons(currentModuleId);
+
+        // Sort lessons by order before setting them
+      const sortedLessons = [...data].sort((a: any, b: any) => 
+        (a.order || 0) - (b.order || 0)
+      );
 
         setModules(prev =>
           prev.map(m =>
@@ -279,7 +290,7 @@ export default function CourseLearn() {
             </Button>
             <Separator orientation="vertical" className="h-4" />
             <div className="text-sm text-muted-foreground">
-              <span>Module {currentModuleId}</span>
+              <span>Module {currentModule.order || 1}</span>
               <ChevronRight className="h-3 w-3 inline mx-1" />
               <span className="text-foreground font-medium">{currentLesson.title}</span>
             </div>
@@ -307,7 +318,7 @@ export default function CourseLearn() {
               </Button>
 
               <div className="text-sm text-muted-foreground hidden sm:block">
-                Lesson {currentLessonId} of {currentModule.lessons.length}
+                Lesson {currentLesson.order} of {currentModule.lessons.length}
               </div>
 
               <Button

@@ -129,7 +129,7 @@ export function CourseModuleNav({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium text-muted-foreground">
-                        M{module.id}
+                        M{module.order}
                       </span>
                       <span className="text-sm font-medium truncate">
                         {module.title}

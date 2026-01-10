@@ -85,7 +85,7 @@ export const API_ENDPOINTS = {
   // Lesson endpoints inside module service (correct)
   lessonRoutes: {
     create: (moduleId: string) => `/modules/${moduleId}/lessons`,          // POST
-    list: (moduleId: string) => `/modules/lessons/${moduleId}/lessons`,            // GET all lessons by module
+    list: (moduleId: string) => `/modules/${moduleId}/lessons`,            // GET all lessons by module
     detail: (lessonId: string) => `/modules/lessons/${lessonId}`,          // GET single lesson
     update: (lessonId: string) => `/modules/lessons/update/${lessonId}`,   // PUT
     delete: (lessonId: string) => `/modules/lessons/delete/${lessonId}`,   // DELETE

@@ -20,7 +20,7 @@ export interface Lesson {
   objectives?: string;
   prerequisites?: string;
   tags?: string[];
-
+  order?:number;
   content_blocks: ContentBlock[];
   quiz_questions?: QuizQuestion[];
 

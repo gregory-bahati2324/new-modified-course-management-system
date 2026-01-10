@@ -112,10 +112,57 @@ def create_lesson(db: Session, module_id: str, data: LessonCreate) -> Lesson:
 
 
 
-def get_lessons_by_module(db: Session, module_id: str):
-    return db.query(Lesson).filter(Lesson.module_id == module_id).order_by(Lesson.order).all()
+
 
 Base_url = "http://localhost:8000"
+
+
+def get_lessons_by_module(db: Session, module_id: str, base_url: Optional[str] = None):
+    lessons = db.query(Lesson).filter(Lesson.module_id == module_id).order_by(Lesson.order).all()
+    
+    result = []
+    for lesson in lessons:
+        # Convert ORM to dict - SAME as get_lesson but without extra fields
+        lesson_data = {
+            "id": lesson.id,
+            "module_id": lesson.module_id,
+            "title": lesson.title,
+            "objectives": lesson.objectives,
+            "prerequisites": lesson.prerequisites,
+            "estimatedDuration": lesson.estimatedDuration,
+            "difficulty": lesson.difficulty,
+            "tags": lesson.tags or [],
+            "contentBlocks": lesson.contentBlocks or [],
+            "quizQuestions": lesson.quizQuestions or [],
+            "discussion": lesson.discussion or {},
+            "progressSettings": lesson.progressSettings or {},
+            "accessibility": lesson.accessibility or {},
+            "feedbackSettings": lesson.feedbackSettings or {},
+            "order": lesson.order,
+            "created_at": lesson.created_at,
+            "updated_at": lesson.updated_at,
+        }
+        
+        # ✅ Add URL conversion - SAME logic as get_lesson
+        if base_url:
+            cb = []
+            MEDIA_TYPES = ["image", "video", "audio", "pdf", "ppt", "pptx", "doc", "docx", "document"]
+            for block in lesson_data.get("contentBlocks", []):
+                if not block:
+                    continue
+                block = block.copy()
+                content = block.get("content")
+                
+                if content and block.get("type") in MEDIA_TYPES and not content.startswith("http"):
+                    # ensure leading slash for safety
+                    path = content if content.startswith("/") else f"/{content}"
+                    block["content"] = f"{base_url.rstrip('/')}{path}"
+                cb.append(block)
+            lesson_data["contentBlocks"] = cb
+        
+        result.append(lesson_data)
+    
+    return result
 
 
 def get_lesson(db: Session, lesson_id: str, base_url: Optional[str] = None):

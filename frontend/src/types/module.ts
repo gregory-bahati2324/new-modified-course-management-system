@@ -6,4 +6,5 @@ export interface Module {
   lessons: Lesson[];
   completed: boolean;
   locked?: boolean;
+  order?: number;
 }
