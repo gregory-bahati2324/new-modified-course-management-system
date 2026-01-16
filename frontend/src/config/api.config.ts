@@ -98,6 +98,7 @@ export const API_ENDPOINTS = {
     lessonComplete: (lessonId: string) => `/progress/lessons/${lessonId}/complete`,
     resetLessonProgress: (lessonId: string) => `/progress/lessons/${lessonId}/reset`,
     getModuleProgress: (moduleId: string) => `/progress/modules/${moduleId}`,
+    getCourseProgress: (courseId: string) => `/progress/courses/${courseId}`,
     getCourseLessonsProgress: (courseId: string) => `/progress/courses/${courseId}/lessons`,
   },
 

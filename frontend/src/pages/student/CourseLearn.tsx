@@ -15,6 +15,7 @@ import { LessonViewer } from '@/components/student/LessonViewer';
 import { moduleService } from '@/services/moduleService';
 import { lessonService } from '@/services/lessonService';
 import { Course, courseService } from '@/services/courseService';
+import { ProgressService } from '@/services/progressService';
 import { Lesson } from '@/types/lesson';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -36,6 +37,8 @@ export default function CourseLearn() {
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
   const [moduleNavOpen, setModuleNavOpen] = useState(true);
+  const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
+
 
   useEffect(() => {
     if (!courseId) return;
@@ -140,6 +143,77 @@ export default function CourseLearn() {
     loadCourse();
   }, [courseId]);
 
+  useEffect(() => {
+    if (!courseId || modules.length === 0) return;
+
+    const loadProgress = async () => {
+      try {
+        const progressService = new ProgressService();
+        const progressList = await progressService.getCourseLessonsProgress(courseId);
+
+        // Convert array to map
+        const progressMap: Record<string, boolean> = {};
+        progressList.forEach(p => {
+          progressMap[p.lessonId] = p.completed;
+        });
+
+        setProgressMap(progressMap);
+
+        // Update lessons in modules with progress
+        setModules(prevModules =>
+          prevModules.map(module => ({
+            ...module,
+            lessons: module.lessons.map(lesson => ({
+              ...lesson,
+              is_completed: progressMap[lesson.id] || false
+            }))
+          }))
+        );
+      } catch (err) {
+        toast.error('Failed to load lesson progress');
+      }
+    };
+
+    loadProgress();
+  }, [courseId, modules.length]);
+
+  const handleMarkComplete = async () => {
+    if (!currentLesson) return;
+
+    try {
+      const progressService = new ProgressService();
+      await progressService.completeLesson(currentLesson.id);
+
+      toast.success('Lesson marked as complete!');
+
+      // Update frontend state
+      setModules(prevModules =>
+        prevModules.map(m =>
+          m.id === currentModuleId
+            ? {
+              ...m,
+              lessons: m.lessons.map(l =>
+                l.id === currentLesson.id ? { ...l, is_completed: true } : l
+              )
+            }
+            : m
+        )
+      );
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to mark lesson as complete');
+    }
+  };
+
+
+  const courseProgress = useMemo(() => {
+    const totalLessons = modules.reduce((sum, m) => sum + m.lessons.length, 0);
+    const completedLessons = modules.reduce(
+      (sum, m) => sum + m.lessons.filter(l => l.is_completed).length,
+      0
+    );
+    return totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
+  }, [modules]);
+
 
   const currentModule = useMemo(
     () => modules.find(m => m.id === currentModuleId),
@@ -205,10 +279,6 @@ export default function CourseLearn() {
     }
   };
 
-
-  const handleMarkComplete = () => {
-    toast.success('Lesson marked as complete!');
-  };
 
   if (!course) {
     return (
@@ -306,6 +376,7 @@ export default function CourseLearn() {
               currentModuleId={currentModuleId}
               currentLessonId={currentLessonId}
               onSelectLesson={handleSelectLesson}
+              courseProgress={courseProgress}
 
             />
           )}

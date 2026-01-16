@@ -121,3 +121,14 @@ def get_course_progress(
         student_id=student_id,
         course_id=course_id
     ).first()
+
+
+def get_course_lessons_progress(
+    db: Session,
+    student_id: str,
+    course_id: str
+):
+    return db.query(student_lesson_progress.StudentLessonProgress).filter_by(
+        student_id=student_id,
+        course_id=course_id
+    ).all()

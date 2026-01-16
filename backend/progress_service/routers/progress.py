@@ -12,7 +12,8 @@ from crud.progress import (
     complete_lesson,
     reset_lesson_progress,
     get_module_progress,
-    get_course_progress
+    get_course_progress,
+    get_course_lessons_progress
 )
 from services.calculator import (
     recalculate_module_progress,
@@ -111,5 +112,32 @@ def get_course_progress_route(
 ):
     progress = get_course_progress(db, student_id, course_id)
     if not progress:
-        raise HTTPException(404, "Course progress not found")
-    return progress
+        return {
+            "course_id": course_id,
+            "completed_modules": 0,
+            "total_modules": 0,
+            "completed_lessons": 0,
+            "total_lessons": 0,
+            "progress_percentage": 0,
+            "is_completed": False,
+            "last_accessed_at": None
+        }
+        
+        
+@router.get(
+    "/courses/{course_id}/lessons",
+    response_model=list[LessonProgressResponse]
+)
+def get_course_lessons_progress_route(
+    course_id: str,
+    db: Session = Depends(get_db),
+    student_id: str = "demo-student"
+):
+    return get_course_lessons_progress(
+        db=db,
+        student_id=student_id,
+        course_id=course_id
+    )
+        
+
+    
