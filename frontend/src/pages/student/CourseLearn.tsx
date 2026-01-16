@@ -43,7 +43,7 @@ export default function CourseLearn() {
     const loadModules = async () => {
       try {
         const { data } = await moduleService.getModules(courseId);
-        console.log(data)
+
 
         // Attach empty lessons initially
         const modulesWithLessons = data.map(m => ({
@@ -91,6 +91,8 @@ export default function CourseLearn() {
                 lessons: data.map((lesson: any) => ({
                   id: String(lesson.id),
                   title: lesson.title,
+                  order: lesson.order ?? 0,
+                  description: lesson.description ?? '',
 
                   duration_minutes: lesson.duration_minutes ?? 0,
                   difficulty: lesson.difficulty ?? undefined,
@@ -110,8 +112,8 @@ export default function CourseLearn() {
         );
 
         // Auto-select first lesson
-        if (data.length > 0) {
-          setCurrentLessonId(data[0].id);
+        if (sortedLessons.length > 0) {
+          setCurrentLessonId(sortedLessons[0].id);
         }
       } catch (err) {
         toast.error('Failed to load lessons');
@@ -148,6 +150,17 @@ export default function CourseLearn() {
     () => currentModule?.lessons?.find(l => String(l.id) === currentLessonId),
     [currentModule, currentLessonId]
   );
+
+  const hasLessons =
+    !!currentModule &&
+    Array.isArray(currentModule.lessons) &&
+    currentModule.lessons.length > 0;
+
+  const isLessonReady =
+    hasLessons &&
+    !!currentLesson &&
+    currentLesson.content_blocks !== undefined;
+
 
   const handleSelectLesson = (moduleId: string, lessonId: string) => {
     setCurrentModuleId(moduleId);
@@ -197,7 +210,7 @@ export default function CourseLearn() {
     toast.success('Lesson marked as complete!');
   };
 
-  if (!course || !currentModule || !currentLesson) {
+  if (!course) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">Loading course...</p>
@@ -205,22 +218,48 @@ export default function CourseLearn() {
     );
   }
 
+  if (modules.length === 0) {
+    return (
+      <div className="h-full flex flex-col">
+        {/* Top bar stays */}
+        <div className="border-b px-4 py-2">
+          <h1 className="font-semibold">{course.title}</h1>
+        </div>
+
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-2">
+            <p className="text-lg font-medium">No modules yet</p>
+            <p className="text-sm text-muted-foreground">
+              The instructor hasn’t added any modules to this course.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+
   const isFirstLesson =
+    !!currentModule &&
+    !!currentLesson &&
     currentModule.lessons[0]?.id === currentLesson.id &&
     modules[0]?.id === currentModule.id;
 
   const isLastLesson = (() => {
+    if (!currentModule || !currentLesson || modules.length === 0) return false;
+
     const lastModule = modules[modules.length - 1];
-    if (!lastModule) return false;
+    if (!lastModule || lastModule.lessons.length === 0) return false;
 
     const lastLesson = lastModule.lessons[lastModule.lessons.length - 1];
-    if (!lastLesson) return false;
 
     return (
       lastModule.id === currentModule.id &&
       lastLesson.id === currentLesson.id
     );
   })();
+
 
 
   return (
@@ -290,19 +329,54 @@ export default function CourseLearn() {
             </Button>
             <Separator orientation="vertical" className="h-4" />
             <div className="text-sm text-muted-foreground">
-              <span>Module {currentModule.order || 1}</span>
-              <ChevronRight className="h-3 w-3 inline mx-1" />
-              <span className="text-foreground font-medium">{currentLesson.title}</span>
+              {currentModule && (
+                <>
+                  <span>Module {currentModule.order || 1}</span>
+                  <ChevronRight className="h-3 w-3 inline mx-1" />
+                </>
+              )}
+
+              {currentLesson ? (
+                <span className="text-foreground font-medium">
+                  {currentLesson.title}
+                </span>
+              ) : (
+                <span className="italic">Loading lesson…</span>
+              )}
             </div>
+
           </div>
 
           {/* Lesson Viewer */}
           <div className="flex-1 overflow-hidden">
-            <LessonViewer
-              lesson={currentLesson}
-              onComplete={handleMarkComplete}
-            />
+            {/* Module exists but has no lessons */}
+            {currentModule && !hasLessons && (
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <p className="text-lg font-medium">No lessons in this module</p>
+                  <p className="text-sm text-muted-foreground">
+                    Lessons will appear here once the instructor adds them.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Lessons exist but lesson not selected yet */}
+            {currentModule && hasLessons && !currentLesson && (
+              <div className="h-full flex items-center justify-center text-muted-foreground">
+                Loading lesson…
+              </div>
+            )}
+
+            {/* Lesson fully ready */}
+            {isLessonReady && (
+              <LessonViewer
+                lesson={currentLesson}
+                onComplete={handleMarkComplete}
+              />
+            )}
           </div>
+
 
           {/* Bottom Navigation */}
           <div className="border-t bg-background p-3 flex-shrink-0">
@@ -318,8 +392,13 @@ export default function CourseLearn() {
               </Button>
 
               <div className="text-sm text-muted-foreground hidden sm:block">
-                Lesson {currentLesson.order} of {currentModule.lessons.length}
+                {currentLesson && currentModule ? (
+                  <>Lesson {currentLesson.order || 1} of {currentModule.lessons.length}</>
+                ) : (
+                  <>Loading…</>
+                )}
               </div>
+
 
               <Button
                 size="sm"

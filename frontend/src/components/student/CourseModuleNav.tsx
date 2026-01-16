@@ -146,30 +146,33 @@ export function CourseModuleNav({
 
                 <CollapsibleContent className="pl-4 pr-2 pb-2">
                   <div className="space-y-0.5 pt-1 border-l-2 border-border ml-2">
-                    {module.lessons.map((lesson) => {
-                      const isCurrentLesson = isCurrentModule && lesson.id === currentLessonId;
+                    {module.lessons.length === 0 ? (
+                      <p className="text-xs text-muted-foreground px-4 py-2">
+                        No lessons yet
+                      </p>
+                    ) : (
+                      module.lessons.map((lesson) => {
+                        const isCurrentLesson = isCurrentModule && lesson.id === currentLessonId;
 
-                      return (
-                        <button
-                          key={lesson.id}
-                          onClick={() => !module.locked && onSelectLesson(module.id, lesson.id)}
+                        return (
+                          <button
+                            key={lesson.id}
+                            onClick={() => !module.locked && onSelectLesson(module.id, lesson.id)}
+                            disabled={module.locked}
+                            className={cn(
+                              "w-full flex items-center gap-2 py-2 px-3 -ml-[1px] text-left text-sm rounded-r-lg transition-colors",
+                              "hover:bg-accent",
+                              isCurrentLesson && "bg-primary/10 border-l-2 border-primary font-medium",
+                              !isCurrentLesson && "border-l-2 border-transparent"
+                            )}
+                          >
+                            {getLessonIcon(lesson)}
+                            <span className="flex-1 truncate">{lesson.title}</span>
+                          </button>
+                        );
+                      })
+                    )}
 
-                          disabled={module.locked}
-                          className={cn(
-                            "w-full flex items-center gap-2 py-2 px-3 -ml-[1px] text-left text-sm rounded-r-lg transition-colors",
-                            "hover:bg-accent",
-                            isCurrentLesson && "bg-primary/10 border-l-2 border-primary font-medium",
-                            !isCurrentLesson && "border-l-2 border-transparent"
-                          )}
-                        >
-                          {getLessonIcon(lesson)}
-                          <span className="flex-1 truncate">{lesson.title}</span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            {lesson.duration_minutes}
-                          </Badge>
-                        </button>
-                      );
-                    })}
                   </div>
                 </CollapsibleContent>
               </Collapsible>
