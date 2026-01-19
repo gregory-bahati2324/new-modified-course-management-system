@@ -177,23 +177,33 @@ export default function CourseLearn() {
     loadProgress();
   }, [courseId, modules.length]);
 
-  const handleMarkComplete = async () => {
+  const handleMarkComplete = async (data: {
+    quizScore?: number;
+    timeSpentSeconds: number;
+  }) => {
     if (!currentLesson) return;
 
     try {
       const progressService = new ProgressService();
-      await progressService.completeLesson(currentLesson.id);
+
+      await progressService.completeLesson(currentLesson.id, {
+        course_id: courseId!,
+        module_id: currentModuleId!,
+        quiz_score: data.quizScore,
+        time_spent_seconds: data.timeSpentSeconds
+      });
 
       toast.success('Lesson marked as complete!');
 
-      // Update frontend state
-      setModules(prevModules =>
-        prevModules.map(m =>
+      setModules(prev =>
+        prev.map(m =>
           m.id === currentModuleId
             ? {
               ...m,
               lessons: m.lessons.map(l =>
-                l.id === currentLesson.id ? { ...l, is_completed: true } : l
+                l.id === currentLesson.id
+                  ? { ...l, is_completed: true }
+                  : l
               )
             }
             : m
@@ -203,6 +213,7 @@ export default function CourseLearn() {
       toast.error(err.message || 'Failed to mark lesson as complete');
     }
   };
+
 
 
   const courseProgress = useMemo(() => {

@@ -20,15 +20,25 @@ export class ProgressService {
     }
   }
 
-  async completeLesson(lessonId: string): Promise<void> {
-    try {
-      await apiProgressClient.post(
-        API_ENDPOINTS.progress.lessonComplete(lessonId)
-      );
-    } catch (error) {
-      throw new Error(handleApiError(error));
-    }
+  async completeLesson(
+  lessonId: string,
+  payload: {
+    course_id: string;
+    module_id: string;
+    quiz_score?: number;
+    time_spent_seconds?: number;
   }
+): Promise<void> {
+  try {
+    await apiProgressClient.post(
+      API_ENDPOINTS.progress.lessonComplete(lessonId),
+      payload
+    );
+  } catch (error) {
+    throw new Error(handleApiError(error));
+  }
+}
+
 
   async resetLessonProgress(lessonId: string): Promise<void> {
     try {

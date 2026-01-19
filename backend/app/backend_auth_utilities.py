@@ -51,10 +51,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def create_refresh_token(data: dict) -> str:
-    """Create JWT refresh token"""
-    expire = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    return create_access_token(data, expires_delta=expire)
+def create_refresh_token(user_id: str) -> str:
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    payload = {
+        "sub": str(user_id),
+        "exp": expire,
+        "type": "refresh"
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
 
 def decode_token(token: str) -> dict:
     """Decode and verify JWT token"""

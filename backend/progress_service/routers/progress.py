@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
+from auth_utils import get_current_user_token, TokenData
 from schemas.progress import (
     LessonProgressCreate,
     LessonProgressResponse,
@@ -40,43 +41,45 @@ def start_lesson_route(
     )
 
 
-@router.post("/lessons/{lesson_id}/complete", response_model=LessonProgressResponse)
+@router.post(
+    "/lessons/{lesson_id}/complete",
+    response_model=LessonProgressResponse
+)
 def complete_lesson_route(
     lesson_id: str,
     data: LessonProgressCreate,
     db: Session = Depends(get_db),
-    student_id: str = "demo-student",
-    course_id: str = "demo-course",
-    module_id: str = "demo-module",
-    total_lessons: int = 10,
-    total_modules: int = 5
+    current_user: TokenData = Depends(get_current_user_token),
 ):
+    student_id = current_user.sub
+
     progress = complete_lesson(
-        db,
-        student_id,
-        course_id,
-        module_id,
-        lesson_id,
-        data.quiz_score,
-        data.time_spent_seconds
+        db=db,
+        student_id=student_id,
+        course_id=data.course_id, 
+        module_id=data.module_id,  
+        lesson_id=lesson_id,
+        quiz_score=data.quiz_score,
+        time_spent_seconds=data.time_spent_seconds,
     )
 
     recalculate_module_progress(
-        db, student_id, course_id, module_id, total_lessons
+        db, student_id, "demo-course", "demo-module", total_lessons=10
     )
 
     recalculate_course_progress(
-        db, student_id, course_id, total_modules, total_lessons
+        db, student_id, "demo-course", total_modules=5, total_lessons=10
     )
 
     return progress
+
 
 
 @router.delete("/lessons/{lesson_id}/reset")
 def reset_lesson_route(
     lesson_id: str,
     db: Session = Depends(get_db),
-    student_id: str = "demo-student"
+    student_id: str = get_current_user_token
 ):
     success = reset_lesson_progress(db, student_id, lesson_id)
     if not success:
@@ -92,7 +95,7 @@ def reset_lesson_route(
 def get_module_progress_route(
     module_id: str,
     db: Session = Depends(get_db),
-    student_id: str = "demo-student"
+    student_id: str = get_current_user_token
 ):
     progress = get_module_progress(db, student_id, module_id)
     if not progress:
@@ -108,7 +111,7 @@ def get_module_progress_route(
 def get_course_progress_route(
     course_id: str,
     db: Session = Depends(get_db),
-    student_id: str = "demo-student"
+    student_id: str = get_current_user_token
 ):
     progress = get_course_progress(db, student_id, course_id)
     if not progress:

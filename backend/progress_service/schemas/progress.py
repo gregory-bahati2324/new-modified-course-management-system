@@ -7,6 +7,8 @@ from datetime import datetime
 # ------------------------
 
 class LessonProgressCreate(BaseModel):
+    course_id: str
+    module_id: str
     quiz_score: Optional[int] = None
     time_spent_seconds: Optional[int] = None
 

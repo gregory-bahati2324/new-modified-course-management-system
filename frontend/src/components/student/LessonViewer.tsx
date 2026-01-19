@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   BookOpen,
   Clock,
@@ -19,12 +19,12 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { Lesson } from '@/types/lesson';
 
-
-
-
 interface LessonViewerProps {
   lesson: Lesson;
-  onComplete?: () => void;
+  onComplete?: (data: {
+    quizScore?: number;
+    timeSpentSeconds: number;
+  }) => void;
 }
 
 
@@ -34,13 +34,24 @@ export function LessonViewer({
   const [selectedAnswer, setSelectedAnswer] = useState<{ [key: number]: number }>({});
   const [showResults, setShowResults] = useState(false);
   const quizQuestions = lesson.quiz_questions || [];
+  const startTimeRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    startTimeRef.current = Date.now();
+  }, [lesson.id]);
+
+
+  const getTimeSpentSeconds = () => {
+    return Math.floor((Date.now() - startTimeRef.current) / 1000);
+  };
 
 
   const handleOptionSelect = (questionId: number, optionIdx: number) => {
     if (!showResults) {
-      setSelectedAnswer({ ...selectedAnswer, [questionId]: optionIdx });
+      setSelectedAnswer(prev => ({ ...prev, [questionId]: optionIdx }));
     }
   };
+
 
   const submitQuiz = () => setShowResults(true);
 
@@ -70,7 +81,10 @@ export function LessonViewer({
   };
 
   const calculateQuizScore = () =>
-    quizQuestions.reduce((score, q) => (selectedAnswer[q.id] === q.correct_answer ? score + 1 : score), 0);
+    quizQuestions.reduce((score, q) => {
+      const selected = selectedAnswer[q.id];
+      return selected === q.correct_answer ? score + 1 : score;
+    }, 0);
 
   const tags = lesson.tags || [];
 
@@ -307,10 +321,20 @@ export function LessonViewer({
               </div>
               <Progress value={quizProgress} />
               {onComplete && !lesson.is_completed && (
-                <Button onClick={onComplete} className="w-full mt-4">
+                <Button
+                  onClick={() =>
+                    onComplete?.({
+                      quizScore: quizQuestions.length > 0 ? calculateQuizScore() : undefined,
+                      timeSpentSeconds: getTimeSpentSeconds()
+                    })
+                  }
+                  className="w-full mt-4"
+                  disabled={quizQuestions.length > 0 && Object.keys(selectedAnswer).length < quizQuestions.length}
+                >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   Mark as Complete
                 </Button>
+
               )}
 
             </div>
