@@ -2,12 +2,25 @@ import { apiProgressClient, handleApiError } from './apiProgress';
 import { API_ENDPOINTS } from '@/config/api.config';
 
 export interface Progress {
-    lessonId: string;
-    moduleId: string;
-    courseId: string;
-    completed: boolean;
-    completedAt: string | null;
+  lesson_id: string;
+  moduleId: string;
+  courseId: string;
+  completed: boolean;
+  completedAt: string | null;
+  progress_percentage: number;
 }
+
+export interface CourseProgress {
+  course_id: string;
+  completed_modules: number;
+  total_modules: number;
+  completed_lessons: number;
+  total_lessons: number;
+  progress_percentage: number;
+  is_completed: boolean;
+  last_accessed_at: string | null;
+}
+
 
 export class ProgressService {
   async startLesson(lessonId: string): Promise<void> {
@@ -21,23 +34,23 @@ export class ProgressService {
   }
 
   async completeLesson(
-  lessonId: string,
-  payload: {
-    course_id: string;
-    module_id: string;
-    quiz_score?: number;
-    time_spent_seconds?: number;
+    lessonId: string,
+    payload: {
+      course_id: string;
+      module_id: string;
+      quiz_score?: number;
+      time_spent_seconds?: number;
+    }
+  ): Promise<void> {
+    try {
+      await apiProgressClient.post(
+        API_ENDPOINTS.progress.lessonComplete(lessonId),
+        payload
+      );
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
   }
-): Promise<void> {
-  try {
-    await apiProgressClient.post(
-      API_ENDPOINTS.progress.lessonComplete(lessonId),
-      payload
-    );
-  } catch (error) {
-    throw new Error(handleApiError(error));
-  }
-}
 
 
   async resetLessonProgress(lessonId: string): Promise<void> {
@@ -71,5 +84,17 @@ export class ProgressService {
       throw new Error(handleApiError(error));
     }
   }
+
+  async getCourseProgress(courseId: string): Promise<CourseProgress> {
+    try {
+      const response = await apiProgressClient.get<CourseProgress>(
+        API_ENDPOINTS.progress.getCourseProgress(courseId)
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
 }
 

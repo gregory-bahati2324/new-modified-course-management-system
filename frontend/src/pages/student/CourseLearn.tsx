@@ -38,6 +38,8 @@ export default function CourseLearn() {
   const [course, setCourse] = useState<Course | null>(null);
   const [moduleNavOpen, setModuleNavOpen] = useState(true);
   const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
+  const [courseProgress, setCourseProgress] = useState<number>(0);
+
 
 
   useEffect(() => {
@@ -144,38 +146,64 @@ export default function CourseLearn() {
   }, [courseId]);
 
   useEffect(() => {
-    if (!courseId || modules.length === 0) return;
+    if (!courseId) return;
+
+    const lessonsLoaded = modules.some(m => m.lessons.length > 0);
+    if (!lessonsLoaded) return;
 
     const loadProgress = async () => {
       try {
         const progressService = new ProgressService();
         const progressList = await progressService.getCourseLessonsProgress(courseId);
 
-        // Convert array to map
-        const progressMap: Record<string, boolean> = {};
+        const progressMap: Record<string, any> = {};
         progressList.forEach(p => {
-          progressMap[p.lessonId] = p.completed;
+          progressMap[p.lesson_id] = p;
         });
 
-        setProgressMap(progressMap);
-
-        // Update lessons in modules with progress
-        setModules(prevModules =>
-          prevModules.map(module => ({
+        setModules(prev =>
+          prev.map(module => ({
             ...module,
-            lessons: module.lessons.map(lesson => ({
-              ...lesson,
-              is_completed: progressMap[lesson.id] || false
-            }))
+            lessons: module.lessons.map(lesson => {
+              const progress = progressMap[lesson.id];
+              if (!progress) return lesson;
+
+              return {
+                ...lesson,
+                is_completed: progress.is_completed,
+                quiz_score: progress.quiz_score,
+                completed_at: progress.completed_at,
+                time_spent_seconds: progress.time_spent_seconds
+              };
+            })
           }))
         );
-      } catch (err) {
+      } catch {
         toast.error('Failed to load lesson progress');
       }
     };
 
     loadProgress();
-  }, [courseId, modules.length]);
+  }, [courseId, modules]);
+
+  useEffect(() => {
+    if (!courseId) return;
+
+    const loadCourseProgress = async () => {
+      try {
+        const progressService = new ProgressService();
+        const progress = await progressService.getCourseProgress(courseId);
+
+        setCourseProgress(progress.progress_percentage);
+      } catch {
+        toast.error('Failed to load course progress');
+      }
+    };
+
+    loadCourseProgress();
+  }, [courseId]);
+
+
 
   const handleMarkComplete = async (data: {
     quizScore?: number;
@@ -195,6 +223,13 @@ export default function CourseLearn() {
 
       toast.success('Lesson marked as complete!');
 
+
+      const updatedCourseProgress =
+        await progressService.getCourseProgress(courseId!);
+
+      setCourseProgress(updatedCourseProgress.progress_percentage);
+
+
       setModules(prev =>
         prev.map(m =>
           m.id === currentModuleId
@@ -202,9 +237,16 @@ export default function CourseLearn() {
               ...m,
               lessons: m.lessons.map(l =>
                 l.id === currentLesson.id
-                  ? { ...l, is_completed: true }
+                  ? {
+                    ...l,
+                    is_completed: true,
+                    quiz_score: data.quizScore ?? null,
+                    time_spent_seconds: data.timeSpentSeconds,
+                    completed_at: new Date().toISOString()
+                  }
                   : l
               )
+
             }
             : m
         )
@@ -213,18 +255,6 @@ export default function CourseLearn() {
       toast.error(err.message || 'Failed to mark lesson as complete');
     }
   };
-
-
-
-  const courseProgress = useMemo(() => {
-    const totalLessons = modules.reduce((sum, m) => sum + m.lessons.length, 0);
-    const completedLessons = modules.reduce(
-      (sum, m) => sum + m.lessons.filter(l => l.is_completed).length,
-      0
-    );
-    return totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
-  }, [modules]);
-
 
   const currentModule = useMemo(
     () => modules.find(m => m.id === currentModuleId),

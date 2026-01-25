@@ -21,6 +21,13 @@ from services.calculator import (
     recalculate_course_progress
 )
 
+from services.course_stucture import (
+    get_total_modules,
+    get_total_lessons_in_course,
+    get_total_lessons_in_module
+)
+
+
 router = APIRouter(prefix="/progress", tags=["Progress"])
 
 
@@ -41,10 +48,7 @@ def start_lesson_route(
     )
 
 
-@router.post(
-    "/lessons/{lesson_id}/complete",
-    response_model=LessonProgressResponse
-)
+@router.post("/lessons/{lesson_id}/complete", response_model=LessonProgressResponse)
 def complete_lesson_route(
     lesson_id: str,
     data: LessonProgressCreate,
@@ -56,19 +60,32 @@ def complete_lesson_route(
     progress = complete_lesson(
         db=db,
         student_id=student_id,
-        course_id=data.course_id, 
-        module_id=data.module_id,  
+        course_id=data.course_id,
+        module_id=data.module_id,
         lesson_id=lesson_id,
         quiz_score=data.quiz_score,
         time_spent_seconds=data.time_spent_seconds,
     )
+    
+    total_lessons_module = get_total_lessons_in_module(data.module_id)
+    total_modules_course = get_total_modules(data.course_id)
+    total_lessons_course = get_total_lessons_in_course(data.course_id)
 
     recalculate_module_progress(
-        db, student_id, "demo-course", "demo-module", total_lessons=10
+        db=db,
+        student_id=student_id,
+        course_id=data.course_id,
+        module_id=data.module_id,
+        total_lessons=total_lessons_module
     )
 
     recalculate_course_progress(
-        db, student_id, "demo-course", total_modules=5, total_lessons=10
+        db=db,
+        student_id=student_id,
+        course_id=data.course_id,
+        total_modules=total_modules_course,
+        total_lessons=total_lessons_course,
+        #assessment_required=data.assessment_required
     )
 
     return progress
@@ -111,9 +128,12 @@ def get_module_progress_route(
 def get_course_progress_route(
     course_id: str,
     db: Session = Depends(get_db),
-    student_id: str = get_current_user_token
+    current_user: TokenData = Depends(get_current_user_token)
 ):
+    student_id = current_user.sub
+
     progress = get_course_progress(db, student_id, course_id)
+
     if not progress:
         return {
             "course_id": course_id,
@@ -125,6 +145,9 @@ def get_course_progress_route(
             "is_completed": False,
             "last_accessed_at": None
         }
+
+    return progress
+
         
         
 @router.get(
@@ -134,8 +157,9 @@ def get_course_progress_route(
 def get_course_lessons_progress_route(
     course_id: str,
     db: Session = Depends(get_db),
-    student_id: str = "demo-student"
+    student_id: TokenData = Depends(get_current_user_token)
 ):
+    student_id = student_id.sub
     return get_course_lessons_progress(
         db=db,
         student_id=student_id,

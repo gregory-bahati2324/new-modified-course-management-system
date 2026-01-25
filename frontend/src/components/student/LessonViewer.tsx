@@ -106,6 +106,29 @@ export function LessonViewer({
               </Badge>
             )}
           </div>
+          {/* Completion Summary */}
+          {lesson.is_completed && (
+            <Card className="border-green-500/20 bg-green-500/5">
+              <CardContent className="pt-4 text-sm space-y-1">
+                <p>
+                  <strong>Status:</strong> Completed
+                </p>
+
+                {lesson.quiz_score !== null && lesson.quiz_score !== undefined && (
+                  <p>
+                    <strong>Quiz Score:</strong> {lesson.quiz_score}
+                  </p>
+                )}
+
+                {lesson.completed_at && (
+                  <p className="text-muted-foreground">
+                    Completed on {new Date(lesson.completed_at).toLocaleString()}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
 
           <div className="flex flex-wrap gap-3">
             {lesson.duration_minutes && (

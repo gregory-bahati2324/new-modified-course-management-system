@@ -26,4 +26,7 @@ export interface Lesson {
 
   is_completed?: boolean;
   locked?: boolean;
+  quiz_score?: number;
+  time_spent_seconds?: number;
+  completed_at?: string;
 }
