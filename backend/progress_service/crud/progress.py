@@ -106,6 +106,18 @@ def get_module_progress(
         student_id=student_id,
         module_id=module_id
     ).first()
+    
+    
+def get_course_id_for_module(
+    db: Session,
+    module_id: str
+):
+    module_progress = db.query(student_module_progress.StudentModuleProgress).filter_by(
+        module_id=module_id
+    ).first()
+    if module_progress:
+        return module_progress.course_id
+    return None    
 
 
 # --------------------------------
@@ -121,6 +133,8 @@ def get_course_progress(
         student_id=student_id,
         course_id=course_id
     ).first()
+    
+    
 
 
 def get_course_lessons_progress(

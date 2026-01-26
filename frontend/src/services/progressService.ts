@@ -21,6 +21,14 @@ export interface CourseProgress {
   last_accessed_at: string | null;
 }
 
+export interface ModuleProgress {
+  module_id: string;
+  completed_lessons: number;
+  total_lessons: number;
+  progress_percentage: number;
+  is_completed: boolean;
+}
+
 
 export class ProgressService {
   async startLesson(lessonId: string): Promise<void> {
@@ -63,9 +71,9 @@ export class ProgressService {
     }
   }
 
-  async getModuleProgress(moduleId: string): Promise<Progress[]> {
+  async getModuleProgress(moduleId: string): Promise<ModuleProgress> {
     try {
-      const response = await apiProgressClient.get<Progress[]>(
+      const response = await apiProgressClient.get<ModuleProgress>(
         API_ENDPOINTS.progress.getModuleProgress(moduleId)
       );
       return response.data;

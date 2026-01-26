@@ -14,7 +14,8 @@ from crud.progress import (
     reset_lesson_progress,
     get_module_progress,
     get_course_progress,
-    get_course_lessons_progress
+    get_course_lessons_progress,
+    get_course_id_for_module
 )
 from services.calculator import (
     recalculate_module_progress,
@@ -112,12 +113,38 @@ def reset_lesson_route(
 def get_module_progress_route(
     module_id: str,
     db: Session = Depends(get_db),
-    student_id: str = get_current_user_token
+    current_user: TokenData = Depends(get_current_user_token),
 ):
+    student_id = current_user.sub
+
+    
+    total_lessons = get_total_lessons_in_module(module_id)
+    course_id = get_course_id_for_module(db=db, module_id = module_id)
+
+    recalculate_module_progress(
+        db=db,
+        student_id=student_id,
+        course_id=course_id,
+        module_id=module_id,
+        total_lessons=total_lessons
+    )
+
     progress = get_module_progress(db, student_id, module_id)
+
+    
     if not progress:
-        raise HTTPException(404, "Module progress not found")
+        return {
+            "module_id": module_id,
+            "completed_lessons": 0,
+            "total_lessons": total_lessons,
+            "progress_percentage": 0,
+            "is_completed": False,
+            "assignment_required": None,
+            "completed_at": None
+        }
+
     return progress
+
 
 
 # -----------------------------
@@ -132,23 +159,33 @@ def get_course_progress_route(
 ):
     student_id = current_user.sub
 
+    # 🔄 Always recalc totals from structure service
+    total_modules = get_total_modules(course_id)
+    total_lessons = get_total_lessons_in_course(course_id)
+
+    recalculate_course_progress(
+        db=db,
+        student_id=student_id,
+        course_id=course_id,
+        total_modules=total_modules,
+        total_lessons=total_lessons
+    )
+
     progress = get_course_progress(db, student_id, course_id)
 
     if not progress:
         return {
             "course_id": course_id,
             "completed_modules": 0,
-            "total_modules": 0,
+            "total_modules": total_modules,
             "completed_lessons": 0,
-            "total_lessons": 0,
+            "total_lessons": total_lessons,
             "progress_percentage": 0,
             "is_completed": False,
             "last_accessed_at": None
         }
 
     return progress
-
-        
         
 @router.get(
     "/courses/{course_id}/lessons",

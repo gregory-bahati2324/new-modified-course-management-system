@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ChevronRight,
   ChevronDown,
@@ -17,6 +17,8 @@ import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Module } from '@/types/module';
 import { Lesson, ContentBlock } from '@/types/lesson';
+import { ModuleProgress } from '@/services/progressService';
+
 
 
 interface CourseModuleNavProps {
@@ -25,7 +27,9 @@ interface CourseModuleNavProps {
   currentLessonId: string | null;
   onSelectLesson: (moduleId: string, lessonId: string) => void;
   courseProgress?: number;
+  moduleProgressMap: Record<string, ModuleProgress>;
 }
+
 
 
 export function CourseModuleNav({
@@ -33,13 +37,13 @@ export function CourseModuleNav({
   currentModuleId,
   currentLessonId,
   onSelectLesson,
-  courseProgress = 0
+  courseProgress = 0,
+  moduleProgressMap
 }: CourseModuleNavProps) {
   const [expandedModules, setExpandedModules] =
     useState<Record<string, boolean>>(() => (
       currentModuleId ? { [currentModuleId]: true } : {}
     ));
-
 
   const toggleModule = (moduleId: string) => {
     setExpandedModules(prev => ({
@@ -76,11 +80,16 @@ export function CourseModuleNav({
     return <FileText className="h-4 w-4 text-muted-foreground" />;
   };
 
+  useEffect(() => {
+    if (currentModuleId) {
+      setExpandedModules(prev => ({
+        ...prev,
+        [currentModuleId]: true
+      }));
+    }
+  }, [currentModuleId, modules]);
 
-  const getModuleProgress = (module: Module) => {
-    const completedLessons = module.lessons.filter(l => l.is_completed).length;
-    return Math.round((completedLessons / module.lessons.length) * 100);
-  };
+
 
   return (
     <div className="h-full flex flex-col bg-muted/30">
@@ -99,7 +108,11 @@ export function CourseModuleNav({
           {modules.map((module) => {
             const isExpanded = expandedModules[module.id] ?? false;
             const isCurrentModule = module.id === currentModuleId;
-            const moduleProgress = getModuleProgress(module);
+            const moduleProgress =
+              moduleProgressMap[module.id]?.progress_percentage ?? 0;
+            const completedLessons =
+              moduleProgressMap[module.id]?.completed_lessons ?? 0;
+
 
             return (
               <Collapsible
@@ -138,26 +151,27 @@ export function CourseModuleNav({
                     <div className="flex items-center gap-2 mt-1">
                       <Progress value={moduleProgress} className="h-1 flex-1" />
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {module.lessons.filter(l => l.is_completed).length}/{module.lessons.length}
+                        {completedLessons}/{moduleProgressMap[module.id]?.total_lessons ?? module.lessons.length}
                       </span>
+
                     </div>
                   </div>
                 </CollapsibleTrigger>
 
                 <CollapsibleContent className="pl-4 pr-2 pb-2">
                   <div className="space-y-0.5 pt-1 border-l-2 border-border ml-2">
-                    {module.lessons.length === 0 ? (
+                    {!module.lessons || module.lessons.length === 0 ? (
                       <p className="text-xs text-muted-foreground px-4 py-2">
                         No lessons yet
                       </p>
                     ) : (
                       module.lessons.map((lesson) => {
-                        const isCurrentLesson = isCurrentModule && lesson.id === currentLessonId;
+                        const isCurrentLesson = isCurrentModule && String(lesson.id) === String(currentLessonId);
 
                         return (
                           <button
                             key={lesson.id}
-                            onClick={() => !module.locked && onSelectLesson(module.id, lesson.id)}
+                            onClick={() => !module.locked && onSelectLesson(String(module.id), String(lesson.id))}
                             disabled={module.locked}
                             className={cn(
                               "w-full flex items-center gap-2 py-2 px-3 -ml-[1px] text-left text-sm rounded-r-lg transition-colors",

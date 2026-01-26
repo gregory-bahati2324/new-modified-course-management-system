@@ -47,9 +47,9 @@ class ModuleProgressResponse(BaseModel):
     is_completed: bool
 
     # 🔗 Assignment integration
-    assignment_required: bool
+    assignment_required: bool | None = None
 
-    completed_at: Optional[datetime]
+    completed_at: Optional[datetime] | None = None
 
     class Config:
         from_attributes = True
@@ -81,6 +81,7 @@ class CourseProgressResponse(BaseModel):
 
     class Config:
         orm_mode = True
+        
 
         
         

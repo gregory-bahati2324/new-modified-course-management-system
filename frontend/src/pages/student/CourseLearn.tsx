@@ -15,7 +15,7 @@ import { LessonViewer } from '@/components/student/LessonViewer';
 import { moduleService } from '@/services/moduleService';
 import { lessonService } from '@/services/lessonService';
 import { Course, courseService } from '@/services/courseService';
-import { ProgressService } from '@/services/progressService';
+import { ProgressService, ModuleProgress } from '@/services/progressService';
 import { Lesson } from '@/types/lesson';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -39,8 +39,7 @@ export default function CourseLearn() {
   const [moduleNavOpen, setModuleNavOpen] = useState(true);
   const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
   const [courseProgress, setCourseProgress] = useState<number>(0);
-
-
+  const [moduleProgressMap, setModuleProgressMap] = useState<Record<string, ModuleProgress>>({});
 
   useEffect(() => {
     if (!courseId) return;
@@ -170,10 +169,11 @@ export default function CourseLearn() {
 
               return {
                 ...lesson,
-                is_completed: progress.is_completed,
-                quiz_score: progress.quiz_score,
-                completed_at: progress.completed_at,
-                time_spent_seconds: progress.time_spent_seconds
+                is_completed: progress.is_completed ?? false,
+                quiz_score: progress.quiz_score ?? null,
+                completed_at: progress.completed_at ?? null,
+                time_spent_seconds: progress.time_spent_seconds ?? null
+
               };
             })
           }))
@@ -204,6 +204,26 @@ export default function CourseLearn() {
   }, [courseId]);
 
 
+  useEffect(() => {
+    if (!currentModuleId) return;
+
+    const loadModuleProgress = async () => {
+      try {
+        const progressService = new ProgressService();
+        const progress = await progressService.getModuleProgress(currentModuleId);
+
+        setModuleProgressMap(prev => ({
+          ...prev,
+          [currentModuleId]: progress
+        }));
+      } catch {
+        toast.error('Failed to load module progress');
+      }
+    };
+
+    loadModuleProgress();
+  }, [currentModuleId]);
+
 
   const handleMarkComplete = async (data: {
     quizScore?: number;
@@ -229,6 +249,13 @@ export default function CourseLearn() {
 
       setCourseProgress(updatedCourseProgress.progress_percentage);
 
+      const moduleProgress =
+        await progressService.getModuleProgress(currentModuleId!);
+
+      setModuleProgressMap(prev => ({
+        ...prev,
+        [currentModuleId!]: moduleProgress
+      }));
 
       setModules(prev =>
         prev.map(m =>
@@ -418,6 +445,7 @@ export default function CourseLearn() {
               currentLessonId={currentLessonId}
               onSelectLesson={handleSelectLesson}
               courseProgress={courseProgress}
+              moduleProgressMap={moduleProgressMap}
 
             />
           )}

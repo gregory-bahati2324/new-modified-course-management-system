@@ -20,3 +20,4 @@ def get_total_lessons_in_course(course_id: str) -> int:
 def get_total_lessons_in_module(module_id: str) -> int:
     lessons = get_module_lessons(module_id)
     return len(lessons)
+
