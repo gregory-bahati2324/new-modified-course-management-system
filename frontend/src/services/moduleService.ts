@@ -10,6 +10,23 @@ export interface Module {
   lessons?: Lesson[];
 }
 
+export interface ApiLesson {
+  id: string;
+  title: string;
+  order: number;
+}
+
+export interface ApiModuleWithLessons {
+  id: string;
+  course_id: string;
+  title: string;
+  description?: string;
+  order: number;
+  visibility?: string;
+  lessons: ApiLesson[];
+}
+
+
 
 export interface Lesson {
   id: string;
@@ -45,6 +62,25 @@ export class ModuleService {
     }
   }
 
+  async getModulesWithLessons(courseId: string): Promise<ApiModuleWithLessons[]> {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const response = await apiModuleClient.get<ApiModuleWithLessons[]>(
+        API_ENDPOINTS.modules.get_modules_with_lessons(courseId),
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      throw {
+        status: error.response?.status,
+        message: handleApiError(error)
+      };
+    }
+  }
 
   async getModuleById(moduleId: string): Promise<Module> {
     try {

@@ -36,6 +36,8 @@ export function LessonViewer({
   const quizQuestions = lesson.quiz_questions || [];
   const startTimeRef = useRef<number>(Date.now());
 
+  console.log(quizQuestions)
+
   useEffect(() => {
     startTimeRef.current = Date.now();
   }, [lesson.id]);

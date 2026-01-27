@@ -75,6 +75,7 @@ export const API_ENDPOINTS = {
     create: "/modules",    // FIXED
     detail: (id: string) => `/modules/${id}`,
     get_course_module: (id: string) => `/modules/course/${id}`,
+    get_modules_with_lessons: (courseId: string) => `/modules/course/${courseId}/with-lessons`,
     update: (id: string) => `/modules/update/${id}`,
     delete: (id: string) => `/modules/${id}`,
     reorder: "/modules/reorder",

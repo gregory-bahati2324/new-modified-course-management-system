@@ -71,16 +71,23 @@ export class ProgressService {
     }
   }
 
-  async getModuleProgress(moduleId: string): Promise<ModuleProgress> {
+  async getModuleProgress(moduleId: string): Promise<ModuleProgress | null> {
     try {
       const response = await apiProgressClient.get<ModuleProgress>(
         API_ENDPOINTS.progress.getModuleProgress(moduleId)
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      
+      if (error.response?.status === 404) {
+        return null;
+      }
+
+      
       throw new Error(handleApiError(error));
     }
   }
+
 
   async getCourseLessonsProgress(courseId: string): Promise<Progress[]> {
     try {

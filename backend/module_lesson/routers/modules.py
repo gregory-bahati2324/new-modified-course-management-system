@@ -5,7 +5,7 @@ from database import get_db
 from crud import (
     create_module, get_modules, get_module, update_module, delete_module, get_course_modules,
     create_lesson, get_lessons_by_module, get_lesson, update_lesson, delete_lesson, reorder_lessons,
-    reorder_modules
+    reorder_modules, get_course_modules_with_lessons
 )
 from schemas import ( ModuleCreate, LessonCreate, LessonUpdate, LessonResponse,
     LessonReorderRequest, ModuleReorderRequest)
@@ -40,6 +40,17 @@ def get_module_route(module_id: str, db: Session = Depends(get_db)):
 def query_course_modules(course_id: str, db: Session = Depends(get_db)):
     modules = get_course_modules(course_id=course_id, db=db)
     return modules
+
+@module_router.get(
+    "/course/{course_id}/with-lessons",
+    summary="Get course modules with lesson names"
+)
+def get_course_modules_with_lessons_route(
+    course_id: str,
+    db: Session = Depends(get_db)
+):
+    return get_course_modules_with_lessons(db, course_id)
+
 
 @module_router.put("/update/{module_id}", summary="Update module")
 def update_module_route(module_id: str, data: ModuleCreate, db: Session = Depends(get_db)):

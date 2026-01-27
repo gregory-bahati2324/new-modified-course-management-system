@@ -29,10 +29,20 @@ export interface Module {
   order?: number;
 }
 
+export interface UIModule {
+  id: string;
+  title: string;
+  order?: number;
+  lessons: Lesson[];
+  completed: boolean;
+  locked?: boolean;
+}
+
+
 export default function CourseLearn() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const [modules, setModules] = useState<Module[]>([]);
+  const [modules, setModules] = useState<UIModule[]>([]);
   const [currentModuleId, setCurrentModuleId] = useState<string | null>(null);
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
@@ -46,26 +56,27 @@ export default function CourseLearn() {
 
     const loadModules = async () => {
       try {
-        const { data } = await moduleService.getModules(courseId);
+        const apiModules = await moduleService.getModulesWithLessons(courseId);
 
-
-        // Attach empty lessons initially
-        const modulesWithLessons = data.map(m => ({
-          ...m,
-          lessons: [],
-          completed: false
+        const uiModules: UIModule[] = apiModules.map(m => ({
+          id: m.id,
+          title: m.title,
+          order: m.order,
+          completed: false,
+          lessons: m.lessons.map(l => ({
+            id: l.id,
+            title: l.title,
+            order: l.order,
+            is_completed: false,
+            content_blocks: undefined
+          }))
         }));
 
-        // Sort modules by order if not already sorted by backend
-        const sortedModules = [...modulesWithLessons].sort((a, b) =>
-          (a.order || 0) - (b.order || 0)
-        );
+        setModules(uiModules);
 
-        setModules(modulesWithLessons);
-
-        // Auto-select first module
-        if (modulesWithLessons.length > 0) {
-          setCurrentModuleId(modulesWithLessons[0].id);
+        if (uiModules.length > 0) {
+          setCurrentModuleId(uiModules[0].id);
+          setCurrentLessonId(uiModules[0].lessons[0]?.id ?? null);
         }
       } catch (err: any) {
         toast.error(err.message || 'Failed to load modules');
@@ -74,6 +85,7 @@ export default function CourseLearn() {
 
     loadModules();
   }, [courseId]);
+
 
   useEffect(() => {
     if (!currentModuleId) return;
@@ -105,7 +117,13 @@ export default function CourseLearn() {
                   tags: lesson.tags ?? [],
 
                   content_blocks: lesson.contentBlocks ?? [],   // ✅ REQUIRED
-                  quiz_questions: lesson.quizQuestions ?? [],
+                  quiz_questions: (lesson.quizQuestions ?? []).map((q: any) => ({
+                    id: Number(q.id),
+                    question: q.question,
+                    options: q.options,
+                    correct_answer: q.correctAnswer, // 🔥 FIX HERE
+                  }))
+                  ,
 
                   is_completed: lesson.completed ?? false,
                 }))
@@ -194,14 +212,29 @@ export default function CourseLearn() {
         const progressService = new ProgressService();
         const progress = await progressService.getCourseProgress(courseId);
 
+        // If backend returns null/undefined or empty progress, assume 0%
+        if (!progress || progress.progress_percentage === undefined) {
+          setCourseProgress(0);
+          return;
+        }
+
         setCourseProgress(progress.progress_percentage);
-      } catch {
-        toast.error('Failed to load course progress');
+      } catch (error: any) {
+        // Only show toast for real errors (network, server errors, etc.)
+        const status = error?.response?.status;
+
+        if (status && status !== 404) {
+          toast.error('Failed to load course progress');
+        }
+
+        // If 404 or no data, assume 0% progress
+        setCourseProgress(0);
       }
     };
 
     loadCourseProgress();
   }, [courseId]);
+
 
 
   useEffect(() => {
@@ -212,17 +245,37 @@ export default function CourseLearn() {
         const progressService = new ProgressService();
         const progress = await progressService.getModuleProgress(currentModuleId);
 
+        // If progress is null/undefined, use empty progress
         setModuleProgressMap(prev => ({
           ...prev,
-          [currentModuleId]: progress
+          [currentModuleId]: progress ?? {
+            completed_lessons: 0,
+            total_lessons: 0,
+            progress_percentage: 0
+          } as ModuleProgress
         }));
-      } catch {
-        toast.error('Failed to load module progress');
+      } catch (error: any) {
+        const status = error?.response?.status;
+
+        if (status && status !== 404) {
+          toast.error('Failed to load module progress');
+        }
+
+        // fallback for no progress
+        setModuleProgressMap(prev => ({
+          ...prev,
+          [currentModuleId]: {
+            completed_lessons: 0,
+            total_lessons: 0,
+            progress_percentage: 0
+          } as ModuleProgress
+        }));
       }
     };
 
     loadModuleProgress();
   }, [currentModuleId]);
+
 
 
   const handleMarkComplete = async (data: {
@@ -283,6 +336,24 @@ export default function CourseLearn() {
     }
   };
 
+  const findNextModuleWithLessons = (startIndex: number) => {
+    for (let i = startIndex + 1; i < modules.length; i++) {
+      if (modules[i].lessons.length > 0) {
+        return modules[i];
+      }
+    }
+    return null;
+  };
+
+  const findPrevModuleWithLessons = (startIndex: number) => {
+    for (let i = startIndex - 1; i >= 0; i--) {
+      if (modules[i].lessons.length > 0) {
+        return modules[i];
+      }
+    }
+    return null;
+  };
+
   const currentModule = useMemo(
     () => modules.find(m => m.id === currentModuleId),
     [modules, currentModuleId]
@@ -311,42 +382,53 @@ export default function CourseLearn() {
 
 
   const goToNextLesson = () => {
-    if (!currentModule || !currentLesson) return;
-
-    const index = currentModule.lessons.findIndex(l => l.id === currentLesson.id);
-
-    if (index < currentModule.lessons.length - 1) {
-      setCurrentLessonId(String(currentModule.lessons[index + 1].id));
-      return;
-    }
+    if (!currentModule) return;
 
     const moduleIndex = modules.findIndex(m => m.id === currentModule.id);
-    const nextModule = modules[moduleIndex + 1];
 
+    // CASE 1: current module has lessons
+    if (currentLesson) {
+      const index = currentModule.lessons.findIndex(l => l.id === currentLesson.id);
+
+      if (index < currentModule.lessons.length - 1) {
+        setCurrentLessonId(String(currentModule.lessons[index + 1].id));
+        return;
+      }
+    }
+
+    // CASE 2: move to next module WITH lessons
+    const nextModule = findNextModuleWithLessons(moduleIndex);
     if (nextModule) {
       setCurrentModuleId(nextModule.id);
+      setCurrentLessonId(String(nextModule.lessons[0].id));
     }
   };
 
 
   const goToPreviousLesson = () => {
-    if (!currentModule || !currentLesson) return;
-
-    const index = currentModule.lessons.findIndex(l => l.id === currentLesson.id);
-
-    if (index > 0) {
-      setCurrentLessonId(String(currentModule.lessons[index - 1].id));
-      return;
-    }
+    if (!currentModule) return;
 
     const moduleIndex = modules.findIndex(m => m.id === currentModule.id);
-    const prevModule = modules[moduleIndex - 1];
 
+    // CASE 1: current module has lessons
+    if (currentLesson) {
+      const index = currentModule.lessons.findIndex(l => l.id === currentLesson.id);
+
+      if (index > 0) {
+        setCurrentLessonId(String(currentModule.lessons[index - 1].id));
+        return;
+      }
+    }
+
+    // CASE 2: move to previous module WITH lessons
+    const prevModule = findPrevModuleWithLessons(moduleIndex);
     if (prevModule) {
       setCurrentModuleId(prevModule.id);
+      setCurrentLessonId(
+        String(prevModule.lessons[prevModule.lessons.length - 1].id)
+      );
     }
   };
-
 
   if (!course) {
     return (
@@ -378,25 +460,19 @@ export default function CourseLearn() {
 
 
 
-  const isFirstLesson =
+  const hasPrev =
     !!currentModule &&
-    !!currentLesson &&
-    currentModule.lessons[0]?.id === currentLesson.id &&
-    modules[0]?.id === currentModule.id;
+    !!findPrevModuleWithLessons(modules.findIndex(m => m.id === currentModule.id)) ||
+    (currentLesson &&
+      currentModule.lessons.findIndex(l => l.id === currentLesson.id) > 0);
 
-  const isLastLesson = (() => {
-    if (!currentModule || !currentLesson || modules.length === 0) return false;
+  const hasNext =
+    !!currentModule &&
+    !!findNextModuleWithLessons(modules.findIndex(m => m.id === currentModule.id)) ||
+    (currentLesson &&
+      currentModule.lessons.findIndex(l => l.id === currentLesson.id) <
+      currentModule.lessons.length - 1);
 
-    const lastModule = modules[modules.length - 1];
-    if (!lastModule || lastModule.lessons.length === 0) return false;
-
-    const lastLesson = lastModule.lessons[lastModule.lessons.length - 1];
-
-    return (
-      lastModule.id === currentModule.id &&
-      lastLesson.id === currentLesson.id
-    );
-  })();
 
 
 
@@ -525,7 +601,7 @@ export default function CourseLearn() {
                 variant="outline"
                 size="sm"
                 onClick={goToPreviousLesson}
-                disabled={isFirstLesson}
+                disabled={!hasPrev}
               >
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Previous
@@ -543,7 +619,7 @@ export default function CourseLearn() {
               <Button
                 size="sm"
                 onClick={goToNextLesson}
-                disabled={isLastLesson}
+                disabled={!hasNext}
               >
                 Next
                 <ChevronRight className="ml-1 h-4 w-4" />

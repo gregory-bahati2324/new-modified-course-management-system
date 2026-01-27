@@ -30,6 +30,46 @@ def get_module(db: Session, module_id: str):
 def get_course_modules(db: Session, course_id: str):
     return db.query(Module).filter(Module.course_id == course_id).order_by(Module.order).all()
 
+def get_course_modules_with_lessons(db: Session, course_id: str):
+    modules = (
+        db.query(Module)
+        .filter(Module.course_id == course_id)
+        .order_by(Module.order)
+        .all()
+    )
+
+    result = []
+
+    for module in modules:
+        lessons = (
+            db.query(Lesson)
+            .filter(Lesson.module_id == module.id)
+            .order_by(Lesson.order)
+            .all()
+        )
+
+        result.append({
+            "id": module.id,
+            "course_id": module.course_id,
+            "title": module.title,
+            "description": module.description,
+            "order": module.order,
+            "visibility": module.visibility,
+            "completed": False,  # progress service will override later
+            "lessons": [
+                {
+                    "id": lesson.id,
+                    "title": lesson.title,
+                    "order": lesson.order
+                }
+                for lesson in lessons
+            ]
+        })
+
+    return result
+
+
+
 def update_module(db: Session, module_id: str, data: ModuleCreate):
     module = get_module(db, module_id)
     if not module:
