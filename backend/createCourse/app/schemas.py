@@ -31,6 +31,7 @@ class CourseOut(CourseBase):
     course_type: str
     duration: str
     instructor_id: str
+    instructor_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

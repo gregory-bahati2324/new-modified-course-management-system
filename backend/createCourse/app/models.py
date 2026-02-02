@@ -16,6 +16,7 @@ class Course(Base):
     course_type = Column(String, nullable=True)
     duration = Column(String, nullable=True)  # e.g. "12 weeks" or number
     instructor_id = Column(String, nullable=False, index=True)
+    instructor_name = Column(String, nullable=True)
     is_published = Column(Boolean, default=False)
     allow_self_enrollment = Column(Boolean, default=True)
     certificate = Column(Boolean, default=True)

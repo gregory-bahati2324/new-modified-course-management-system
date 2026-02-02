@@ -92,6 +92,7 @@ def recalculate_course_progress(
     course_progress.progress_percentage = progress_percent
     course_progress.assessment_passed = assessment_passed
     course_progress.is_completed = (
+        total_lessons > 0 and
         completed_lessons == total_lessons and
         (not assessment_required or assessment_passed)
     )

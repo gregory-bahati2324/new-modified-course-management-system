@@ -15,7 +15,7 @@ def create_course(course_in: schemas.CourseCreate, db: Session = Depends(databas
     # ensure unique code
     if crud.get_course_by_code(db, course_in.code):
         raise HTTPException(status_code=400, detail="Course code already exists")
-    new = crud.create_course(db, course_in, instructor_id=token.sub)
+    new = crud.create_course(db, course_in, instructor_id=token.sub, instructor_name=token.name)
     # convert tags string back to list
     out = schemas.CourseOut.from_orm(new)
     return out
