@@ -490,13 +490,7 @@ export default function Enrollment() {
                                             <span>•</span>
 
                                         </div>
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                            <Users className="h-4 w-4" />
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-
-                                        </div>
+                                        
                                     </div>
                                 </CardContent>
                                 <CardFooter className="pt-3 border-t">

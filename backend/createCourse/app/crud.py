@@ -20,7 +20,7 @@ def _str_to_tags(s: str | None):
     except Exception:
         return []
 
-def create_course(db: Session, course_in: schemas.CourseCreate, instructor_id: str, instructor_name: str | None = None):
+def create_course(db: Session, course_in: schemas.CourseCreate, instructor_id: str):
     new = models.Course(
         id=str(uuid.uuid4()),
         code=course_in.code,
@@ -32,7 +32,7 @@ def create_course(db: Session, course_in: schemas.CourseCreate, instructor_id: s
         course_type=course_in.course_type,
         duration=course_in.duration,
         instructor_id=instructor_id,
-        instructor_name=instructor_name,
+        instructor_name=course_in.instructor_name,
         is_published=course_in.is_published or False,
         prerequisites=course_in.prerequisites,
         learning_outcomes=course_in.learning_outcomes,

@@ -1,0 +1,47 @@
+
+
+services:
+  auth_service:
+    build: ./backend
+    ports:
+      - "8000:8000"
+
+    volumes:
+     - ./backend/app:/app/app
+     - ./backend/test.db:/app/test.db
+    restart: always
+
+  create_course_service:
+    build: ./backend/createCourse
+    ports:
+      - "8001:8000"
+
+    volumes:
+      - ./backend/createCourse/app:/app/app
+      - ./backend/createCourse/courses.db:/app/courses.db  
+    restart: always
+
+  assessments_service:
+    build: ./backend/assessments
+    ports:
+      - "8003:8000"
+    restart: always
+
+  module_lesson_service:
+    build: ./backend/module_lesson
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./backend/module_lesson/app:/app/app
+      - ./backend/module_lesson/module_service.db:/app/module_service.db  
+    restart: always
+
+  progress_service:
+    build: ./backend/progress_service
+    ports:
+      - "8004:8000"
+
+    volumes:
+      - ./backend/progress_service/app:/app/app
+      - ./backend/progress_service/progress.db:/app/progress.db  
+    restart: always

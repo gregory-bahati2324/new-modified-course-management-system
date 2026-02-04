@@ -18,6 +18,7 @@ class UserResponse(BaseModel):
     last_name: str
     role: str
     newsletter: bool
+     
 
 # Response for registration (matches authService expectations)
 class RegisterResponse(BaseModel):

@@ -1,8 +1,8 @@
 import { useState, ReactNode } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { 
-  BookOpen, 
-  Home, 
+import {
+  BookOpen,
+  Home,
   Calendar,
   FileText,
   Trophy,
@@ -64,6 +64,14 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
         { title: 'All Assignments', href: '/student/assignments', icon: FileText },
         { title: 'Submit Assignment', href: '/student/submit-assignment', icon: FileText },
         { title: 'Grades', href: '/student/grades', icon: Trophy },
+      ],
+    },
+    {
+      title: 'Tests & Exams',
+      icon: ClipboardCheck,
+      children: [
+        { title: 'Available Exams', href: '/student/exams', icon: ClipboardCheck },
+        { title: 'Exam History', href: '/student/exam-history', icon: Trophy },
       ],
     },
     {
@@ -170,7 +178,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
   return (
     <div className="h-screen flex flex-col w-full overflow-hidden">
       <Header />
-      
+
       <div className="flex flex-1 w-full overflow-hidden">
         {/* Desktop Sidebar */}
         <aside
@@ -190,7 +198,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
               <Menu className="h-4 w-4" />
             </Button>
           </div>
-          
+
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {navItems.map((item, index) => (
               <NavItemComponent key={index} item={item} />
@@ -226,7 +234,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                 {navItems.map((item, index) => (
                   <NavItemComponent key={index} item={item} />

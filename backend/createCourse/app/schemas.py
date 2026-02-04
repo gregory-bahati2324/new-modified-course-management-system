@@ -11,6 +11,7 @@ class CourseBase(BaseModel):
     department: Optional[str] = None
     level: Optional[str] = None
     course_type: Optional[str] = None
+    instructor_name: Optional[str] = None
     duration: Optional[str] = None
     is_published: Optional[bool] = False
     allow_self_enrollment: Optional[bool] = True

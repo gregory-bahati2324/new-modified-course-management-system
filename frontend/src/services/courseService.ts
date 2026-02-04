@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '@/config/api.config';
 export interface CreateCourseRequest {
   code: string;
   title: string;
+  instructor_name?: string;
   description?: string;
   category?: string;
   department?: string;

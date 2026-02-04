@@ -5,19 +5,20 @@ from .database import get_db
 from .crud import create_user, authenticate_user
 from .models import User
 from .backend_auth_utilities import decode_token, get_current_user, create_access_token, create_refresh_token  # you need JWT helper functions
+import os
+from fastapi import Header
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/register", response_model=RegisterResponse)
 def register(user: RegisterRequest, db: Session = Depends(get_db)):
-    # Check if email already exists
     if db.query(User).filter(User.registrationNumber == user.registrationNumber).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Registration Number Present")
 
     # Create user in DB
     new_user: User = create_user(db, user)
 
-    # Generate JWT tokens (replace with your JWT logic)
+    # Generate JWT tokens
     access_token = create_access_token({"sub": str(new_user.id)})
     refresh_token = create_refresh_token({"sub": str(new_user.id)})
 
@@ -43,7 +44,7 @@ def register(user: RegisterRequest, db: Session = Depends(get_db)):
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = authenticate_user(db, data.registrationNumber, data.password)
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(status_code=401, detail="Invalid Registration Number or password")
 
     access_token = create_access_token({"sub": str(user.id),
                                         "role": user.role})
@@ -90,3 +91,4 @@ def refresh_token(data: RefreshTokenRequest, db: Session = Depends(get_db)):
     
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")     
+

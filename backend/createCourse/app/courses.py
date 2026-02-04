@@ -11,11 +11,9 @@ router = APIRouter(prefix="/courses", tags=["Courses"])
              dependencies=[Depends(auth_utils.require_role(["instructor", "admin"]))])
 def create_course(course_in: schemas.CourseCreate, db: Session = Depends(database.get_db),
                   token=Depends(auth_utils.get_current_user_token)):
-    # token.sub contains instructor id
-    # ensure unique code
     if crud.get_course_by_code(db, course_in.code):
         raise HTTPException(status_code=400, detail="Course code already exists")
-    new = crud.create_course(db, course_in, instructor_id=token.sub, instructor_name=token.name)
+    new = crud.create_course(db, course_in, instructor_id=token.sub)
     # convert tags string back to list
     out = schemas.CourseOut.from_orm(new)
     return out

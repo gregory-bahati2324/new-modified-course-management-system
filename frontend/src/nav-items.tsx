@@ -6,6 +6,9 @@ import SettingsPage from "./pages/Settings.tsx";
 import StudentCourses from "./pages/student/Courses.tsx";
 import Enrollment from "./pages/student/Enrollment.tsx";
 import StudentAssignments from "./pages/student/Assignments.tsx";
+import Exams from "./pages/student/Exam.tsx";
+import ExamHistory from "./pages/student/ExamHistory.tsx";
+import TakeExam from "./pages/student/TakeExam.tsx";
 import StudentSchedule from "./pages/student/Schedule.tsx";
 import StudentGrades from "./pages/student/Grades.tsx";
 import StudentProfile from "./pages/student/Profile.tsx";
@@ -90,6 +93,24 @@ export const navItems = [
     to: "/student/assignments",
     icon: <FileText className="h-4 w-4" />,
     page: <StudentLayout><StudentAssignments /></StudentLayout>,
+  },
+  {
+    title: "student exams",
+    to: "/student/exams",
+    icon: <FileQuestion className="h-4 w-4" />,
+    page: <StudentLayout><Exams /></StudentLayout>,
+  },
+  {
+    title: "student exam history",
+    to: "/student/exam-history",
+    icon: <Award className="h-4 w-4" />,
+    page: <StudentLayout><ExamHistory /></StudentLayout>,
+  },
+  {
+    title: "Take Exam",
+    to: "/student/exam/:examId/take",
+    icon: <FileQuestion className="h-4 w-4" />,
+    page: <StudentLayout><TakeExam /></StudentLayout>,
   },
   {
     title: "Student Schedule",

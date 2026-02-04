@@ -23,9 +23,10 @@ export default function CreateCourse() {
   const [courseData, setCourseData] = useState<CreateCourseRequest>({
     title: '',
     code: '',
+    instructor_name: '',
     description: '',
     category: '',
-    department: '', // ✅ Added new field for department
+    department: '',
     level: '',
     course_type: '',
     duration: '',
@@ -65,7 +66,7 @@ export default function CreateCourse() {
         duration = `Year ${courseData.year_of_study} - Semester ${courseData.semester}`;
       }
 
-      // ✅ Build duration for SHORT courses
+      //  Build duration for SHORT courses
       if (courseData.course_type === 'short' && courseData.duration) {
         duration = `${courseData.duration} weeks`;
       }
@@ -153,6 +154,28 @@ export default function CreateCourse() {
                   />
                 </div>
               </div>
+
+              {/* Instructor Name */}
+              <div className="space-y-2">
+                <Label htmlFor="instructor_name">
+                  Instructor Name *
+                </Label>
+                <Input
+                  id="instructor_name"
+                  placeholder="e.g. Gregory Bahati"
+                  value={courseData.instructor_name || ''}
+                  onChange={(e) =>
+                    setCourseData({ ...courseData, instructor_name: e.target.value })
+                  }
+                  required
+                  minLength={3}
+                  maxLength={100}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter your full name as it will appear on the course (3–100 characters)
+                </p>
+              </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="description">Course Description *</Label>

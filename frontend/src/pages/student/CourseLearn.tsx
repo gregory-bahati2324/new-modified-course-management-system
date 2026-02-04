@@ -116,12 +116,12 @@ export default function CourseLearn() {
                   prerequisites: lesson.prerequisites ?? '',
                   tags: lesson.tags ?? [],
 
-                  content_blocks: lesson.contentBlocks ?? [],   // ✅ REQUIRED
+                  content_blocks: lesson.contentBlocks ?? [],   
                   quiz_questions: (lesson.quizQuestions ?? []).map((q: any) => ({
                     id: Number(q.id),
                     question: q.question,
                     options: q.options,
-                    correct_answer: q.correctAnswer, // 🔥 FIX HERE
+                    correct_answer: q.correctAnswer, 
                   }))
                   ,
 
