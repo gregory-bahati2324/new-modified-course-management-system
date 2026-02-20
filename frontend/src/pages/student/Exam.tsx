@@ -1,9 +1,3 @@
-/**
- * Student Exams List Page
- * Shows all available, upcoming, and completed exams
- * Created: 2025-02-04
- */
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -36,12 +30,12 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { studentExamService, ExamListItem } from '@/services/studentExamService';
+import { assessmentService, Assessment } from '@/services/assessmentService';
 import { format, formatDistanceToNow, isPast, isFuture } from 'date-fns';
 
 export default function StudentExams() {
   const navigate = useNavigate();
-  const [exams, setExams] = useState<ExamListItem[]>([]);
+  const [exams, setExams] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -54,16 +48,15 @@ export default function StudentExams() {
   const fetchExams = async () => {
     try {
       setLoading(true);
-      const data = await studentExamService.getExams({
-        type: typeFilter !== 'all' ? typeFilter : undefined
-      });
+      const data = await assessmentService.getStudentAssessments();
       setExams(data);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to load exams');
+      toast.error(error.message || 'Failed to load assessments');
     } finally {
       setLoading(false);
     }
   };
+
 
   /* CHANGE: Helper function to get status badge styling */
   const getStatusBadge = (status: string) => {
@@ -107,8 +100,8 @@ export default function StudentExams() {
   /* CHANGE: Filter exams based on search and tab */
   const filteredExams = exams.filter(exam => {
     const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         exam.course_title.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      exam.course_title.toLowerCase().includes(searchTerm.toLowerCase());
+
     if (activeTab === 'all') return matchesSearch;
     if (activeTab === 'available') return matchesSearch && (exam.status === 'available' || exam.status === 'in_progress');
     if (activeTab === 'upcoming') return matchesSearch && exam.status === 'upcoming';
@@ -117,14 +110,34 @@ export default function StudentExams() {
   });
 
   /* CHANGE: Calculate statistics */
+  /* const stats = {
+    total: exams.length,
+    available: exams.filter(e => e.status === 'available' || e.status === 'in_progress').length,
+    upcoming: exams.filter(e => e.status === 'upcoming').length,
+    completed: exams.filter(e => e.status === 'completed').length,
+    averageScore: exams.filter(e => e.best_score).reduce((sum, e) => sum + (e.best_score || 0), 0) /
+      (exams.filter(e => e.best_score).length || 1)
+  };*/
+
   const stats = {
     total: exams.length,
     available: exams.filter(e => e.status === 'available' || e.status === 'in_progress').length,
     upcoming: exams.filter(e => e.status === 'upcoming').length,
     completed: exams.filter(e => e.status === 'completed').length,
-    averageScore: exams.filter(e => e.best_score).reduce((sum, e) => sum + (e.best_score || 0), 0) / 
-                  (exams.filter(e => e.best_score).length || 1)
+    averageScore: (() => {
+      const scoredExams = exams.filter(e => typeof (e as any).best_score === 'number');
+      if (scoredExams.length === 0) return 0;
+      const totalScore = scoredExams.reduce((sum, e) => sum + ((e as any).best_score ?? 0), 0);
+      return totalScore / scoredExams.length;
+    })(),
+    totalQuestions: exams.reduce((sum, e) => sum + ((e as any).question_count ?? 0), 0),
+    totalPoints: exams.reduce((sum, e) => sum + ((e as any).total_points ?? 0), 0),
+    totalAttemptsAllowed: exams.reduce((sum, e) => {
+      if ((e as any).attempts === 'Unlimited' || (e as any).attempts == null) return sum;
+      return sum + parseInt((e as any).attempts);
+    }, 0),
   };
+
 
   const handleStartExam = (examId: string) => {
     navigate(`/student/exams/${examId}/take`);
@@ -135,12 +148,12 @@ export default function StudentExams() {
   };
 
   /* CHANGE: Exam card component */
-  const ExamCard = ({ exam }: { exam: ExamListItem }) => {
-    const dueDate = new Date(exam.due_date);
-    const isOverdue = isPast(dueDate) && exam.status !== 'completed';
-    const attemptsRemaining = exam.attempts_allowed === 'unlimited' 
-      ? 'Unlimited' 
-      : `${parseInt(exam.attempts_allowed) - exam.attempts_used} remaining`;
+  const ExamCard = ({ exam }: { exam: Assessment }) => {
+    const dueDate = exam.due_date ? new Date(exam.due_date) : null;
+    const isOverdue = dueDate ? isPast(dueDate) && exam.status !== 'completed' : false;
+
+    const attemptsAllowed = exam.attempts ?? 'Unlimited';
+    const attemptsUsed = (exam as any).attempts_used ?? 0; // if you start tracking attempts later
 
     return (
       <Card className="hover:shadow-md transition-shadow">
@@ -155,14 +168,17 @@ export default function StudentExams() {
               <h3 className="font-semibold text-lg truncate">{exam.title}</h3>
               <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                 <BookOpen className="h-4 w-4" />
-                {exam.course_title}
+                {exam.course_title} ({exam.course_code})
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Instructor: {exam.instructor_name ?? 'N/A'}
               </p>
             </div>
-            
+
             {/* Score display for completed exams */}
-            {exam.best_score !== undefined && (
+            {exam.status === 'completed' && (exam as any).best_score !== undefined && (
               <div className="text-right">
-                <div className="text-2xl font-bold text-primary">{exam.best_score}%</div>
+                <div className="text-2xl font-bold text-primary">{(exam as any).best_score}%</div>
                 <p className="text-xs text-muted-foreground">Best Score</p>
               </div>
             )}
@@ -173,7 +189,7 @@ export default function StudentExams() {
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span className={isOverdue ? 'text-destructive' : ''}>
-                {format(dueDate, 'MMM d, yyyy')}
+                {dueDate ? format(dueDate, 'MMM d, yyyy') : 'No due date'}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -182,23 +198,27 @@ export default function StudentExams() {
             </div>
             <div className="flex items-center gap-2">
               <FileQuestion className="h-4 w-4 text-muted-foreground" />
-              <span>{exam.question_count} questions</span>
+              <span>{(exam as any).question_count ?? 'N/A'} questions</span>
             </div>
             <div className="flex items-center gap-2">
               <Trophy className="h-4 w-4 text-muted-foreground" />
-              <span>{exam.total_points} points</span>
+              <span>{(exam as any).total_points ?? 'N/A'} points</span>
             </div>
           </div>
 
           {/* Progress bar for attempts */}
-          {exam.attempts_allowed !== 'unlimited' && (
+          {attemptsAllowed !== 'Unlimited' && (
             <div className="mb-4">
               <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Attempts: {exam.attempts_used}/{exam.attempts_allowed}</span>
-                <span>{attemptsRemaining}</span>
+                <span>Attempts: {attemptsUsed}/{attemptsAllowed}</span>
+                <span>
+                  {attemptsAllowed === 'Unlimited'
+                    ? 'Unlimited'
+                    : `${Number(attemptsAllowed) - attemptsUsed} remaining`}
+                </span>
               </div>
-              <Progress 
-                value={(exam.attempts_used / parseInt(exam.attempts_allowed)) * 100} 
+              <Progress
+                value={attemptsAllowed === 'Unlimited' ? 0 : (attemptsUsed / Number(attemptsAllowed)) * 100}
                 className="h-2"
               />
             </div>
@@ -207,17 +227,14 @@ export default function StudentExams() {
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
             {(exam.status === 'available' || exam.status === 'in_progress') && (
-              <Button 
-                onClick={() => handleStartExam(exam.id)}
-                className="gap-2"
-              >
+              <Button onClick={() => handleStartExam(exam.id)} className="gap-2">
                 <Play className="h-4 w-4" />
                 {exam.status === 'in_progress' ? 'Continue' : 'Start Exam'}
               </Button>
             )}
             {exam.status === 'completed' && (
               <>
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => handleViewResult(exam.id)}
                   className="gap-2"
@@ -225,20 +242,20 @@ export default function StudentExams() {
                   <Eye className="h-4 w-4" />
                   View Results
                 </Button>
-                {exam.attempts_allowed !== '1' && 
-                 (exam.attempts_allowed === 'unlimited' || exam.attempts_used < parseInt(exam.attempts_allowed)) && (
-                  <Button 
-                    variant="secondary"
-                    onClick={() => handleStartExam(exam.id)}
-                    className="gap-2"
-                  >
-                    <Play className="h-4 w-4" />
-                    Retake
-                  </Button>
-                )}
+                {Number(attemptsAllowed) !== 1 &&
+                  (attemptsAllowed === 'Unlimited' || attemptsUsed < attemptsAllowed) && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleStartExam(exam.id)}
+                      className="gap-2"
+                    >
+                      <Play className="h-4 w-4" />
+                      Retake
+                    </Button>
+                  )}
               </>
             )}
-            {exam.status === 'upcoming' && (
+            {exam.status === 'upcoming' && dueDate && (
               <Button variant="outline" disabled className="gap-2">
                 <Timer className="h-4 w-4" />
                 Starts {formatDistanceToNow(dueDate, { addSuffix: true })}
@@ -255,6 +272,7 @@ export default function StudentExams() {
       </Card>
     );
   };
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -381,7 +399,7 @@ export default function StudentExams() {
                 <FileQuestion className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">No exams found</h3>
                 <p className="text-muted-foreground text-center">
-                  {activeTab === 'all' 
+                  {activeTab === 'all'
                     ? "You don't have any exams yet."
                     : `No ${activeTab} exams at the moment.`}
                 </p>

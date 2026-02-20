@@ -121,7 +121,7 @@ export const API_ENDPOINTS = {
     create: '/assessments',
     update: (id: string) => `/assessments/${id}`,
     delete: (id: string) => `/assessments/${id}`,
-    // remove questions from these endpoints — questions handled separately
+    get_student_assessments: '/assessments/students/asess',
     submit: (id: string) => `/assessments/${id}/submit`,
     submissions: (id: string) => `/assessments/${id}/submissions`,
     grade: (id: string, submissionId: string) => `assessments/${id}/submissions/${submissionId}/grade`,

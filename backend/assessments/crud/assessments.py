@@ -51,6 +51,16 @@ def get_assessment(db: Session, assessment_id: int, instructor_id: str):
         Assessment.id == assessment_id,
         Assessment.instructor_id == instructor_id
     ).first()
+    
+def get_assessments_for_courses(db: Session, course_ids: list[str]):
+    return (
+        db.query(Assessment)
+        .filter(
+            Assessment.course_id.in_(course_ids),
+            Assessment.status == "published"
+        )
+        .all()
+    )
 
 # crud/assessments.py (excerpt)
 def update_assessment(db: Session, assessment_id: int, instructor_id: str, data):

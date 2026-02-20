@@ -32,7 +32,7 @@ class AssessmentCreate(BaseModel):
     shuffle_questions: Optional[bool] = False
     show_answers: Optional[bool] = True
     status: Optional[str] = "draft"
-    questions: Optional[List[QuestionCreate]] = []
+    
 
 class QuestionResponse(QuestionCreate):
     id: int
@@ -51,3 +51,31 @@ class AssessmentResponse(AssessmentCreate):
 
     class Config:
         orm_mode = True
+        
+class StudentAssessmentResponse(BaseModel):
+    id: int
+    title: str
+    type: str
+    description: Optional[str]
+    course_id: Optional[str]
+    instructor_id: str
+
+    due_date: Optional[datetime]
+    time_limit: Optional[int]
+    attempts: Optional[str]
+    passing_score: Optional[int]
+    shuffle_questions: Optional[bool]
+    show_answers: Optional[bool]
+    status: str
+
+    # course info
+    course_title: Optional[str]
+    course_code: Optional[str]
+    instructor_name: Optional[str]
+
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+        

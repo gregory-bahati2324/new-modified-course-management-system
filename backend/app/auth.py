@@ -19,8 +19,15 @@ def register(user: RegisterRequest, db: Session = Depends(get_db)):
     new_user: User = create_user(db, user)
 
     # Generate JWT tokens
-    access_token = create_access_token({"sub": str(new_user.id)})
-    refresh_token = create_refresh_token({"sub": str(new_user.id)})
+    access_token = create_access_token({
+    "sub": str(new_user.id),
+    "role": new_user.role
+    })
+
+    refresh_token = create_refresh_token({
+        "sub": str(new_user.id),
+        "role": new_user.role
+    })
 
     user_data = UserResponse(
         id=new_user.id,

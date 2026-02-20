@@ -53,6 +53,10 @@ export interface Assessment {
 
   questions: QuestionCreate[];  // fetched separately
 
+  course_title?: string;
+  course_code?: string;
+  instructor_name?: string;
+
   created_at: string;
   updated_at: string;
 }
@@ -106,6 +110,18 @@ class AssessmentService {
       const response = await apiAssessmentClient.put<Assessment>(
         API_ENDPOINTS.assessments.update(id),
         data,  // no questions here
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+  async getStudentAssessments(): Promise<Assessment[]> {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await apiAssessmentClient.get<Assessment[]>(
+        API_ENDPOINTS.assessments.get_student_assessments,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       return response.data;

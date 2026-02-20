@@ -20,6 +20,7 @@ security = HTTPBearer()
 class TokenData(BaseModel):
     sub: Optional[str] = None   # user id
     role: Optional[str] = None  # instructor / student / admin
+    raw_token: Optional[str] = None  # Added to hold the raw token for forwarding
 
 # ============================================================================
 # TOKEN DECODER
@@ -48,16 +49,18 @@ def decode_token(token: str) -> TokenData:
 def get_current_user_token(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> TokenData:
-    """
-    Extract user info from the Authorization header.
-    """
+
     token = credentials.credentials
     td = decode_token(token)
 
     if not td.sub:
-        raise HTTPException(401, "Invalid token: missing subject")
+        raise HTTPException(status_code=401, detail="Invalid token: missing subject")
+
+    # Attach raw token for service-to-service forwarding
+    td.raw_token = token
 
     return td
+
 
 # ============================================================================
 # ROLE CHECKER

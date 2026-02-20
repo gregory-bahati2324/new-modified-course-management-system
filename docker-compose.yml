@@ -25,6 +25,9 @@ services:
     build: ./backend/assessments
     ports:
       - "8003:8000"
+    volumes:
+      - ./backend/assessments:/app
+
     restart: always
 
   module_lesson_service:
