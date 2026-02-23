@@ -1,50 +1,100 @@
-
+version: "3.9"
 
 services:
+
+  postgres:
+    image: postgres:15
+    container_name: auth_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   auth_service:
     build: ./backend
+    container_name: auth_service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
-
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/auth_db
     volumes:
-     - ./backend/app:/app/app
-     - ./backend/test.db:/app/test.db
+      - ./backend/app:/app/app
     restart: always
 
-  create_course_service:
+  course_service:
     build: ./backend/createCourse
+    container_name: course_service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8001:8000"
-
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/course_db
     volumes:
       - ./backend/createCourse/app:/app/app
-      - ./backend/createCourse/courses.db:/app/courses.db  
-    restart: always
-
-  assessments_service:
-    build: ./backend/assessments
-    ports:
-      - "8003:8000"
-    volumes:
-      - ./backend/assessments:/app
-
-    restart: always
+    restart: always  
 
   module_lesson_service:
     build: ./backend/module_lesson
+    container_name: module_lesson_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8002:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/module_db
     volumes:
-      - ./backend/module_lesson/app:/app/app
-      - ./backend/module_lesson/module_service.db:/app/module_service.db  
+      - ./backend/module_lesson:/app
+      - ./backend/module_lesson/uploads:/app/uploads
     restart: always
+
+  assessment_service:
+    build: ./backend/assessments
+    container_name: assessment_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8003:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/assessment_db
+    volumes:
+      - ./backend/assessments:/app/app
+    restart: always  
 
   progress_service:
     build: ./backend/progress_service
+    container_name: progress_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8004:8000"
-
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/progress_db
     volumes:
-      - ./backend/progress_service/app:/app/app
-      - ./backend/progress_service/progress.db:/app/progress.db  
-    restart: always
+      - ./backend/progress_service:/app/app
+    restart: always  
+
+volumes:
+  postgres_data:

@@ -53,10 +53,17 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid Registration Number or password")
 
-    access_token = create_access_token({"sub": str(user.id),
-                                        "role": user.role})
-    refresh_token = create_refresh_token({"sub": str(user.id),
-                                          "role": user.role})
+    full_name = f"{user.first_name} {user.last_name}"
+    access_token = create_access_token({
+        "sub": str(user.id),
+        "role": user.role,
+        "name": full_name,
+        "reg_no": user.registrationNumber
+    })
+    refresh_token = create_refresh_token({
+        "sub": str(user.id),
+        "role": user.role
+    })
 
     user_data = UserResponse(
         id=user.id,

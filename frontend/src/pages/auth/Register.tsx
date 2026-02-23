@@ -130,7 +130,7 @@ export default function Register() {
                     <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       id="firstName"
-                      placeholder="John"
+                      placeholder="First Name"
                       value={formData.firstName}
                       onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                       className="pl-10"
@@ -142,7 +142,7 @@ export default function Register() {
                   <Label htmlFor="lastName">Last Name</Label>
                   <Input
                     id="lastName"
-                    placeholder="Doe"
+                    placeholder="Last Name"
                     value={formData.lastName}
                     onChange={(e) => setFormData({...formData, lastName: e.target.value})}
                     required
@@ -158,13 +158,10 @@ export default function Register() {
                    'Registration Number'} *
                 </Label>
                 <div className="relative">
-                  <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="registrationNumber"
                     type="text"
-                    placeholder={formData.role === 'student' ? 'e.g., 2024-01-12345' : 
-                                formData.role === 'instructor' ? 'e.g., STAFF-2024-001' : 
-                                'Enter your registration number'}
+                    placeholder= 'Enter your registration number'
                     value={formData.registrationNumber}
                     onChange={(e) => setFormData({...formData, registrationNumber: e.target.value.toUpperCase()})}
                     className="pl-10"
