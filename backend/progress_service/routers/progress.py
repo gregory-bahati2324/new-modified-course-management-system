@@ -27,6 +27,7 @@ from services.course_stucture import (
     get_total_lessons_in_course,
     get_total_lessons_in_module
 )
+from services.version_syc import sync_lesson_versions
 
 
 router = APIRouter(prefix="/progress", tags=["Progress"])
@@ -40,10 +41,11 @@ router = APIRouter(prefix="/progress", tags=["Progress"])
 def start_lesson_route(
     lesson_id: str,
     db: Session = Depends(get_db),
-    student_id: str = "demo-student",
+    currentuser: TokenData = Depends(get_current_user_token),
     course_id: str = "demo-course",
     module_id: str = "demo-module"
 ):
+    student_id = currentuser.sub
     return start_lesson(
         db, student_id, course_id, module_id, lesson_id
     )
@@ -58,6 +60,9 @@ def complete_lesson_route(
 ):
     student_id = current_user.sub
 
+    # 🔥 ensure versions are synced first
+    sync_lesson_versions(db, student_id, data.course_id)
+
     progress = complete_lesson(
         db=db,
         student_id=student_id,
@@ -67,7 +72,7 @@ def complete_lesson_route(
         quiz_score=data.quiz_score,
         time_spent_seconds=data.time_spent_seconds,
     )
-    
+
     total_lessons_module = get_total_lessons_in_module(data.module_id)
     total_modules_course = get_total_modules(data.course_id)
     total_lessons_course = get_total_lessons_in_course(data.course_id)
@@ -86,7 +91,6 @@ def complete_lesson_route(
         course_id=data.course_id,
         total_modules=total_modules_course,
         total_lessons=total_lessons_course,
-        #assessment_required=data.assessment_required
     )
 
     return progress
@@ -97,8 +101,9 @@ def complete_lesson_route(
 def reset_lesson_route(
     lesson_id: str,
     db: Session = Depends(get_db),
-    student_id: str = get_current_user_token
+    current_user: TokenData = Depends(get_current_user_token)
 ):
+    student_id = current_user.sub
     success = reset_lesson_progress(db, student_id, lesson_id)
     if not success:
         raise HTTPException(404, "Lesson progress not found")
@@ -117,9 +122,12 @@ def get_module_progress_route(
 ):
     student_id = current_user.sub
 
-    
+    course_id = get_course_id_for_module(module_id)
+
+    # 🔥 sync versions before recalculation
+    sync_lesson_versions(db, student_id, course_id)
+
     total_lessons = get_total_lessons_in_module(module_id)
-    course_id = get_course_id_for_module(db=db, module_id = module_id)
 
     recalculate_module_progress(
         db=db,
@@ -131,7 +139,6 @@ def get_module_progress_route(
 
     progress = get_module_progress(db, student_id, module_id)
 
-    
     if not progress:
         return {
             "module_id": module_id,
@@ -146,7 +153,6 @@ def get_module_progress_route(
     return progress
 
 
-
 # -----------------------------
 # COURSE ENDPOINTS
 # -----------------------------
@@ -159,10 +165,14 @@ def get_course_progress_route(
 ):
     student_id = current_user.sub
 
-    # 🔄 Always recalc totals from structure service
+    # 🔥 STEP 1: sync lesson versions
+    sync_lesson_versions(db, student_id, course_id)
+
+    # 🔥 STEP 2: fetch updated structure
     total_modules = get_total_modules(course_id)
     total_lessons = get_total_lessons_in_course(course_id)
 
+    # 🔥 STEP 3: recalc progress
     recalculate_course_progress(
         db=db,
         student_id=student_id,

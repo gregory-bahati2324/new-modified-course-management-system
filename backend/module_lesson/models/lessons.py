@@ -25,6 +25,7 @@ class Lesson(Base):
     accessibility = Column(JSON, default={})  # {darkMode, fontSize, transcriptEnabled, transcriptText}
     feedbackSettings = Column(JSON, default={})  # {ratings, reviews, customQuestions}
     order = Column(Integer, default=1)
+    version = Column(Integer, nullable=False, default=1)
     # -------------------------------------------
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

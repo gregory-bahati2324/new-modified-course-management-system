@@ -10,6 +10,7 @@ class StudentLessonProgress(Base):
     course_id = Column(String, nullable=False)
     module_id = Column(String, nullable=False)
     lesson_id = Column(String, nullable=False, index=True)
+    lesson_version = Column(Integer, nullable=False, default=1)
 
     is_completed = Column(Boolean, default=False)
     quiz_score = Column(Integer)

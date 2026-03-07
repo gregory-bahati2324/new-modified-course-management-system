@@ -124,6 +124,7 @@ from datetime import datetime
 class LessonResponse(LessonBase):
     id: str
     module_id: str
+    version: int
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 

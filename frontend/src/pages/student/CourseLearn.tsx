@@ -43,6 +43,7 @@ export default function CourseLearn() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [modules, setModules] = useState<UIModule[]>([]);
+  const [modulesLoaded, setModulesLoaded] = useState(false);
   const [currentModuleId, setCurrentModuleId] = useState<string | null>(null);
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
@@ -73,6 +74,7 @@ export default function CourseLearn() {
         }));
 
         setModules(uiModules);
+        setModulesLoaded(true);
 
         if (uiModules.length > 0) {
           setCurrentModuleId(uiModules[0].id);
@@ -116,12 +118,12 @@ export default function CourseLearn() {
                   prerequisites: lesson.prerequisites ?? '',
                   tags: lesson.tags ?? [],
 
-                  content_blocks: lesson.contentBlocks ?? [],   
+                  content_blocks: lesson.contentBlocks ?? [],
                   quiz_questions: (lesson.quizQuestions ?? []).map((q: any) => ({
                     id: Number(q.id),
                     question: q.question,
                     options: q.options,
-                    correct_answer: q.correctAnswer, 
+                    correct_answer: q.correctAnswer,
                   }))
                   ,
 
@@ -163,15 +165,13 @@ export default function CourseLearn() {
   }, [courseId]);
 
   useEffect(() => {
-    if (!courseId) return;
-
-    const lessonsLoaded = modules.some(m => m.lessons.length > 0);
-    if (!lessonsLoaded) return;
+    if (!courseId || !modulesLoaded) return;
 
     const loadProgress = async () => {
       try {
         const progressService = new ProgressService();
-        const progressList = await progressService.getCourseLessonsProgress(courseId);
+        const progressList =
+          await progressService.getCourseLessonsProgress(courseId);
 
         const progressMap: Record<string, any> = {};
         progressList.forEach(p => {
@@ -191,18 +191,17 @@ export default function CourseLearn() {
                 quiz_score: progress.quiz_score ?? null,
                 completed_at: progress.completed_at ?? null,
                 time_spent_seconds: progress.time_spent_seconds ?? null
-
               };
             })
           }))
         );
-      } catch {
+      } catch (error: any) {
         toast.error('Failed to load lesson progress');
       }
     };
 
     loadProgress();
-  }, [courseId, modules]);
+  }, [courseId, modulesLoaded]);
 
   useEffect(() => {
     if (!courseId) return;

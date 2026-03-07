@@ -179,6 +179,7 @@ def get_lessons_by_module(db: Session, module_id: str, base_url: Optional[str] =
             "accessibility": lesson.accessibility or {},
             "feedbackSettings": lesson.feedbackSettings or {},
             "order": lesson.order,
+            "version": lesson.version,
             "created_at": lesson.created_at,
             "updated_at": lesson.updated_at,
         }
@@ -230,6 +231,7 @@ def get_lesson(db: Session, lesson_id: str, base_url: Optional[str] = None):
         "order": lesson_obj.order,
         "created_at": lesson_obj.created_at,
         "updated_at": lesson_obj.updated_at,
+        "version": lesson_obj.version
     }
 
     # If base_url provided, convert local upload paths to absolute URLs
@@ -255,6 +257,10 @@ def get_lesson(db: Session, lesson_id: str, base_url: Optional[str] = None):
 def get_lesson_instance(db: Session, lesson_id: str) -> Optional[Lesson]:
     return db.query(Lesson).filter(Lesson.id == lesson_id).first()
 
+def get_lesson_version(db: Session, lesson_id: str) -> Optional[int]:
+    lesson = get_lesson_instance(db, lesson_id)
+    return lesson.version if lesson else None
+
       
   
 
@@ -268,6 +274,9 @@ def update_lesson(db: Session, lesson_id: str, data: LessonUpdate):
             setattr(lesson, key, value.dict() if hasattr(value, 'dict') else value)
         else:
             setattr(lesson, key, value)
+
+    # ✅ Increment version on content change
+    lesson.version += 1
 
     db.commit()
     db.refresh(lesson)
