@@ -383,9 +383,18 @@ export default function CreateAssessment() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const time24 = convertTo24Hour(assessmentData.dueTime);
-    const dueDateString = `${assessmentData.dueDate} ${time24}:00`;
+    if (!assessmentData.course) {
+      toast.error("Please select a course before submitting.");
+      return;
+    }
 
+
+    if (!assessmentData.dueTime || !assessmentData.dueDate) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    const dueDateString = `${assessmentData.dueDate} ${assessmentData.dueTime}:00`;
     // 1. Prepare assessment metadata payload (no questions field)
     const payload: AssessmentMetadata = {
       title: assessmentData.title,
@@ -595,6 +604,7 @@ export default function CreateAssessment() {
                     <Select
                       value={assessmentData.course}
                       onValueChange={(value) => setAssessmentData({ ...assessmentData, course: value })}
+                      required
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select course" />
@@ -913,6 +923,7 @@ export default function CreateAssessment() {
                   <Input
                     id="dueDate"
                     type="date"
+                    required
                     value={assessmentData.dueDate}
                     onChange={(e) => setAssessmentData({ ...assessmentData, dueDate: e.target.value })}
                   />
@@ -922,6 +933,7 @@ export default function CreateAssessment() {
                   <Input
                     id="dueTime"
                     type="time"
+                    required
                     value={assessmentData.dueTime}
                     onChange={(e) => setAssessmentData({ ...assessmentData, dueTime: e.target.value })}
                   />

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from models.assessments import Question
 from database import get_db
-from schemas.assessments import AssessmentCreate, AssessmentResponse, StudentAssessmentResponse
-from crud.assessments import create_assessment, get_assessments_for_instructor, get_assessment, update_assessment, get_assessments_for_courses
+from schemas.assessments import AssessmentCreate, SaveProgressRequest,SubmitExamRequest, AssessmentResponse, StudentAssessmentResponse, ExamDetails
+from crud.assessments import create_assessment,save_exam_progress, submit_exam, get_assessment_for_student, get_assessments_for_instructor, get_assessment, start_exam, update_assessment, get_assessments_for_courses
+from crud.questions import list_questions_for_assessment
 from utils.auth import require_role, get_current_user_token, security
 from services.enrollment_client import get_student_enrollments, get_course_details
 from services.assessment_status import calculate_student_status
@@ -115,7 +117,75 @@ def get_student_assessments_for_course(
     return results
     
 
+@router.get("/{assessment_id}/exam", response_model=ExamDetails)
+def get_exam(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    token = Depends(get_current_user_token)
+):
+
+    assessment = get_assessment_for_student(db, assessment_id)
+
+    if not assessment:
+        raise HTTPException(404)
+
+    questions = list_questions_for_assessment(db, assessment_id)
+
+    return {
+        "id": assessment.id,
+        "title": assessment.title,
+        "time_limit": assessment.time_limit,
+        "questions": questions
+    }  
+    
+    
+@router.post("/{assessment_id}/start")
+def start_exam_route(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    token = Depends(get_current_user_token)
+):
+
+    student_id = token.sub
+
+    attempt = start_exam(db, student_id, assessment_id)
+
+    return {"attempt_id": attempt.id}   
 
 
+@router.post("/attempts/save")
+def save_progress_route(
+    data: SaveProgressRequest,
+    db: Session = Depends(get_db),
+    token = Depends(get_current_user_token)
+):
+    save_exam_progress(
+        db,
+        data.attempt_id,
+        token.sub,  # 🔥 ADD THIS
+        [a.dict() for a in data.answers]
+    )
 
+    return {"message": "Progress saved"}
 
+@router.post("/attempts/submit")
+def submit_exam_route(
+    data: SubmitExamRequest,
+    db: Session = Depends(get_db),
+    token = Depends(get_current_user_token)
+):
+
+    attempt = submit_exam(
+        db,
+        data.attempt_id,
+        token.sub, 
+        [a.dict() for a in data.answers],
+        data.time_taken
+    )
+
+    return {
+        "message": "Exam submitted successfully",
+        "attempt_id": attempt.id,
+        "status": attempt.status,
+        "submitted_at": attempt.submitted_at
+    }

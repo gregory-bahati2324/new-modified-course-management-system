@@ -2,6 +2,7 @@
 from pydantic import BaseModel
 from typing import List, Optional, Union
 from datetime import datetime
+from typing import Any
 
 class QuestionCreate(BaseModel):
     type: str
@@ -79,3 +80,46 @@ class StudentAssessmentResponse(BaseModel):
     class Config:
         orm_mode = True
         
+        
+class ExamQuestion(BaseModel):
+    id: int
+    type: str
+    question_text: str
+    points: int
+
+    options: Optional[List[str]]
+    test_cases: Optional[List[dict]]
+    matching_pairs: Optional[List[dict]]
+    correct_order: Optional[List[str]]
+
+    class Config:
+        orm_mode = True
+        
+        
+class ExamDetails(BaseModel):
+
+    id: int
+    title: str
+    course_title: Optional[str] = None
+
+    time_limit: Optional[int]
+
+    questions: List[ExamQuestion]
+
+    class Config:
+        orm_mode = True
+        
+        
+class ExamAnswer(BaseModel):
+    question_id: int
+    answer: Any
+    
+class SaveProgressRequest(BaseModel):
+    attempt_id: int
+    answers: List[ExamAnswer]
+
+
+class SubmitExamRequest(BaseModel):
+    attempt_id: int
+    answers: List[ExamAnswer]
+    time_taken: int

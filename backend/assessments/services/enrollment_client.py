@@ -3,7 +3,7 @@ import requests
 
 ENROLLMENT_SERVICE_URL = os.getenv(
     "ENROLLMENT_SERVICE_URL",
-    "http://create_course_service:8000/api"
+    "http://course_service:8000/api"
 )
 
 TIMEOUT = 5

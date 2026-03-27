@@ -32,6 +32,60 @@ export interface AssessmentMetadata {
   status?: 'draft' | 'published' | 'closed';
 }
 
+export interface ExamQuestion {
+  id: number;
+  type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'coding' | 'file-upload' | 'matching' | 'ordering';
+  question_text: string;
+  points: number;
+  options?: string[];
+  matching_pairs?: { left: string; right: string }[];
+  correct_order?: string[]; // For ordering questions, shuffled for display
+  test_cases?: { input: string; expectedOutput: string }[];
+}
+
+export interface ExamDetails {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  course_title: string;
+  module_title?: string;
+  due_date: string;
+  time_limit: number | null;
+  attempts_allowed: string;
+  attempts_used: number;
+  passing_score: number;
+  shuffle_questions: boolean;
+  show_answers: boolean;
+  total_points: number;
+  questions: ExamQuestion[];
+  started_at?: string;
+  time_remaining?: number;
+}
+
+export interface ExamQuestion {
+  id: number;
+  type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'coding' | 'file-upload' | 'matching' | 'ordering';
+  question_text: string;
+  points: number;
+  options?: string[];
+  matching_pairs?: { left: string; right: string }[];
+  correct_order?: string[]; // For ordering questions, shuffled for display
+  test_cases?: { input: string; expectedOutput: string }[];
+}
+
+export interface ExamAnswer {
+  question_id: number;
+  answer: string | number | string[] | { [key: string]: string };
+  file?: File;
+}
+
+export interface ExamSubmission {
+  exam_id: string;
+  answers: ExamAnswer[];
+  time_taken: number;
+}
+
 export interface Assessment {
   id: string;
   title: string;
@@ -128,6 +182,66 @@ class AssessmentService {
     } catch (error) {
       throw new Error(handleApiError(error));
     }
+  }
+
+  async deleteAssessment(id: string): Promise<void> {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      await apiAssessmentClient.delete(
+        API_ENDPOINTS.assessments.delete(id),
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
+
+  async getExamDetails(id: string): Promise<ExamDetails> {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await apiAssessmentClient.get<ExamDetails>(
+        API_ENDPOINTS.assessments.get_exam(id),
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  async startExam(id: string): Promise<{ attempt_id: number }> {
+    const token = localStorage.getItem('accessToken');
+    const response = await apiAssessmentClient.post(
+      API_ENDPOINTS.assessments.startExam(id),
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  }
+
+  async saveExamProgress(id: number, answers: ExamAnswer[]): Promise<void> {
+    try {
+      const token = localStorage.getItem('accessToken');
+      await apiAssessmentClient.post(
+        API_ENDPOINTS.assessments.saveAttempt,
+        { attempt_id: id, answers },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  async submitExam(attempt_id: number, answers: ExamAnswer[], time_taken: number) {
+    const token = localStorage.getItem('accessToken');
+    const response = await apiAssessmentClient.post(
+      API_ENDPOINTS.assessments.submitExam,
+      { attempt_id, answers, time_taken },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
   }
 }
 

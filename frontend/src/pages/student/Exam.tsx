@@ -49,6 +49,7 @@ export default function StudentExams() {
     try {
       setLoading(true);
       const data = await assessmentService.getStudentAssessments();
+      console.log("Student assessments response:", data);
       setExams(data);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load assessments');
@@ -140,11 +141,11 @@ export default function StudentExams() {
 
 
   const handleStartExam = (examId: string) => {
-    navigate(`/student/exams/${examId}/take`);
+    navigate(`/student/exam/${examId}/take`);
   };
 
   const handleViewResult = (examId: string) => {
-    navigate(`/student/exams/${examId}/result`);
+    navigate(`/student/exam/${examId}/result`);
   };
 
   /* CHANGE: Exam card component */

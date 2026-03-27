@@ -38,7 +38,7 @@ export const API_CONFIG_PROGRESS = {
 /**
  * API Endpoints
  * Define all API endpoints used in the application
- */   
+ */
 
 export const API_ENDPOINTS = {
   // Authentication endpoints - maps to FastAPI /api/auth/*
@@ -121,10 +121,13 @@ export const API_ENDPOINTS = {
     create: '/assessments',
     update: (id: string) => `/assessments/${id}`,
     delete: (id: string) => `/assessments/${id}`,
+    // student
     get_student_assessments: '/assessments/students/asess',
-    submit: (id: string) => `/assessments/${id}/submit`,
-    submissions: (id: string) => `/assessments/${id}/submissions`,
-    grade: (id: string, submissionId: string) => `assessments/${id}/submissions/${submissionId}/grade`,
+    get_exam: (id: string) => `/assessments/${id}/exam`,
+    startExam: (id: string) => `/assessments/${id}/start`,
+    saveAttempt: '/assessments/attempts/save',
+    submitExam: '/assessments/attempts/submit',
+    getSubmissions: (id: string) => `/assessments/${id}/submissions`,
   },
   // Add a new “questions” group for question-related endpoints
   questions: {

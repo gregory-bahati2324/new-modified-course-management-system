@@ -46,3 +46,45 @@ class Question(Base):
     correct_order = Column(JSON, nullable=True)
 
     assessment = relationship("Assessment", back_populates="questions")
+    
+    
+class StudentAssessmentAttempt(Base):
+    __tablename__ = "student_assessment_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    student_id = Column(String, nullable=False)
+    assessment_id = Column(Integer, ForeignKey("assessments.id"))
+
+    attempt_number = Column(Integer, default=1)
+
+    started_at = Column(DateTime, nullable=False, server_default=func.now())
+    submitted_at = Column(DateTime, nullable=True)
+
+    status = Column(String, default="in_progress")  
+    # in_progress | submitted | graded
+
+    time_taken = Column(Integer, nullable=True)
+
+    created_at = Column(DateTime, server_default=func.now())
+
+    answers = relationship(
+        "StudentAnswer",
+        back_populates="attempt",
+        cascade="all, delete-orphan"
+    )
+
+class StudentAnswer(Base):
+    __tablename__ = "student_assessment_answers"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    attempt_id = Column(Integer, ForeignKey("student_assessment_attempts.id"))
+    question_id = Column(Integer, ForeignKey("assessment_questions.id"))
+
+    answer = Column(JSON, nullable=True)
+
+    created_at = Column(DateTime, server_default=func.now())
+
+    attempt = relationship("StudentAssessmentAttempt", back_populates="answers")
+    

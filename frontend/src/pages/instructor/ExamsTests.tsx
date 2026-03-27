@@ -53,7 +53,8 @@ export default function ExamsTests() {
   useEffect(() => {
     const loadData = async () => {
       try {
-         // 1️⃣ Load courses and create local map
+
+        // 1️⃣ Load courses and create local map
         const coursesResponse = await courseService.getCourses();
         const courseMapping: Record<string, string> = {};
         coursesResponse.courses.forEach((course) => {

@@ -1,8 +1,3 @@
-/**
- * Take Exam Page - Student exam-taking interface
- * Supports all question types with timer and auto-save
- * Created: 2025-02-04
- */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -43,14 +38,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { studentExamService, ExamDetails, ExamAnswer, ExamQuestion } from '@/services/studentExamService';
+import { assessmentService, ExamDetails, ExamAnswer, ExamQuestion } from '@/services/assessmentService';
 import { cn } from '@/lib/utils';
 
 export default function TakeExam() {
   const navigate = useNavigate();
   const { examId } = useParams<{ examId: string }>();
-  
+
   const [exam, setExam] = useState<ExamDetails | null>(null);
+  const [attemptId, setAttemptId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -60,7 +56,7 @@ export default function TakeExam() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [startTime] = useState(Date.now());
-  
+
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -68,19 +64,20 @@ export default function TakeExam() {
   useEffect(() => {
     const fetchExam = async () => {
       if (!examId) return;
-      
+
       try {
         setLoading(true);
-        const data = await studentExamService.getExamDetails(examId);
+        const data = await assessmentService.getExamDetails(examId);
         setExam(data);
-        
+
         // Set timer if time limit exists
         if (data.time_limit) {
           setTimeRemaining(data.time_limit * 60); // Convert to seconds
         }
-        
+
         // Start the exam
-        await studentExamService.startExam(examId);
+        const res = await assessmentService.startExam(examId);
+        setAttemptId(res.attempt_id);
       } catch (error: any) {
         toast.error(error.message || 'Failed to load exam');
         navigate('/student/exams');
@@ -88,9 +85,9 @@ export default function TakeExam() {
         setLoading(false);
       }
     };
-    
+
     fetchExam();
-    
+
     return () => {
       if (autoSaveRef.current) clearInterval(autoSaveRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
@@ -100,7 +97,7 @@ export default function TakeExam() {
   /* CHANGE: Timer countdown */
   useEffect(() => {
     if (timeRemaining === null) return;
-    
+
     timerRef.current = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev === null) return null;
@@ -116,7 +113,7 @@ export default function TakeExam() {
         return prev - 1;
       });
     }, 1000);
-    
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -124,32 +121,32 @@ export default function TakeExam() {
 
   /* CHANGE: Auto-save every 30 seconds */
   useEffect(() => {
-    if (!examId || !exam) return;
-    
+    if (!examId || !exam || !attemptId) return;
+
     autoSaveRef.current = setInterval(async () => {
       const answersArray: ExamAnswer[] = Object.entries(answers).map(([qId, answer]) => ({
         question_id: parseInt(qId),
         answer
       }));
-      
+
       try {
-        await studentExamService.saveProgress(examId, answersArray);
+        await assessmentService.saveExamProgress(attemptId, answersArray);
       } catch (error) {
         console.error('Auto-save failed:', error);
       }
     }, 30000);
-    
+
     return () => {
       if (autoSaveRef.current) clearInterval(autoSaveRef.current);
     };
-  }, [examId, exam, answers]);
+  }, [examId, exam, attemptId, answers]);
 
   /* CHANGE: Format time display */
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hrs > 0) {
       return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
@@ -176,27 +173,36 @@ export default function TakeExam() {
 
   /* CHANGE: Submit exam */
   const handleSubmit = async (isAutoSubmit = false) => {
-    if (!exam || !examId) return;
-    
+    if (!exam || !examId || !attemptId) return;
+    if (submitting) return;
+
     setSubmitting(true);
+
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);
-    
+
     const answersArray: ExamAnswer[] = Object.entries(answers).map(([qId, answer]) => ({
       question_id: parseInt(qId),
       answer
     }));
-    
+
     try {
-      const result = await studentExamService.submitExam({
-        exam_id: examId,
-        answers: answersArray,
-        time_taken: timeTaken
-      });
-      
-      toast.success(isAutoSubmit ? 'Time up! Exam submitted automatically.' : 'Exam submitted successfully!');
+      const result = await assessmentService.submitExam(attemptId, answersArray, timeTaken);
+
+      toast.success(
+        isAutoSubmit
+          ? 'Time up! Exam submitted automatically.'
+          : 'Exam submitted successfully!'
+      );
+
       navigate(`/student/exams/${examId}/result`, { state: { result } });
+
     } catch (error: any) {
-      toast.error(error.message || 'Failed to submit exam');
+      const message =
+        error?.response?.data?.detail ||
+        error?.message ||
+        'Failed to submit exam';
+
+      toast.error(message);
       setSubmitting(false);
     }
   };
@@ -209,8 +215,12 @@ export default function TakeExam() {
   /* CHANGE: Render question based on type */
   const renderQuestion = (question: ExamQuestion) => {
     const answer = answers[question.id];
-    
-    switch (question.type) {
+    const normalizedtype = question.type?.toLowerCase().trim();
+    console.log("QUESTION TYPE:", question.type);
+    console.log("NORMALIZED TYPE:", normalizedtype);
+
+
+    switch (normalizedtype) {
       case 'multiple-choice':
         return (
           <RadioGroup
@@ -218,8 +228,8 @@ export default function TakeExam() {
             onValueChange={(value) => handleAnswer(question.id, parseInt(value))}
           >
             {question.options?.map((option, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="flex items-center space-x-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
                 onClick={() => handleAnswer(question.id, idx)}
               >
@@ -231,21 +241,21 @@ export default function TakeExam() {
             ))}
           </RadioGroup>
         );
-        
+
       case 'true-false':
         return (
           <RadioGroup
             value={answer}
             onValueChange={(value) => handleAnswer(question.id, value)}
           >
-            <div 
+            <div
               className="flex items-center space-x-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
               onClick={() => handleAnswer(question.id, 'true')}
             >
               <RadioGroupItem value="true" id={`q${question.id}-true`} />
               <Label htmlFor={`q${question.id}-true`} className="flex-1 cursor-pointer text-base">True</Label>
             </div>
-            <div 
+            <div
               className="flex items-center space-x-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
               onClick={() => handleAnswer(question.id, 'false')}
             >
@@ -254,7 +264,7 @@ export default function TakeExam() {
             </div>
           </RadioGroup>
         );
-        
+
       case 'short-answer':
         return (
           <Input
@@ -264,7 +274,7 @@ export default function TakeExam() {
             className="text-base"
           />
         );
-        
+
       case 'essay':
         return (
           <div className="space-y-2">
@@ -280,7 +290,7 @@ export default function TakeExam() {
             </p>
           </div>
         );
-        
+
       case 'coding':
         return (
           <div className="space-y-4">
@@ -303,7 +313,7 @@ export default function TakeExam() {
                 <CardContent className="py-3">
                   {question.test_cases.map((tc, i) => (
                     <div key={i} className="text-xs font-mono mb-1">
-                      <span className="text-muted-foreground">Input:</span> {tc.input} → 
+                      <span className="text-muted-foreground">Input:</span> {tc.input} →
                       <span className="text-muted-foreground ml-2">Expected:</span> {tc.expectedOutput}
                     </div>
                   ))}
@@ -312,7 +322,7 @@ export default function TakeExam() {
             )}
           </div>
         );
-        
+
       case 'file-upload':
         return (
           <div className="space-y-4">
@@ -321,8 +331,8 @@ export default function TakeExam() {
               <p className="text-sm text-muted-foreground mb-2">
                 Drag and drop your file here, or click to browse
               </p>
-              <Input 
-                type="file" 
+              <Input
+                type="file"
                 className="max-w-xs mx-auto cursor-pointer"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -335,7 +345,7 @@ export default function TakeExam() {
             )}
           </div>
         );
-        
+
       case 'matching':
         return (
           <div className="space-y-4">
@@ -365,7 +375,7 @@ export default function TakeExam() {
             ))}
           </div>
         );
-        
+
       case 'ordering':
         const items = answer ? [...answer] : [...(question.correct_order || [])].sort(() => Math.random() - 0.5);
         return (
@@ -376,8 +386,8 @@ export default function TakeExam() {
             </div>
             <div className="space-y-2">
               {items.map((item, idx) => (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className="p-4 bg-muted/50 rounded-lg flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3">
@@ -415,7 +425,7 @@ export default function TakeExam() {
             </div>
           </div>
         );
-        
+
       default:
         return <p className="text-muted-foreground">Unknown question type</p>;
     }
@@ -451,7 +461,7 @@ export default function TakeExam() {
               <h1 className="font-semibold text-lg truncate">{exam.title}</h1>
               <p className="text-sm text-muted-foreground">{exam.course_title}</p>
             </div>
-            
+
             <div className="flex items-center gap-4">
               {/* Timer */}
               {timeRemaining !== null && (
@@ -463,7 +473,7 @@ export default function TakeExam() {
                   {formatTime(timeRemaining)}
                 </div>
               )}
-              
+
               {/* Save indicator */}
               <Button variant="ghost" size="sm" className="gap-2">
                 <Save className="h-4 w-4" />
@@ -471,7 +481,7 @@ export default function TakeExam() {
               </Button>
             </div>
           </div>
-          
+
           {/* Progress bar */}
           <div className="mt-3">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
@@ -512,9 +522,9 @@ export default function TakeExam() {
                     </Button>
                   ))}
                 </div>
-                
+
                 <Separator className="my-4" />
-                
+
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded bg-green-100 dark:bg-green-900 border border-green-500" />
@@ -558,9 +568,9 @@ export default function TakeExam() {
                 <p className="text-lg font-medium leading-relaxed">
                   {currentQ.question_text}
                 </p>
-                
+
                 <Separator />
-                
+
                 {renderQuestion(currentQ)}
               </CardContent>
             </Card>
@@ -576,10 +586,10 @@ export default function TakeExam() {
                 <ChevronLeft className="h-4 w-4" />
                 Previous
               </Button>
-              
+
               <div className="flex gap-2">
                 {currentQuestion === exam.questions.length - 1 ? (
-                  <Button 
+                  <Button
                     onClick={() => setShowSubmitDialog(true)}
                     className="gap-2"
                     disabled={submitting}
