@@ -8,11 +8,15 @@ class QuestionCreate(BaseModel):
     type: str
     question_text: str
     points: Optional[int] = 1
+
+    # ✅ FILE URLS (returned, not uploaded here)
+    question_file_url: Optional[str] = None
+    answer_file_url: Optional[str] = None
+
     options: Optional[List[str]] = None
     correct_answer: Optional[Union[int, str, List[str]]] = None
     model_answer: Optional[str] = None
     test_cases: Optional[List[dict]] = None
-    reference_file: Optional[str] = None
     matching_pairs: Optional[List[dict]] = None
     correct_order: Optional[List[str]] = None
 
@@ -37,8 +41,8 @@ class AssessmentCreate(BaseModel):
 
 class QuestionResponse(QuestionCreate):
     id: int
-    reference_file: Optional[str] = None
-    reference_file_url: Optional[str] = None
+    question_file_url: Optional[str] = None
+    answer_file_url: Optional[str] = None
 
     class Config:
         orm_mode = True

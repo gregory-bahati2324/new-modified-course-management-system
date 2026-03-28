@@ -136,8 +136,10 @@ export const API_ENDPOINTS = {
     update: (questionId: string) => `/questions/${questionId}`,
     delete: (questionId: string) => `/questions/${questionId}`,
     sync: (assessmentId: string) => `/questions/assessments/${assessmentId}/sync`,
-    uploadFile: (questionId: string) => `/questions/${questionId}/upload`,
-    deleteFile: (questionId: string) => `/questions/${questionId}/delete`,
+    uploadQuestionFile: (id: string) => `/questions/${id}/upload-question-file`,
+    uploadAnswerFile: (id: string) => `/questions/${id}/upload-answer-file`,
+    deleteQuestionFile: (id: string) => `/questions/${id}/delete-question-file`,
+    deleteAnswerFile: (id: string) => `/questions/${id}/delete-answer-file`,
   },
 
 

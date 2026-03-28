@@ -6,12 +6,12 @@ export interface QuestionCreate {
   type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'coding' | 'file-upload' | 'matching' | 'ordering';
   question_text: string;
   points?: number;
+  question_file_url?: string;
+  answer_file_url?: string;
   options?: string[];
   correct_answer?: number | string | string[];
   model_answer?: string;
   test_cases?: { input: string; expectedOutput: string }[];
-  reference_file?: string;
-  reference_file_url?: string;
   matching_pairs?: { left: string; right: string }[];
   correct_order?: string[];
 }
@@ -109,7 +109,7 @@ class QuestionService {
       formData.append('file', file);
 
       const response = await apiAssessmentClient.post<QuestionResponse>(
-        API_ENDPOINTS.questions.uploadFile(questionId),
+        API_ENDPOINTS.questions.uploadQuestionFile(questionId),
         formData,
         {
           headers: {
@@ -122,13 +122,36 @@ class QuestionService {
     } catch (error) {
       throw new Error(handleApiError(error));
     }
-  } 
+  }
+
+  async uploadAnswerFile(questionId: string, file: File): Promise<QuestionResponse> {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await apiAssessmentClient.post<QuestionResponse>(
+        API_ENDPOINTS.questions.uploadAnswerFile(questionId),
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
   // Delete a file associated with a question
   async deleteQuestionFile(questionId: string): Promise<{ ok: boolean }> {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await apiAssessmentClient.delete<{ ok: boolean }>(
-        API_ENDPOINTS.questions.deleteFile(questionId),
+        API_ENDPOINTS.questions.deleteQuestionFile(questionId),
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -139,7 +162,26 @@ class QuestionService {
     } catch (error) {
       throw new Error(handleApiError(error));
     }
-  } 
+  }
+
+  async deleteAnswerFile(questionId: string): Promise<{ ok: boolean }> {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const response = await apiAssessmentClient.delete<{ ok: boolean }>(
+        API_ENDPOINTS.questions.deleteAnswerFile(questionId),
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
 }
 
 export const questionService = new QuestionService();

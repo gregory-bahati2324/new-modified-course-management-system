@@ -41,7 +41,8 @@ class Question(Base):
     correct_answer = Column(JSON, nullable=True)
     model_answer = Column(String, nullable=True)
     test_cases = Column(JSON, nullable=True)
-    reference_file = Column(String, nullable=True)
+    question_file = Column(String, nullable=True)
+    answer_file = Column(String, nullable=True)
     matching_pairs = Column(JSON, nullable=True)
     correct_order = Column(JSON, nullable=True)
 

@@ -79,7 +79,12 @@ export default function TakeExam() {
         const res = await assessmentService.startExam(examId);
         setAttemptId(res.attempt_id);
       } catch (error: any) {
-        toast.error(error.message || 'Failed to load exam');
+        const message =
+          error?.response?.data?.detail ||
+          error?.message ||
+          'Failed to submit exam';
+
+        toast.error(message);
         navigate('/student/exams');
       } finally {
         setLoading(false);

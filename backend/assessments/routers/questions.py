@@ -68,7 +68,7 @@ def sync_questions_route(
     return updated_list
 
 
-@router.post("/{question_id}/upload", response_model=QuestionResponse)
+@router.post("/{question_id}/upload-question-file", response_model=QuestionResponse)
 def upload_question_file_route(
     question_id: int,
     file: UploadFile = File(...),
@@ -77,7 +77,16 @@ def upload_question_file_route(
 ):
     return questions_crud.upload_question_file(db, question_id, file)
 
-@router.delete("/{question_id}/delete", response_model=dict)
+@router.post("/{question_id}/upload-answer-file", response_model=QuestionResponse)
+def upload_answer_file_route(
+    question_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    token_data = Depends(get_current_instructor),
+):
+    return questions_crud.upload_answer_file(db, question_id, file)
+
+@router.delete("/{question_id}/delete-question-file")
 def delete_question_file_route(
     question_id: int,
     db: Session = Depends(get_db),
@@ -85,5 +94,16 @@ def delete_question_file_route(
 ):
     ok = questions_crud.delete_question_file(db, question_id)
     if not ok:
-        raise HTTPException(status_code=404, detail="No file to delete")
+        raise HTTPException(status_code=404, detail="No question file")
+    return {"ok": True}
+
+@router.delete("/{question_id}/delete-answer-file")
+def delete_answer_file_route(
+    question_id: int,
+    db: Session = Depends(get_db),
+    token_data = Depends(get_current_instructor),
+):
+    ok = questions_crud.delete_answer_file(db, question_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="No answer file")
     return {"ok": True}

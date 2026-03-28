@@ -113,7 +113,7 @@ def start_exam(db: Session, student_id: str, assessment_id: int):
     ).first()
 
     if submitted_attempt:
-        return submitted_attempt
+        raise HTTPException(status_code=400, detail="Exam already submitted")
 
     # 🔥 2. Check in_progress
     attempt = db.query(StudentAssessmentAttempt).filter(

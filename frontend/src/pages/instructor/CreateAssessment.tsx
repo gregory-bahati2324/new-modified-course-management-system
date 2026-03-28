@@ -34,6 +34,11 @@ interface Question {
   type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'coding' | 'file-upload' | 'matching' | 'ordering';
   question_text: string;
   points: number;
+  question_file?: File | null;
+  question_file_url?: string | null;
+
+  answer_file?: File | null;
+  answer_file_url?: string | null;
   options?: string[];
   correct_answer?: number | string | string[];
   model_answer?: string;
@@ -247,32 +252,46 @@ export default function CreateAssessment() {
     }));
   };
 
-  const uploadFileForQuestion = async (question: Question) => {
-    if (!question.reference_file || !question.id) return;
+  const uploadQuestionFile = async (question: Question) => {
+    if (!question.question_file || !question.id) return;
 
-    try {
-      const updatedQuestion = await questionService.uploadQuestionFile(
-        String(question.id),
-        question.reference_file
-      );
+    const updated = await questionService.uploadQuestionFile(
+      String(question.id),
+      question.question_file
+    );
 
-      // ✅ Update URL after upload
-      setQuestions(prev =>
-        prev.map(q =>
-          q.id === question.id
-            ? {
-              ...q,
-              reference_file: null,
-              reference_file_url: updatedQuestion.reference_file_url
-            }
-            : q
-        )
-      );
+    setQuestions(prev =>
+      prev.map(q =>
+        q.id === question.id
+          ? {
+            ...q,
+            question_file: null,
+            question_file_url: updated.question_file_url
+          }
+          : q
+      )
+    );
+  };
 
-      toast.success("File uploaded successfully");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to upload file");
-    }
+  const uploadAnswerFile = async (question: Question) => {
+    if (!question.answer_file || !question.id) return;
+
+    const updated = await questionService.uploadAnswerFile(
+      String(question.id),
+      question.answer_file
+    );
+
+    setQuestions(prev =>
+      prev.map(q =>
+        q.id === question.id
+          ? {
+            ...q,
+            answer_file: null,
+            answer_file_url: updated.answer_file_url
+          }
+          : q
+      )
+    );
   };
 
 
@@ -362,8 +381,8 @@ export default function CreateAssessment() {
           correct_answer: q.correct_answer,
           model_answer: q.model_answer,
           test_cases: q.test_cases || [],
-          reference_file: null,
-          reference_file_url: q.reference_file_url || null,
+          question_file: null,
+          answer_file: null,
           matching_pairs: q.matching_pairs || [],
           correct_order: q.correct_order || []
         }));
@@ -467,9 +486,14 @@ export default function CreateAssessment() {
             q.id = Number(createdOrUpdatedQuestion.id);
           }
 
-          // Upload file if it exists
-          if (q.reference_file) {
-            await uploadFileForQuestion(q);
+          // Upload question file
+          if (q.question_file) {
+            await uploadQuestionFile(q);
+          }
+
+          // Upload answer file
+          if (q.answer_file) {
+            await uploadAnswerFile(q);
           }
         }
 
@@ -482,7 +506,8 @@ export default function CreateAssessment() {
 
         // Then create questions one by one for the new assessment
         for (const q of questions) {
-          await questionService.createQuestion(assessmentId, {
+          // 1️⃣ Create question first
+          const created = await questionService.createQuestion(assessmentId, {
             type: q.type,
             question_text: q.question_text,
             points: q.points,
@@ -493,6 +518,19 @@ export default function CreateAssessment() {
             matching_pairs: q.matching_pairs,
             correct_order: q.correct_order,
           });
+
+          // 2️⃣ Assign ID (CRITICAL)
+          q.id = Number(created.id);
+
+          // 3️⃣ Upload question file
+          if (q.question_file) {
+            await uploadQuestionFile(q);
+          }
+
+          // 4️⃣ Upload answer file
+          if (q.answer_file) {
+            await uploadAnswerFile(q);
+          }
         }
 
         toast.success(
@@ -798,38 +836,60 @@ export default function CreateAssessment() {
                         )}
 
                         {question.type === 'file-upload' && (
-                          <div className="space-y-2">
-                            <Label>Reference/Sample Solution (Optional)</Label>
+                          <div className="space-y-4">
 
-                            {question.reference_file_url && !question.reference_file && (
-                              <p className="text-sm text-muted-foreground">
-                                Previously uploaded:{" "}
-                                <a
-                                  href={question.reference_file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 underline"
-                                >
-                                  View File
-                                </a>
-                              </p>
-                            )}
+                            {/* QUESTION FILE */}
+                            <div className="space-y-2">
+                              <Label>Upload Question File (PDF, DOCX, etc.)</Label>
 
-                            <Input
-                              type="file"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0] || null;
-                                updateQuestion(question.id, { reference_file: file, reference_file_url: null });
-                              }}
-                              className="cursor-pointer"
-                            />
+                              {question.question_file_url && !question.question_file && (
+                                <p className="text-sm">
+                                  Existing:{" "}
+                                  <a href={question.question_file_url} target="_blank" className="text-blue-600 underline">
+                                    View Question File
+                                  </a>
+                                </p>
+                              )}
 
-                            <p className="text-xs text-muted-foreground">
-                              Upload a reference file or sample solution for comparison
-                            </p>
+                              <Input
+                                type="file"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] || null;
+                                  updateQuestion(question.id, {
+                                    question_file: file,
+                                    question_file_url: null
+                                  });
+                                }}
+                              />
+                            </div>
+
+                            {/* ANSWER FILE */}
+                            <div className="space-y-2">
+                              <Label>Upload Answer / Solution File</Label>
+
+                              {question.answer_file_url && !question.answer_file && (
+                                <p className="text-sm">
+                                  Existing:{" "}
+                                  <a href={question.answer_file_url} target="_blank" className="text-green-600 underline">
+                                    View Answer File
+                                  </a>
+                                </p>
+                              )}
+
+                              <Input
+                                type="file"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] || null;
+                                  updateQuestion(question.id, {
+                                    answer_file: file,
+                                    answer_file_url: null
+                                  });
+                                }}
+                              />
+                            </div>
+
                           </div>
                         )}
-
 
                         {question.type === 'matching' && (
                           <div className="space-y-2">

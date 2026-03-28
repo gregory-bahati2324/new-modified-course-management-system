@@ -162,7 +162,7 @@ def save_progress_route(
     save_exam_progress(
         db,
         data.attempt_id,
-        token.sub,  # 🔥 ADD THIS
+        token.sub, 
         [a.dict() for a in data.answers]
     )
 
