@@ -255,7 +255,7 @@ export const navItems = [
     title: "Create Assessment",
     to: "/instructor/create-assessment",
     icon: <Plus className="h-4 w-4" />,
-    page: <InstructorLayout><CreateAssessment /></InstructorLayout>,
+    page: <CreateAssessment />,
   },
   {
     title: "Edit Assessment",

@@ -32,6 +32,28 @@ def attach_file_urls(question: Question) -> Question:
 
     return question
 
+import os
+
+def attach_file_urls_exam(q: Question):
+    BASE_FILE_URL = os.getenv(
+        "BASE_FILE_URL",
+        "http://localhost:8003/static/questions"
+    )
+
+    return {
+        "id": q.id,
+        "type": q.type,
+        "question_text": q.question_text,
+        "points": q.points,
+        "options": q.options,
+        "matching_pairs": q.matching_pairs,
+        "correct_order": q.correct_order,
+        "test_cases": q.test_cases,
+
+        # FILE URLS
+        "question_file_url": f"{BASE_FILE_URL}/{q.question_file}" if q.question_file else None,
+        "answer_file_url": f"{BASE_FILE_URL}/{q.answer_file}" if q.answer_file else None,
+    }
 
 def delete_physical_file(filename: str | None):
     if not filename:
@@ -76,7 +98,7 @@ def list_questions_for_assessment(db: Session, assessment_id: int):
     questions = db.query(Question).filter(
         Question.assessment_id == assessment_id
     ).all()
-    return [attach_file_urls(q) for q in questions]
+    return [attach_file_urls_exam(q) for q in questions]
 
 
 def update_question(db: Session, question_id: int, qdata: Dict[str, Any]) -> Question | None:
@@ -111,48 +133,6 @@ def delete_question(db: Session, question_id: int) -> bool:
     return True
 
 
-# ===============================
-# FILE UPLOAD
-# ===============================
-def upload_question_file(db: Session, question_id: int, file: UploadFile):
-    question = db.query(Question).filter(Question.id == question_id).first()
-    if not question:
-        return None
-
-    # Delete old file
-    delete_physical_file(question.reference_file)
-
-    ext = os.path.splitext(file.filename)[1]
-    filename = f"question_{question_id}_{int(time.time())}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    question.reference_file = filename
-    db.commit()
-    db.refresh(question)
-
-    return attach_file_urls(question)
-
-
-def delete_question_file(db: Session, question_id: int) -> bool:
-    question = db.query(Question).filter(Question.id == question_id).first()
-    if not question or not question.reference_file:
-        return False
-
-    delete_physical_file(question.reference_file)
-
-    question.reference_file = None
-    db.commit()
-    db.refresh(question)
-
-    return True
-
-
-# ===============================
-# SYNC (SAFE)
-# ===============================
 def sync_questions_for_assessment(
     db: Session,
     assessment_id: int,
@@ -231,7 +211,7 @@ def upload_question_file(db: Session, question_id: int, file: UploadFile):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    question.question_file = filename
+    question.question_file = filename  # ✅ CORRECT FIELD
     db.commit()
     db.refresh(question)
 
@@ -251,7 +231,7 @@ def upload_answer_file(db: Session, question_id: int, file: UploadFile):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    question.answer_file = filename
+    question.answer_file = filename  # ✅ CORRECT
     db.commit()
     db.refresh(question)
 

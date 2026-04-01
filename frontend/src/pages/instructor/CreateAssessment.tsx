@@ -27,7 +27,7 @@ import AssessmentPreview from '@/components/AssessmentPreview';
 import { courseService } from "@/services/courseService";
 import { assessmentService, AssessmentMetadata, QuestionCreate } from '@/services/assessmentService';
 import { questionService, QuestionUpdate } from '@/services/questionsService';
-
+import { InstructorLayout } from '@/components/layout/InstructorLayout';
 
 interface Question {
   id?: number;
@@ -237,8 +237,14 @@ export default function CreateAssessment() {
 
 
 
-  const updateQuestion = (id: number, updates: Partial<Question>) => {
-    setQuestions(questions.map(q => q.id === id ? { ...q, ...updates } : q));
+  const updateQuestion = (identifier: number, updates: Partial<Question>) => {
+    setQuestions(prev =>
+      prev.map(q =>
+        (q.id === identifier || q.tempId === identifier)
+          ? { ...q, ...updates }
+          : q
+      )
+    );
   };
 
   const updateOption = (questionId: number, optionIndex: number, value: string) => {
@@ -315,7 +321,6 @@ export default function CreateAssessment() {
 
   useEffect(() => {
     if (!isEditMode) return;
-    console.log("Edit mode, id:", examId);
 
     const fetchAssessment = async () => {
       try {
@@ -486,14 +491,21 @@ export default function CreateAssessment() {
             q.id = Number(createdOrUpdatedQuestion.id);
           }
 
-          // Upload question file
+          const questionId = q.id ?? createdOrUpdatedQuestion.id;
+          console.log("Uploading file for question:", questionId, q.question_file);
+
           if (q.question_file) {
-            await uploadQuestionFile(q);
+            await questionService.uploadQuestionFile(
+              String(questionId),
+              q.question_file
+            );
           }
 
-          // Upload answer file
           if (q.answer_file) {
-            await uploadAnswerFile(q);
+            await questionService.uploadAnswerFile(
+              String(questionId),
+              q.answer_file
+            );
           }
         }
 
@@ -519,17 +531,24 @@ export default function CreateAssessment() {
             correct_order: q.correct_order,
           });
 
-          // 2️⃣ Assign ID (CRITICAL)
-          q.id = Number(created.id);
+          const questionId = created.id; // ✅ USE THIS DIRECTLY
 
-          // 3️⃣ Upload question file
+          console.log("Uploading file for question:", questionId, q.question_file);
+
+          // Upload question file
           if (q.question_file) {
-            await uploadQuestionFile(q);
+            await questionService.uploadQuestionFile(
+              String(questionId),
+              q.question_file
+            );
           }
 
-          // 4️⃣ Upload answer file
+          // Upload answer file
           if (q.answer_file) {
-            await uploadAnswerFile(q);
+            await questionService.uploadAnswerFile(
+              String(questionId),
+              q.answer_file
+            );
           }
         }
 
@@ -545,11 +564,6 @@ export default function CreateAssessment() {
       toast.error(err.message || "Something went wrong");
     }
   };
-
-
-
-
-
 
   const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
 
@@ -699,7 +713,9 @@ export default function CreateAssessment() {
                           <Badge variant="secondary">Q{index + 1}</Badge>
                           <Select
                             value={question.type}
-                            onValueChange={(value: any) => updateQuestion(question.id, { type: value })}
+                            onValueChange={(value: any) =>
+                              updateQuestion(question.id ?? question.tempId!, { type: value })
+                            }
                           >
                             <SelectTrigger className="w-[180px]">
                               <SelectValue />
@@ -722,7 +738,7 @@ export default function CreateAssessment() {
                               min="1"
                               className="w-20"
                               value={question.points}
-                              onChange={(e) => updateQuestion(question.id, { points: parseInt(e.target.value) || 1 })}
+                              onChange={(e) => updateQuestion(question.id ?? question.tempId!, { points: parseInt(e.target.value) || 1 })}
                             />
                           </div>
                         </div>
@@ -730,7 +746,11 @@ export default function CreateAssessment() {
                         <Textarea
                           placeholder="Enter your question here..."
                           value={question.question_text}
-                          onChange={(e) => updateQuestion(question.id, { question_text: e.target.value })}
+                          onChange={(e) =>
+                            updateQuestion(question.id ?? question.tempId!, {
+                              question_text: e.target.value
+                            })
+                          }
                           rows={2}
                         />
 
@@ -743,13 +763,13 @@ export default function CreateAssessment() {
                                   type="radio"
                                   name={`correct-${question.id}`}
                                   checked={question.correct_answer === optIndex}
-                                  onChange={() => updateQuestion(question.id, { correct_answer: optIndex })}
+                                  onChange={() => updateQuestion(question.id ?? question.tempId!, { correct_answer: optIndex })}
                                   className="mt-1"
                                 />
                                 <Input
                                   placeholder={`Option ${optIndex + 1}`}
                                   value={option}
-                                  onChange={(e) => updateOption(question.id, optIndex, e.target.value)}
+                                  onChange={(e) => updateOption(question.id ?? question.tempId!, optIndex, e.target.value)}
                                 />
                               </div>
                             ))}
@@ -761,7 +781,7 @@ export default function CreateAssessment() {
                             <Label>Correct Answer</Label>
                             <Select
                               value={String(question.correct_answer)}
-                              onValueChange={(value) => updateQuestion(question.id, { correct_answer: value })}
+                              onValueChange={(value) => updateQuestion(question.id ?? question.tempId!, { correct_answer: value })}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select correct answer" />
@@ -780,7 +800,7 @@ export default function CreateAssessment() {
                             <Textarea
                               placeholder="Enter the model answer or expected response..."
                               value={question.model_answer || ''}
-                              onChange={(e) => updateQuestion(question.id, { model_answer: e.target.value })}
+                              onChange={(e) => updateQuestion(question.id ?? question.tempId!, { model_answer: e.target.value })}
                               rows={4}
                               className="font-mono text-sm"
                             />
@@ -797,7 +817,7 @@ export default function CreateAssessment() {
                               <Textarea
                                 placeholder="Enter expected code output..."
                                 value={question.model_answer || ''}
-                                onChange={(e) => updateQuestion(question.id, { model_answer: e.target.value })}
+                                onChange={(e) => updateQuestion(question.id ?? question.tempId!, { model_answer: e.target.value })}
                                 rows={3}
                                 className="font-mono text-sm"
                               />

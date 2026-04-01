@@ -68,6 +68,7 @@ export interface ExamQuestion {
   type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'coding' | 'file-upload' | 'matching' | 'ordering';
   question_text: string;
   points: number;
+  question_file_url?: string;
   options?: string[];
   matching_pairs?: { left: string; right: string }[];
   correct_order?: string[]; // For ordering questions, shuffled for display
@@ -235,13 +236,49 @@ class AssessmentService {
   }
 
   async submitExam(attempt_id: number, answers: ExamAnswer[], time_taken: number) {
-    const token = localStorage.getItem('accessToken');
-    const response = await apiAssessmentClient.post(
-      API_ENDPOINTS.assessments.submitExam,
-      { attempt_id, answers, time_taken },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const formData = new FormData();
+
+      formData.append("attempt_id", String(attempt_id));
+      formData.append("time_taken", String(time_taken));
+
+      // Separate answers
+      const cleanAnswers = answers.map(a => ({
+        question_id: a.question_id,
+        answer: a.file ? null : a.answer // file questions handled separately
+      }));
+
+      formData.append("answers", JSON.stringify(cleanAnswers));
+
+      for (let pair of formData.entries()) {
+        console.log("FORM DATA:", pair[0], pair[1]);
+      }
+
+      // Attach files
+      answers.forEach((a) => {
+        if (a.file) {
+          formData.append(`file_${a.question_id}`, a.file);
+        }
+      });
+
+      const response = await apiAssessmentClient.post(
+        API_ENDPOINTS.assessments.submitExam,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data"
+          }
+        }
+      );
+
+      return response.data;
+
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
   }
 }
 

@@ -122,14 +122,12 @@ export default function ExamsTests() {
 
   if (loading) {
     return (
-      <InstructorLayout>
-        <div className="p-6 text-center text-lg">Loading assessments...</div>
-      </InstructorLayout>
+      <div className="p-6 text-center text-lg">Loading assessments...</div>
     );
   }
 
   return (
-    <InstructorLayout>
+    <div className="container py-6 lg:py-8 space-y-6 lg:space-y-8 animate-fade-in">
       <div className="container py-6 lg:py-8 space-y-6 lg:space-y-8 animate-fade-in">
 
         {/* Header */}
@@ -299,7 +297,6 @@ export default function ExamsTests() {
         assessmentData={previewAssessment}
         questions={previewQuestions}
       />
-
-    </InstructorLayout>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 # schemas/assessments.py
 from pydantic import BaseModel
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 from datetime import datetime
 from typing import Any
 
@@ -95,6 +95,9 @@ class ExamQuestion(BaseModel):
     test_cases: Optional[List[dict]]
     matching_pairs: Optional[List[dict]]
     correct_order: Optional[List[str]]
+    
+    question_file_url: Optional[str] = None
+    answer_file_url: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -127,3 +130,5 @@ class SubmitExamRequest(BaseModel):
     attempt_id: int
     answers: List[ExamAnswer]
     time_taken: int
+    
+

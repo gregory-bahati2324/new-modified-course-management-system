@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Form, UploadFile, File, Request, HTTPException
+import json
 from sqlalchemy.orm import Session
 from models.assessments import Question
 from database import get_db
@@ -9,6 +10,7 @@ from utils.auth import require_role, get_current_user_token, security
 from services.enrollment_client import get_student_enrollments, get_course_details
 from services.assessment_status import calculate_student_status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import os
 
 router = APIRouter(prefix="/assessments", tags=["Assessments"])
 
@@ -169,18 +171,93 @@ def save_progress_route(
     return {"message": "Progress saved"}
 
 @router.post("/attempts/submit")
-def submit_exam_route(
-    data: SubmitExamRequest,
+async def submit_exam_route(
+    request: Request,
     db: Session = Depends(get_db),
     token = Depends(get_current_user_token)
 ):
+    form = await request.form()
+    
+    # DEBUG: show all keys received
+    debug_keys = list(form.keys())
 
+    if not debug_keys:
+        raise HTTPException(
+            status_code=400,
+            detail="DEBUG: No form data received at all"
+        )
+
+    # ✅ Required fields
+    try:
+        attempt_id = int(form.get("attempt_id"))
+        time_taken = int(form.get("time_taken"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid attempt_id or time_taken")
+
+    # ✅ Parse answers JSON
+    try:
+        answers_raw = json.loads(form.get("answers", "[]"))
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid answers format")
+
+    # ✅ Collect uploaded files
+    files = {}
+    for key, value in form.items():
+        if key.startswith("file_"):
+            try:
+                q_id = int(key.split("_")[1])
+                files[q_id] = value
+            except:
+                continue
+            
+    if not files:
+        raise HTTPException(
+            status_code=400,
+            detail=f"DEBUG: No files received. Keys received: {list(form.keys())}"
+        )        
+
+    final_answers = []
+
+    UPLOAD_DIR = "/app/uploads/uploadAnswers"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    # ✅ Merge answers + files
+    for ans in answers_raw:
+        q_id = ans.get("question_id")
+
+        if not q_id:
+            continue
+
+        # 🔥 If file exists → save file
+        if q_id in files:
+            file = files[q_id]
+
+            file_path = os.path.join(
+                UPLOAD_DIR,
+                f"{attempt_id}_{q_id}_{file.filename}"
+            )
+
+            with open(file_path, "wb") as f:
+                f.write(await file.read())
+
+            final_answers.append({
+                "question_id": q_id,
+                "answer": file_path   # store file path
+            })
+
+        else:
+            final_answers.append({
+                "question_id": q_id,
+                "answer": ans.get("answer")
+            })
+
+    # ✅ Submit exam using existing CRUD
     attempt = submit_exam(
         db,
-        data.attempt_id,
-        token.sub, 
-        [a.dict() for a in data.answers],
-        data.time_taken
+        attempt_id,
+        token.sub,
+        final_answers,
+        time_taken
     )
 
     return {

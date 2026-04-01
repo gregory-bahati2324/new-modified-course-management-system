@@ -75,7 +75,7 @@ export default function InstructorDashboard() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-2">
             <h1 className="text-2xl lg:text-3xl font-bold">
-              Welcome back, {instructor.first_name} {instructor.last_name}! 👋
+              {instructor.first_name} {instructor.last_name}
             </h1>
             <div className="flex flex-wrap items-center gap-2 lg:gap-4 text-sm text-muted-foreground">
               <span>{instructor.registrationNumber}</span>

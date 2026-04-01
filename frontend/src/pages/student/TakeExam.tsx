@@ -57,8 +57,72 @@ export default function TakeExam() {
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [startTime] = useState(Date.now());
 
+  const [prepareMode, setPrepareMode] = useState<Record<number, boolean>>({});
+  const [prepareTimeLeft, setPrepareTimeLeft] = useState<Record<number, number>>({});
+  const [prepareAttempts, setPrepareAttempts] = useState<Record<number, number>>({});
+  const [selectedFiles, setSelectedFiles] = useState<Record<number, File | null>>({});
+
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [viewFileUrl, setViewFileUrl] = useState<string | null>(null);
+  const [filePreviewUrls, setFilePreviewUrls] = useState({});
+
+  useEffect(() => {
+    const urls: any = {};
+    Object.entries(selectedFiles).forEach(([qid, file]) => {
+      if (file) {
+        urls[qid] = URL.createObjectURL(file);
+      }
+    });
+    setFilePreviewUrls(urls);
+  }, [selectedFiles]);
+
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPrepareTimeLeft(prev => {
+        const updated = { ...prev };
+
+        Object.keys(updated).forEach(qId => {
+          const id = Number(qId);
+
+          if (!prepareMode[id]) return;
+
+          if (updated[id] <= 1) {
+            toast.error("Time expired! Auto submitting...");
+            handleSubmit(true);
+            updated[id] = 0;
+          } else {
+            if (updated[id] === 60) {
+              toast.warning("1 minute remaining!");
+            }
+            updated[id] -= 1;
+          }
+        });
+
+        return updated;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [prepareMode]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const isAnyPreparing = Object.values(prepareMode).some(v => v);
+      if (!isAnyPreparing && document.hidden) {
+        toast.error("You left the exam! Auto-submitting...");
+        handleSubmit(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [prepareMode]);
 
   /* CHANGE: Fetch exam details on mount */
   useEffect(() => {
@@ -158,9 +222,23 @@ export default function TakeExam() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  /* CHANGE: Handle answer changes */
-  const handleAnswer = useCallback((questionId: number, answer: any) => {
-    setAnswers(prev => ({ ...prev, [questionId]: answer }));
+  const handleAnswer = useCallback((questionId: number, value: any) => {
+    if (value instanceof File) {
+      setAnswers(prev => ({
+        ...prev,
+        [questionId]: {
+          answer: null,
+          file: value
+        }
+      }));
+    } else {
+      setAnswers(prev => ({
+        ...prev,
+        [questionId]: {
+          answer: value
+        }
+      }));
+    }
   }, []);
 
   /* CHANGE: Toggle flagged question */
@@ -185,14 +263,22 @@ export default function TakeExam() {
 
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);
 
-    const answersArray: ExamAnswer[] = Object.entries(answers).map(([qId, answer]) => ({
-      question_id: parseInt(qId),
-      answer
-    }));
+
 
     try {
-      const result = await assessmentService.submitExam(attemptId, answersArray, timeTaken);
+      const answersArray: ExamAnswer[] = Object.entries(answers).map(([qId, ans]: any) => ({
+        question_id: parseInt(qId),
+        answer: ans?.file ? null : ans?.answer ?? ans,
+        file: ans?.file || undefined
+      }));
 
+
+
+      const result = await assessmentService.submitExam(
+        attemptId,
+        answersArray,
+        timeTaken
+      );
       toast.success(
         isAutoSubmit
           ? 'Time up! Exam submitted automatically.'
@@ -221,15 +307,14 @@ export default function TakeExam() {
   const renderQuestion = (question: ExamQuestion) => {
     const answer = answers[question.id];
     const normalizedtype = question.type?.toLowerCase().trim();
-    console.log("QUESTION TYPE:", question.type);
-    console.log("NORMALIZED TYPE:", normalizedtype);
+    console.log("QUESTION FILE URL:", question.question_file_url);
 
 
     switch (normalizedtype) {
       case 'multiple-choice':
         return (
           <RadioGroup
-            value={answer?.toString()}
+            value={answer?.answer?.toString()}
             onValueChange={(value) => handleAnswer(question.id, parseInt(value))}
           >
             {question.options?.map((option, idx) => (
@@ -250,7 +335,7 @@ export default function TakeExam() {
       case 'true-false':
         return (
           <RadioGroup
-            value={answer}
+            value={answer?.answer?.toString()}
             onValueChange={(value) => handleAnswer(question.id, value)}
           >
             <div
@@ -274,27 +359,33 @@ export default function TakeExam() {
         return (
           <Input
             placeholder="Type your answer here..."
-            value={answer || ''}
+            value={answer?.answer || ''}
             onChange={(e) => handleAnswer(question.id, e.target.value)}
             className="text-base"
           />
         );
 
-      case 'essay':
+      case 'essay': {
+        const essayText =
+          typeof answer === 'string'
+            ? answer
+            : answer?.answer || '';
+
         return (
           <div className="space-y-2">
             <Textarea
               placeholder="Write your essay response here..."
-              value={answer || ''}
+              value={essayText}
               onChange={(e) => handleAnswer(question.id, e.target.value)}
               rows={10}
               className="text-base"
             />
             <p className="text-sm text-muted-foreground">
-              Word count: {(answer || '').split(/\s+/).filter(Boolean).length}
+              Word count: {essayText.split(/\s+/).filter(Boolean).length}
             </p>
           </div>
         );
+      }
 
       case 'coding':
         return (
@@ -305,7 +396,7 @@ export default function TakeExam() {
             </div>
             <Textarea
               placeholder="// Write your code here..."
-              value={answer || ''}
+              value={answer?.answer || ''}
               onChange={(e) => handleAnswer(question.id, e.target.value)}
               rows={12}
               className="font-mono text-sm"
@@ -329,24 +420,101 @@ export default function TakeExam() {
         );
 
       case 'file-upload':
+        const attemptsLeft = prepareAttempts[question.id] ?? 4;
+        const file = selectedFiles[question.id];
+        const isPreparing = prepareMode[question.id];
+        const timeLeft = prepareTimeLeft[question.id];
+
         return (
           <div className="space-y-4">
-            <div className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
-              <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground mb-2">
-                Drag and drop your file here, or click to browse
+
+            {/* 📄 Question PDF */}
+            {question.question_file_url && (
+              <div className="border rounded-lg p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileQuestion className="h-5 w-5" />
+                  <span className="font-medium">Question File</span>
+                </div>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setViewFileUrl(question.question_file_url!)}
+                >
+                  View File
+                </Button>
+              </div>
+            )}
+
+            {/* 🔄 Prepare */}
+            <div>
+              <Button
+                disabled={attemptsLeft <= 0 || isPreparing}
+                onClick={() => {
+                  setPrepareMode(prev => ({ ...prev, [question.id]: true }));
+                  setPrepareTimeLeft(prev => ({ ...prev, [question.id]: 180 }));
+
+                  setPrepareAttempts(prev => ({
+                    ...prev,
+                    [question.id]: (prev[question.id] ?? 4) - 1
+                  }));
+                }}
+              >
+                Prepare File (3 min)
+              </Button>
+
+              <p className="text-sm text-muted-foreground">
+                Attempts left: {attemptsLeft}
               </p>
+
+              {isPreparing && (
+                <p className="text-orange-600">
+                  Time left: {timeLeft}s
+                </p>
+              )}
+            </div>
+
+            {/* 📤 Upload */}
+            <div className="border-2 border-dashed rounded-lg p-6 text-center">
+              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+
               <Input
                 type="file"
-                className="max-w-xs mx-auto cursor-pointer"
+                accept="application/pdf"
+                disabled={isPreparing}
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleAnswer(question.id, file.name);
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    setSelectedFiles(prev => ({ ...prev, [question.id]: f }));
+                    handleAnswer(question.id, f);
+                  }
                 }}
               />
+
+              {file && (
+                <p className="text-green-600 mt-2">
+                  Selected: {file.name}
+                </p>
+              )}
             </div>
-            {answer && (
-              <p className="text-sm text-green-600">File selected: {answer}</p>
+
+            {/* 👁 Preview */}
+            {file && (
+              <iframe
+                src={filePreviewUrls[question.id]}
+                className="w-full h-[400px] border rounded"
+              />
+            )}
+
+            {/* ✅ Return */}
+            {isPreparing && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setPrepareMode(prev => ({ ...prev, [question.id]: false }));
+                }}
+              >
+                I am back
+              </Button>
             )}
           </div>
         );
@@ -614,6 +782,25 @@ export default function TakeExam() {
                     Next
                     <ChevronRight className="h-4 w-4" />
                   </Button>
+                )}
+
+                {viewFileUrl && (
+                  <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
+                    <div className="bg-background w-[90%] h-[90%] rounded-lg overflow-hidden flex flex-col">
+
+                      <div className="flex justify-between items-center p-3 border-b">
+                        <h2 className="font-semibold">Question File</h2>
+                        <Button variant="ghost" onClick={() => setViewFileUrl(null)}>
+                          Close
+                        </Button>
+                      </div>
+
+                      <iframe
+                        src={viewFileUrl}
+                        className="flex-1 w-full"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

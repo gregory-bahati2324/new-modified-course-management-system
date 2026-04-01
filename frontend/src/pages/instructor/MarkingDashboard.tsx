@@ -136,7 +136,6 @@ export default function MarkingDashboard() {
   const gradedCount = submissions.filter(s => s.status === 'graded').length;
 
   return (
-    <InstructorLayout>
       <div className="container py-8 space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -446,6 +445,5 @@ export default function MarkingDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-    </InstructorLayout>
   );
 }

@@ -5,10 +5,15 @@ from database import Base, engine
 from routers.assigments import router as assignment_router
 from routers.assessments import router as assessment_router
 from routers import questions as questions_router
+from fastapi.staticfiles import StaticFiles
+
+
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Assessment Service")
+
+app.mount("/uploadAnswers", StaticFiles(directory="uploadAnswers"), name="uploadAnswers")
 
 origins = [
     "http://localhost:5173",

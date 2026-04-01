@@ -80,6 +80,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/assessment_db
     volumes:
       - ./backend/assessments:/app/app
+      - ./backend/assessments/uploads:/app/uploads
     restart: always  
 
   progress_service:
