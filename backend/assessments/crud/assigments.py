@@ -1,48 +1,33 @@
 from sqlalchemy.orm import Session
 from schemas.assigments import AssignmentCreate
 from models.assigments import Assignment
+import os
 
 # CREATE
-def create_assignment(db: Session, data: AssignmentCreate, instructor_id: str):
-    # ensure module_id is None if empty
-    module_id = data.module_id if data.module_id not in ("", None) else None
+def create_assignment(db: Session, data: dict, instructor_id: str):
+    from datetime import datetime
 
-    # ensure attempts
-    attempts = 0 if data.attempts is not None and data.attempts == 0 else data.attempts
+    due_date = data.get("due_date")
 
-    # time_limit
-    time_limit = data.time_limit if data.time_limit not in (None, '') else None
-
-    # total_points
-    total_points = data.total_points if data.total_points not in (None, '') else 0
-
-    # due_date: convert from str to datetime if needed
-    due_date = data.due_date
     if isinstance(due_date, str):
-        from datetime import datetime
-        # Parse "YYYY-MM-DD HH:MM:SS"
         due_date = datetime.strptime(due_date, "%Y-%m-%d %H:%M:%S")
 
-
     assignment = Assignment(
-        title=data.title,
-        type=data.type,
-        description=data.description,
-        instructions=data.instructions,
-        course_id=data.course_id,
-        module_id=module_id,
+        title=data.get("title"),
+        description=data.get("description"),
+        instructions=data.get("instructions"),
+        course_id=data.get("course_id"),
         due_date=due_date,
-        attempts=attempts,
-        time_limit=time_limit,
-        total_points=total_points,
-        status=data.status,
+        total_points=data.get("total_points", 0),
+        status=data.get("status", "draft"),
+        file_url=data.get("file_url"),  # ✅ NEW
         instructor_id=instructor_id
     )
+
     db.add(assignment)
     db.commit()
     db.refresh(assignment)
     return assignment
-
 
 # GET ALL BY INSTRUCTOR
 def get_assignments_for_instructor(db: Session, instructor_id: str):
@@ -65,3 +50,32 @@ def update_assignment(db: Session, assignment_id: str, instructor_id: str, data:
     db.commit()
     db.refresh(assignment)
     return assignment
+
+
+
+UPLOAD_BASE_DIR = "uploads"
+
+def delete_assignment(db: Session, assignment_id: str, instructor_id: str):
+    # Get assignment
+    assignment = db.query(Assignment).filter(
+        Assignment.id == assignment_id,
+        Assignment.instructor_id == instructor_id
+    ).first()
+
+    if not assignment:
+        return None
+
+    # ---------------- DELETE FILE ----------------
+    if assignment.file_url:
+        try:
+            file_path = assignment.file_url.replace("/uploads/", "uploads/")
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception as e:
+            print(f"File deletion error: {e}")
+
+    # ---------------- DELETE DB ----------------
+    db.delete(assignment)
+    db.commit()
+
+    return True

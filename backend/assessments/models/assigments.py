@@ -9,20 +9,18 @@ class Assignment(Base):
 
     # Core fields
     title = Column(String, nullable=False)
-    type = Column(String, default="assignment")        # matches frontend type
     description = Column(Text, default="")
     instructions = Column(Text, default="")
+    file_url = Column(String, nullable=True)  
 
     # Relations
     course_id = Column(String, nullable=False)
-    module_id = Column(String, nullable=True)          # optional
 
     # Settings
     due_date = Column(DateTime, nullable=False)
-    attempts = Column(Integer, default=1)
-    time_limit = Column(Integer, nullable=True)
     total_points = Column(Integer, default=0)
-    status = Column(String, default="draft")          # draft, published, closed
+    status = Column(String, default="draft")       
+    
 
     # Tracking
     graded = Column(Boolean, default=False)

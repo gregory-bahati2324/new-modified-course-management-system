@@ -1,7 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, FileText, Calendar, Clock, Users, Eye, Edit } from 'lucide-react';
+import { Plus, Search, Filter, FileText, Calendar, Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +30,7 @@ import { useParams } from "react-router-dom";
 export default function InstructorAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -51,6 +63,29 @@ export default function InstructorAssignments() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    try {
+      await assignmentService.deleteAssignment(deleteId);
+
+      toast({
+        title: "Success",
+        description: "Assignment deleted successfully",
+      });
+
+      setAssignments(prev => prev.filter(a => a.id !== deleteId));
+      setDeleteId(null);
+
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete assignment",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredAssignments = assignments.filter(assignment => {
     const matchesSearch = assignment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       assignment.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -72,11 +107,9 @@ export default function InstructorAssignments() {
     }
   };
 
-  const activeAssignments = filteredAssignments.filter(a => !a.graded && !a.submitted);
-  const gradedAssignments = filteredAssignments.filter(a => a.graded);
-  const submittedAssignments = filteredAssignments.filter(a => a.submitted && !a.graded);
 
-  const AssignmentCard = ({ assignment }: { assignment: Assignment }) => (
+
+  const AssignmentCard = ({ assignment, onDelete }: { assignment: Assignment; onDelete: (id: string) => void }) => (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
         <div className="flex items-start justify-between">
@@ -112,19 +145,22 @@ export default function InstructorAssignments() {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="gap-2">
-        <Link to={`/instructor/assignment/${assignment.id}/view`} className="flex-1">
-          <Button variant="outline" className="w-full">
-            <Eye className="h-4 w-4 mr-2" />
-            View
-          </Button>
-        </Link>
-        <Link to={`/instructor/assignment/${assignment.id}/grade`} className="flex-1">
+      <CardFooter className="flex gap-2">
+        <Link to={`/instructor/assignment/${assignment.id}/edit`} className="flex-1">
           <Button className="w-full">
             <Edit className="h-4 w-4 mr-2" />
-            Grade
+            Edit
           </Button>
         </Link>
+
+        <Button
+          variant="destructive"
+          className="flex-1"
+          onClick={() => setDeleteId(assignment.id)}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete
+        </Button>
       </CardFooter>
     </Card>
   );
@@ -199,122 +235,60 @@ export default function InstructorAssignments() {
               <div className="text-2xl font-bold">{assignments.length}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Not Submitted</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {assignments.filter(a => !a.submitted).length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Grading</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {assignments.filter(a => a.submitted && !a.graded).length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Graded</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {assignments.filter(a => a.graded).length}
-              </div>
-            </CardContent>
-          </Card>
+
         </div>
 
-        {/* Assignments Tabs */}
+        {/* Assignments */}
         {loading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Loading assignments...</p>
           </div>
         ) : (
-          <Tabs defaultValue="active" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="active">
-                Not Submitted ({activeAssignments.length})
-              </TabsTrigger>
-              <TabsTrigger value="submitted">
-                Pending Grading ({submittedAssignments.length})
-              </TabsTrigger>
-              <TabsTrigger value="graded">
-                Graded ({gradedAssignments.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="active" className="space-y-4">
-              {activeAssignments.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No active assignments</h3>
-                    <p className="text-muted-foreground mb-4">Create an assignment to get started</p>
-                    <Link to="/instructor/create-assignment">
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Assignment
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {activeAssignments.map((assignment) => (
-                    <AssignmentCard key={assignment.id} assignment={assignment} />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="submitted" className="space-y-4">
-              {submittedAssignments.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No pending submissions</h3>
-                    <p className="text-muted-foreground">All submissions have been graded</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {submittedAssignments.map((assignment) => (
-                    <AssignmentCard key={assignment.id} assignment={assignment} />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="graded" className="space-y-4">
-              {gradedAssignments.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No graded assignments</h3>
-                    <p className="text-muted-foreground">Assignments will appear here when graded</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {gradedAssignments.map((assignment) => (
-                    <AssignmentCard key={assignment.id} assignment={assignment} />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          filteredAssignments.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No assignments</h3>
+                <p className="text-muted-foreground mb-4">
+                  Create an assignment to get started
+                </p>
+                <Link to="/instructor/create-assignment">
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Assignment
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredAssignments.map((assignment) => (
+                <AssignmentCard key={assignment.id} assignment={assignment} onDelete={handleDelete} />
+              ))}
+            </div>
+          )
         )}
       </div>
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Assignment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this assignment? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteId(null)}>
+              Cancel
+            </AlertDialogCancel>
+
+            <AlertDialogAction onClick={handleDelete}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </InstructorLayout>
   );
 }

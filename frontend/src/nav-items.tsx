@@ -234,6 +234,12 @@ export const navItems = [
     page: <InstructorLayout><CreateAssignment /></InstructorLayout>,
   },
   {
+    title: "Edit Assignment",
+    to: "/instructor/assignment/:assignmentId/edit",
+    icon: <Edit className="h-4 w-4" />,
+    page: <InstructorLayout><CreateAssignment /></InstructorLayout>, // same page as Create Assignment
+  },
+  {
     title: "View Assignment",
     to: "/instructor/assignment/:assignmentId/view",
     icon: <Eye className="h-4 w-4" />,

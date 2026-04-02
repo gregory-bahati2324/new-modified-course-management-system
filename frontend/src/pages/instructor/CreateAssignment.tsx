@@ -9,30 +9,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { assignmentService, AssignmentCreate } from '@/services/assignmentService';
 import { courseService } from '@/services/courseService';
-import { moduleService } from '@/services/moduleService';
 import { useToast } from '@/hooks/use-toast';
 
 type AssignmentStatus = 'draft' | 'published' | 'closed';
-type AssignmentType = 'assignment' | 'quiz' | 'exam' | 'project' | 'discussion';
 
-interface Module {
+interface Course {
   id: string;
   name: string;
-  course_id: string;
 }
 
 interface AssignmentData {
   title: string;
-  type: AssignmentType;
+  course_id: string;
   description: string;
   instructions: string;
   dueDate: string;
   dueTime: string;
   points: string;
-  attempts: '1' | '2' | '3' | 'unlimited';
-  timeLimit: string;
-  module: string;
   status: AssignmentStatus;
+  file: File | null; // ✅ NEW
 }
 
 function convertTo24Hour(time12h: string) {
@@ -53,91 +48,128 @@ function convertTo24Hour(time12h: string) {
 
 export default function CreateAssignment() {
   const navigate = useNavigate();
-  const { id: courseId } = useParams<{ id: string }>();
+  const { assignmentId } = useParams<{ assignmentId: string }>();
   const { toast } = useToast();
 
   const [assignmentData, setAssignmentData] = useState<AssignmentData>({
     title: '',
-    type: 'assignment',
+    course_id: '',
     description: '',
     instructions: '',
     dueDate: '',
     dueTime: '',
     points: '',
-    attempts: '1',
-    timeLimit: '',
-    module: '',
-    status: 'draft'
+    status: 'draft',
+    file: null // ✅ NEW
   });
 
-  const [modules, setModules] = useState<Module[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch modules from backend
   useEffect(() => {
-    const fetchModules = async () => {
+    if (assignmentId) {
+      loadAssignment();
+    }
+  }, [assignmentId]);
+
+  const loadAssignment = async () => {
+    try {
+      console.log("👉 Fetching assignment with ID:", assignmentId);
+      const data = await assignmentService.getAssignment(assignmentId);
+      console.log("✅ Raw assignment data from backend:", data);
+
+      const due = new Date(data.due_date);
+
+      setAssignmentData({
+        title: data.title,
+        course_id: data.course_id,
+        description: data.description || '',
+        instructions: data.instructions || '',
+        dueDate: due.toISOString().split("T")[0],
+        dueTime: due.toTimeString().slice(0, 5),
+        points: data.total_points?.toString() || '0',
+        status: data.status,
+        file: null // existing file stays backend
+      });
+
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load assignment',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Fetch courses from backend
+  useEffect(() => {
+    const fetchCourses = async () => {
       try {
         const { courses } = await courseService.getCourses();
-        if (!courses || courses.length === 0) return setModules([]);
 
-        const moduleArrays = await Promise.all(
-          courses.map(async (course) => {
-            try {
-              const res = await moduleService.getModules(course.id);
-              return res.data ?? [];
-            } catch (err: any) {
-              if ((err?.response?.status ?? err?.status) === 404) return [];
-              throw err;
-            }
-          })
-        );
+        if (!courses || courses.length === 0) {
+          setCourses([]);
+          return;
+        }
 
-        const allModules = moduleArrays.flat().map((m: any) => ({
-          id: m.id,
-          name: m.title ?? m.name,
-          course_id: m.course_id,
+        const formattedCourses = courses.map((c: any) => ({
+          id: c.id,
+          name: c.title ?? c.name,
         }));
 
-        setModules(allModules);
+        setCourses(formattedCourses);
+
       } catch (err: any) {
         console.error(err);
-        toast({ title: 'Error', description: err?.message || 'Failed to load modules', variant: 'destructive' });
-        setModules([]);
+        toast({
+          title: 'Error',
+          description: err?.message || 'Failed to load courses',
+          variant: 'destructive'
+        });
+        setCourses([]);
       }
     };
 
-    fetchModules();
+    fetchCourses();
   }, [toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const selectedModule = modules.find(m => m.id === assignmentData.module);
-
-    const time24 = convertTo24Hour(assignmentData.dueTime);
-    const dueDateString = `${assignmentData.dueDate} ${time24}:00`;
-
-    if (!selectedModule) {
-      throw new Error("Module not found");
-    }
-
     try {
-      const payload: AssignmentCreate = {
-        title: assignmentData.title,
-        type: assignmentData.type,
-        description: assignmentData.description || '',
-        instructions: assignmentData.instructions || '',
-        course_id: selectedModule.course_id,
-        module_id: assignmentData.module || undefined,
-        due_date: dueDateString,
-        attempts: assignmentData.attempts === 'unlimited' ? 0 : Number(assignmentData.attempts),
-        time_limit: assignmentData.timeLimit ? Number(assignmentData.timeLimit) : undefined,
-        total_points: assignmentData.points ? Number(assignmentData.points) : 0,
-        status: assignmentData.status,
-      };
+      if (!assignmentData.course_id) {
+        throw new Error("Please select a course");
+      }
 
-      await assignmentService.createAssignment(payload);
+      const dueDateString = assignmentData.dueTime
+        ? `${assignmentData.dueDate} ${assignmentData.dueTime}:00`
+        : `${assignmentData.dueDate} 23:59:00`;
+
+      // ✅ CREATE FORM DATA
+      const formData = new FormData();
+
+      formData.append("title", assignmentData.title);
+      formData.append("description", assignmentData.description || "");
+      formData.append("instructions", assignmentData.instructions || "");
+      formData.append("course_id", assignmentData.course_id);
+      formData.append("due_date", dueDateString);
+      formData.append(
+        "total_points",
+        assignmentData.points ? assignmentData.points : "0"
+      );
+      formData.append("status", assignmentData.status);
+
+      // ✅ OPTIONAL FILE
+      if (assignmentData.file) {
+        formData.append("file", assignmentData.file);
+      }
+
+      if (assignmentId) {
+        await assignmentService.updateAssignment(assignmentId, formData);
+      } else {
+        await assignmentService.createAssignment(formData);
+      }
 
       toast({
         title: 'Success',
@@ -145,11 +177,16 @@ export default function CreateAssignment() {
           assignmentData.status === 'draft'
             ? 'Assignment saved as draft'
             : 'Assignment created successfully',
-        variant: 'default',
       });
-      navigate(`/instructor/course/${courseId}/manage`);
+
+      navigate(`/instructor/assignments`);
+
     } catch (err: any) {
-      toast({ title: 'Error', description: err?.message || 'Failed to create assignment', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: err?.message || 'Failed to create assignment',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -159,9 +196,6 @@ export default function CreateAssignment() {
     <div className="container py-8 space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/instructor/course/${courseId}/manage`)} className="gap-2">
-          <ArrowLeft className="h-4 w-4" /> Back to Course Management
-        </Button>
         <div>
           <h1 className="text-3xl font-bold">Create Assignment</h1>
           <p className="text-muted-foreground">Create a new assignment or assessment for your course</p>
@@ -192,36 +226,26 @@ export default function CreateAssignment() {
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Assignment Type</Label>
-                    <Select
-                      value={assignmentData.type}
-                      onValueChange={(value) => setAssignmentData({ ...assignmentData, type: value as AssignmentType })}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                        <SelectItem value="assignment">Assignment</SelectItem>
-                        <SelectItem value="quiz">Quiz</SelectItem>
-                        <SelectItem value="exam">Exam</SelectItem>
-                        <SelectItem value="project">Project</SelectItem>
-                        <SelectItem value="discussion">Discussion</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
 
-                {/* Module & Points */}
+                {/* course and Points */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="module">Module</Label>
+                    <Label htmlFor="course">Course</Label>
                     <Select
-                      value={assignmentData.module}
-                      onValueChange={(value) => setAssignmentData({ ...assignmentData, module: value })}
+                      value={assignmentData.course_id}
+                      onValueChange={(value) =>
+                        setAssignmentData({ ...assignmentData, course_id: value })
+                      }
                     >
-                      <SelectTrigger><SelectValue placeholder="Select module" /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select course" />
+                      </SelectTrigger>
                       <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                        {modules.map((module) => (
-                          <SelectItem key={module.id} value={module.id}>{module.name}</SelectItem>
+                        {courses.map((course) => (
+                          <SelectItem key={course.id} value={course.id}>
+                            {course.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -261,6 +285,33 @@ export default function CreateAssignment() {
                     rows={6}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="file">Upload Assignment File (PDF only)</Label>
+                  <Input
+                    id="file"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+
+                      if (file && file.type !== "application/pdf") {
+                        toast({
+                          title: "Invalid file",
+                          description: "Only PDF files are allowed",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+
+                      setAssignmentData({ ...assignmentData, file: file || null });
+                    }}
+                  />
+                  {assignmentData.file && (
+                    <p className="text-sm text-green-600">
+                      Selected: {assignmentData.file.name}
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -293,34 +344,6 @@ export default function CreateAssignment() {
                     />
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="attempts">Allowed Attempts</Label>
-                    <Select
-                      value={assignmentData.attempts}
-                      onValueChange={(value) => setAssignmentData({ ...assignmentData, attempts: value as AssignmentData['attempts'] })}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                        <SelectItem value="1">1 Attempt</SelectItem>
-                        <SelectItem value="2">2 Attempts</SelectItem>
-                        <SelectItem value="3">3 Attempts</SelectItem>
-                        <SelectItem value="unlimited">Unlimited</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="timeLimit">Time Limit (minutes)</Label>
-                    <Input
-                      id="timeLimit"
-                      type="number"
-                      placeholder="Leave blank for no limit"
-                      value={assignmentData.timeLimit}
-                      onChange={(e) => setAssignmentData({ ...assignmentData, timeLimit: e.target.value })}
-                    />
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -335,20 +358,8 @@ export default function CreateAssignment() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Type:</span>
-                  <span className="capitalize">{assignmentData.type}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-muted-foreground">Points:</span>
                   <span>{assignmentData.points || 'Not set'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Attempts:</span>
-                  <span>{assignmentData.attempts === 'unlimited' ? 'Unlimited' : `${assignmentData.attempts} attempt(s)`}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Time Limit:</span>
-                  <span>{assignmentData.timeLimit ? `${assignmentData.timeLimit} min` : 'No limit'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Due:</span>
@@ -363,7 +374,7 @@ export default function CreateAssignment() {
                   disabled={loading}
                   onClick={() => setAssignmentData({ ...assignmentData, status: 'published' })}
                 >
-                  <Save className="mr-2 h-4 w-4" /> {loading ? 'Saving...' : 'Create Assignment'}
+                  <Save className="mr-2 h-4 w-4" /> {assignmentId ? "Save Changes" : "Create Assignment"}
                 </Button>
 
                 <Button
@@ -374,10 +385,6 @@ export default function CreateAssignment() {
                   onClick={() => setAssignmentData((prev) => ({ ...prev, status: 'draft' }))}
                 >
                   Save as Draft
-                </Button>
-
-                <Button asChild variant="outline" size="sm" className="flex-1 md:flex-none">
-                  <Link to={`/instructor/course/${courseId}/assignment/:assignmentId/view`}>View Assignment</Link>
                 </Button>
               </CardContent>
             </Card>

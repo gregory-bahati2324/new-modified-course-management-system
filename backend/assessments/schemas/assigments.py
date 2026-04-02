@@ -7,17 +7,13 @@ from typing import Optional, Union, Literal
 # -------------------------------
 class AssignmentBase(BaseModel):
     title: str
-    type: str = "assignment"  # accept string directly from frontend
     description: Optional[str] = ""
     instructions: Optional[str] = ""
-    course_id: Optional[str]
-    module_id: Optional[str] = None  # frontend may send empty string
+    course_id: str
     due_date: Union[datetime, str]
-    attempts: Union[int, str] = 1    # accept number or string ('1','2','unlimited')
-    time_limit: Optional[Union[int, str]] = None  # accept number or string
     total_points: Optional[Union[int, str]] = 0
-    status: str = "draft"  # accept string directly from frontend
-
+    status: str = "draft"
+    file_url: Optional[str] = None
 # -------------------------------
 # Create Schema
 # -------------------------------
@@ -29,13 +25,13 @@ class AssignmentCreate(AssignmentBase):
 # -------------------------------
 class AssignmentResponse(AssignmentBase):
     id: str
+    file_url: Optional[str] = None  # ✅ NEW
     graded: bool = False
     submitted: bool = False
     instructor_id: str
 
     class Config:
         orm_mode = True
-
 # -------------------------------
 # Update Schema
 # -------------------------------
