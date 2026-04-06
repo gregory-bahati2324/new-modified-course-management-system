@@ -14,6 +14,16 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Assessment Service")
 
 app.mount("/uploadAnswers", StaticFiles(directory="uploadAnswers"), name="uploadAnswers")
+app.mount(
+    "/uploads/assignments",
+    StaticFiles(directory="uploads/assignments"),
+    name="assignment_files"
+)
+app.mount(
+    "/uploads/submissions",
+    StaticFiles(directory="uploads/submissions"),
+    name="submission_files"
+)
 
 origins = [
     "http://localhost:5173",

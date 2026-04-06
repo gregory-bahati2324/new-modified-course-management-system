@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, DateTime, Integer, Boolean, func
+from sqlalchemy import Column, ForeignKey, String, Text, DateTime, Integer, Boolean, func
 from database import Base
 import uuid
 
@@ -30,3 +30,17 @@ class Assignment(Base):
     instructor_id = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    
+    
+class AssignmentSubmission(Base):
+    __tablename__ = "assignment_submissions"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    assignment_id = Column(String, ForeignKey("assignments.id"), nullable=False)
+    student_id = Column(String, nullable=False)
+
+    submission_text = Column(Text, nullable=True)
+    file_url = Column(String, nullable=True)
+
+    submitted_at = Column(DateTime, server_default=func.now())    

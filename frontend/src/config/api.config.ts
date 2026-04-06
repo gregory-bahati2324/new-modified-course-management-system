@@ -111,6 +111,8 @@ export const API_ENDPOINTS = {
     update: (id: string) => `/assignments/${id}/update`, // PUT/PATCH update assignment (to implement)
     delete: (id: string) => `/assignments/${id}/delete`, // DELETE assignment (to implement)
     submit: (id: string) => `/assignments/${id}/submit`,
+    studentList: '/assignments/student/assignments', // GET all assignments for logged-in student
+    getStudentAssignment: (id: string) => `/assignments/student/${id}/details`,
     submissions: (id: string) => `/assignments/${id}/submissions`,
     grade: (id: string, submissionId: string) => `assignments/${id}/submissions/${submissionId}/grade`,
   },

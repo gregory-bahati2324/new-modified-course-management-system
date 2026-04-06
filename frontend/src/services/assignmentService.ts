@@ -30,6 +30,29 @@ export interface Assignment {
   updated_at: string;
 }
 
+export interface StudentAssignment {
+  id: string;
+  title: string;
+  description: string;
+  instructions?: string;
+
+  course_id: string;
+  course_title?: string;
+
+  due_date?: string;
+  total_points?: number;
+
+  file_url?: string;
+
+  submitted: boolean;
+  graded: boolean;
+
+  status: 'pending' | 'submitted' | 'overdue';
+
+  created_at: string;
+  updated_at: string;
+}
+
 class AssignmentService {
   async createAssignment(data: FormData): Promise<Assignment> {
     try {
@@ -119,6 +142,71 @@ class AssignmentService {
           },
         }
       );
+
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+  async getStudentAssignments(): Promise<StudentAssignment[]> {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const response = await apiAssessmentClient.get<StudentAssignment[]>(
+        API_ENDPOINTS.assignments.studentList,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  async getStudentAssignment(id: string): Promise<StudentAssignment> {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const response = await apiAssessmentClient.get<StudentAssignment>(
+        API_ENDPOINTS.assignments.getStudentAssignment(id),
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+  async submitAssignment(id: string, data: { submission_text: string; files: File[] }) {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const formData = new FormData();
+      formData.append("submission_text", data.submission_text);
+
+      if (data.files.length > 0) {
+        formData.append("file", data.files[0]); // backend expects single file
+      }
+
+      const response = await apiAssessmentClient.post(
+        API_ENDPOINTS.assignments.submit(id),
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data"
+          }
+        }
+      );
+
+      return response.data;
 
     } catch (error) {
       throw new Error(handleApiError(error));

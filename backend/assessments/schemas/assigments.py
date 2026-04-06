@@ -45,3 +45,41 @@ class AssignmentUpdate(BaseModel):
     time_limit: Optional[Union[int, str]] = None
     total_points: Optional[Union[int, str]] = None
     status: Optional[str] = None
+    
+
+class StudentAssignmentResponse(BaseModel):
+    id: str
+    title: str
+    description: Optional[str]
+    instructions: Optional[str]
+
+    course_id: str
+    course_title: Optional[str] = None
+
+    due_date: Optional[datetime]
+    total_points: Optional[int]
+
+    file_url: Optional[str]
+
+    # Student-specific state (temporary for now)
+    submitted: bool = False
+    graded: bool = False
+    status: str  # pending / submitted / overdue
+
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True  
+        
+        
+class SubmissionResponse(BaseModel):
+    id: str
+    assignment_id: str
+    student_id: str
+    submission_text: Optional[str]
+    file_url: Optional[str]
+    submitted_at: datetime
+
+    class Config:
+        orm_mode = True          

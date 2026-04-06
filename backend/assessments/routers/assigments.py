@@ -1,11 +1,12 @@
-# backend/assessments/routers/assignments.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
 
-from schemas.assigments import AssignmentCreate, AssignmentResponse
-from crud.assigments import create_assignment, delete_assignment, get_assignments_for_instructor, get_assignment, update_assignment
+from schemas.assigments import AssignmentCreate, AssignmentResponse, StudentAssignmentResponse, SubmissionResponse
+from crud.assigments import create_assignment, delete_assignment, get_assignments_for_instructor, get_assignment, get_submission_by_student_and_assignment, update_assignment, get_assignments_for_courses, get_student_assignment_detail, build_file_url, submit_assignment_service
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from services.enrollment_client import get_student_enrollments, get_course_details
 from database import get_db
 from utils.auth import get_current_user_token, require_role
 
@@ -186,3 +187,159 @@ def delete_assignment_route(
         raise HTTPException(status_code=404, detail="Assignment not found")
 
     return {"message": "Assignment deleted successfully"}
+
+
+
+
+@router.get("/student/assignments", response_model=list[StudentAssignmentResponse])
+def get_student_assignments(
+    db: Session = Depends(get_db),
+    token_data = Depends(get_current_user_token),
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+):
+    raw_token = credentials.credentials
+
+    # ---------------- GET ENROLLMENTS ----------------
+    enrollments = get_student_enrollments(raw_token)
+
+    if not enrollments:
+        return []
+
+    course_ids = [e.get("course_id") for e in enrollments if e.get("course_id")]
+
+    # ---------------- GET ASSIGNMENTS ----------------
+    assignments = get_assignments_for_courses(db, course_ids)
+
+    results = []
+
+    for assignment in assignments:
+
+        # ---------------- COURSE DETAILS ----------------
+        try:
+            course = get_course_details(assignment.course_id, raw_token)
+        except Exception:
+            course = None
+
+        # ---------------- STATUS LOGIC ----------------
+        now = datetime.utcnow()
+
+        student_id = token_data.sub
+
+        submission = get_submission_by_student_and_assignment(
+            db,
+            assignment.id,
+            student_id
+        )
+
+        if submission:
+            status = "submitted"
+        elif assignment.due_date and assignment.due_date < now:
+            status = "overdue"
+        else:
+            status = "pending"
+
+        # ---------------- RESPONSE ----------------
+        results.append({
+            "id": assignment.id,
+            "title": assignment.title,
+            "description": assignment.description,
+            "instructions": assignment.instructions,
+            "course_id": assignment.course_id,
+            "course_title": course.get("title") if course else None,
+            "due_date": assignment.due_date,
+            "total_points": assignment.total_points,
+            "file_url": assignment.file_url,
+            "submitted": assignment.submitted,
+            "graded": assignment.graded,
+            "status": status,
+            "created_at": assignment.created_at,
+            "updated_at": assignment.updated_at,
+        })
+
+    return results
+
+
+@router.get("/student/{assignment_id}/details", response_model=StudentAssignmentResponse)
+def get_student_assignment_detail_route(
+    assignment_id: str,
+    db: Session = Depends(get_db),
+    token_data = Depends(get_current_user_token),
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+):
+    raw_token = credentials.credentials
+
+    # ---------------- GET ENROLLMENTS ----------------
+    enrollments = get_student_enrollments(raw_token)
+    course_ids = [e.get("course_id") for e in enrollments if e.get("course_id")]
+
+    # ---------------- GET ASSIGNMENT (CRUD) ----------------
+    assignment = get_student_assignment_detail(db, assignment_id, course_ids)
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # ---------------- COURSE DETAILS ----------------
+    try:
+        course = get_course_details(assignment.course_id, raw_token)
+    except Exception:
+        course = None
+
+    # ---------------- STATUS LOGIC ----------------
+    now = datetime.utcnow()
+
+    student_id = token_data.sub
+
+    submission = get_submission_by_student_and_assignment(
+        db,
+        assignment_id,
+        student_id
+    )
+
+    if submission:
+        status = "submitted"
+    elif assignment.due_date and assignment.due_date < now:
+        status = "overdue"
+    else:
+        status = "pending"
+    # ---------------- RESPONSE ----------------
+    return {
+        "id": assignment.id,
+        "title": assignment.title,
+        "description": assignment.description,
+        "instructions": assignment.instructions,
+        "course_id": assignment.course_id,
+        "course_title": course.get("title") if course else None,
+        "due_date": assignment.due_date,
+        "total_points": assignment.total_points,
+        "file_url": build_file_url(assignment.file_url),
+        "submitted": submission is not None,
+        "graded": assignment.graded,
+        "status": status,
+        "created_at": assignment.created_at,
+        "updated_at": assignment.updated_at,
+    }
+    
+
+@router.post("/{assignment_id}/submit", response_model=SubmissionResponse)
+async def submit_assignment(
+    assignment_id: str,
+    submission_text: str = Form(""),
+    file: UploadFile = File(None),
+
+    db: Session = Depends(get_db),
+    token_data = Depends(get_current_user_token)
+):
+    student_id = token_data.sub
+
+    submission = await submit_assignment_service(
+        db=db,
+        assignment_id=assignment_id,
+        student_id=student_id,
+        submission_text=submission_text,
+        file=file
+    )
+
+    if not submission:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    return submission    

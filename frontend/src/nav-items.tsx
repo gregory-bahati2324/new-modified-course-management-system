@@ -6,6 +6,8 @@ import SettingsPage from "./pages/Settings.tsx";
 import StudentCourses from "./pages/student/Courses.tsx";
 import Enrollment from "./pages/student/Enrollment.tsx";
 import StudentAssignments from "./pages/student/Assignments.tsx";
+import ViewMyAssignment from "./pages/student/ViewMyAssignment.tsx";
+import SubmitAssignment from "./pages/student/SubmitAssignment.tsx";
 import Exams from "./pages/student/Exam.tsx";
 import ExamHistory from "./pages/student/ExamHistory.tsx";
 import TakeExam from "./pages/student/TakeExam.tsx";
@@ -93,6 +95,18 @@ export const navItems = [
     to: "/student/assignments",
     icon: <FileText className="h-4 w-4" />,
     page: <StudentLayout><StudentAssignments /></StudentLayout>,
+  },
+  {
+    title: "View Assignment",
+    to: "/student/Myassignment/:assignmentId/view",
+    icon: <Eye className="h-4 w-4" />,
+    page: <StudentLayout><ViewMyAssignment /></StudentLayout>,  
+  },
+  {
+    title: "Submit Assignment",
+    to: "/student/assignment/:assignmentId/submit",
+    icon: <Edit className="h-4 w-4" />,
+    page: <StudentLayout><SubmitAssignment /></StudentLayout>,
   },
   {
     title: "student exams",
