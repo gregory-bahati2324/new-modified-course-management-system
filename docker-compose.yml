@@ -98,5 +98,19 @@ services:
       - ./backend/progress_service:/app/app
     restart: always  
 
+  marking_grading_service:
+    build: ./backend/marking_grading
+    container_name: marking_grading_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8005:8000"
+    depends_on:
+      - course_service
+      - assessment_service
+      - progress_service
+    volumes:
+      - ./backend/marking_grading:/app
+    restart: always  
+
 volumes:
   postgres_data:

@@ -127,176 +127,178 @@ export default function ExamsTests() {
   }
 
   return (
-    <div className="container py-6 lg:py-8 space-y-6 lg:space-y-8 animate-fade-in">
+    <InstructorLayout>
       <div className="container py-6 lg:py-8 space-y-6 lg:space-y-8 animate-fade-in">
+        <div className="container py-6 lg:py-8 space-y-6 lg:space-y-8 animate-fade-in">
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold">Tests & Exams</h1>
-            <p className="text-muted-foreground">
-              Create, manage, and monitor student assessments
-            </p>
+          {/* Header */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold">Tests & Exams</h1>
+              <p className="text-muted-foreground">
+                Create, manage, and monitor student assessments
+              </p>
+            </div>
+            <Button asChild>
+              <Link to="/instructor/create-assessment">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Assessment
+              </Link>
+            </Button>
           </div>
-          <Button asChild>
-            <Link to="/instructor/create-assessment">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Assessment
-            </Link>
-          </Button>
-        </div>
 
-        {/* Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Assessments</CardTitle>
-            <CardDescription>View and manage your assessments</CardDescription>
-          </CardHeader>
+          {/* Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Assessments</CardTitle>
+              <CardDescription>View and manage your assessments</CardDescription>
+            </CardHeader>
 
-          <CardContent className="space-y-4">
+            <CardContent className="space-y-4">
 
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground -translate-y-1/2" />
-                <Input
-                  placeholder="Search assessments..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground -translate-y-1/2" />
+                  <Input
+                    placeholder="Search assessments..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="exam">Exams</SelectItem>
+                    <SelectItem value="test">Tests</SelectItem>
+                    <SelectItem value="quiz">Quizzes</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="published">Scheduled</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="exam">Exams</SelectItem>
-                  <SelectItem value="test">Tests</SelectItem>
-                  <SelectItem value="quiz">Quizzes</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="published">Scheduled</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Assessment</TableHead>
-                    <TableHead className="hidden md:table-cell">Course</TableHead>
-                    <TableHead className="hidden lg:table-cell">Type</TableHead>
-                    <TableHead className="hidden lg:table-cell">Date & Time</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-
-                <TableBody>
-                  {filteredExams.map((exam) => (
-                    <TableRow key={exam.id}>
-                      <TableCell>
-                        <p className="font-medium">{exam.title}</p>
-                        <p className="text-xs text-muted-foreground lg:hidden">
-                          {exam.date} at {exam.time}
-                        </p>
-                      </TableCell>
-
-                      <TableCell className="hidden md:table-cell">{exam.course}</TableCell>
-
-                      <TableCell className="hidden lg:table-cell">
-                        <Badge variant="outline">{exam.type}</Badge>
-                      </TableCell>
-
-                      <TableCell className="hidden lg:table-cell">
-                        <div>
-                          <p>{exam.date}</p>
-                          <p className="text-muted-foreground">{exam.time}</p>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge className={getStatusColor(exam.status)}>
-                          {exam.status}
-                        </Badge>
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            onClick={async () => {
-                              try {
-                                const data = await assessmentService.getAssessmentDetail(exam.id);
-
-                                setPreviewAssessment({
-                                  title: data.title,
-                                  type: data.type,
-                                  description: data.description,
-                                  course: data.course_id,
-                                  module: data.module_id,
-                                  dueDate: data.due_date?.split("T")[0],
-                                  dueTime: data.due_date
-                                    ? new Date(data.due_date).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })
-                                    : "",
-                                  timeLimit: data.time_limit,
-                                  attempts: data.attempts,
-                                  passingScore: data.passing_score,
-                                  shuffleQuestions: data.shuffle_questions,
-                                  showAnswers: data.show_answers,
-                                });
-
-                                setPreviewQuestions(data.questions || []);
-
-                                setPreviewOpen(true);
-                              } catch (error) {
-                                console.error("Failed to load assessment", error);
-                              }
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-
-
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link to={`/instructor/exam/${exam.id}/edit`}>
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Assessment</TableHead>
+                      <TableHead className="hidden md:table-cell">Course</TableHead>
+                      <TableHead className="hidden lg:table-cell">Type</TableHead>
+                      <TableHead className="hidden lg:table-cell">Date & Time</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
 
-          </CardContent>
-        </Card>
+                  <TableBody>
+                    {filteredExams.map((exam) => (
+                      <TableRow key={exam.id}>
+                        <TableCell>
+                          <p className="font-medium">{exam.title}</p>
+                          <p className="text-xs text-muted-foreground lg:hidden">
+                            {exam.date} at {exam.time}
+                          </p>
+                        </TableCell>
+
+                        <TableCell className="hidden md:table-cell">{exam.course}</TableCell>
+
+                        <TableCell className="hidden lg:table-cell">
+                          <Badge variant="outline">{exam.type}</Badge>
+                        </TableCell>
+
+                        <TableCell className="hidden lg:table-cell">
+                          <div>
+                            <p>{exam.date}</p>
+                            <p className="text-muted-foreground">{exam.time}</p>
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <Badge className={getStatusColor(exam.status)}>
+                            {exam.status}
+                          </Badge>
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              onClick={async () => {
+                                try {
+                                  const data = await assessmentService.getAssessmentDetail(exam.id);
+
+                                  setPreviewAssessment({
+                                    title: data.title,
+                                    type: data.type,
+                                    description: data.description,
+                                    course: data.course_id,
+                                    module: data.module_id,
+                                    dueDate: data.due_date?.split("T")[0],
+                                    dueTime: data.due_date
+                                      ? new Date(data.due_date).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                      : "",
+                                    timeLimit: data.time_limit,
+                                    attempts: data.attempts,
+                                    passingScore: data.passing_score,
+                                    shuffleQuestions: data.shuffle_questions,
+                                    showAnswers: data.show_answers,
+                                  });
+
+                                  setPreviewQuestions(data.questions || []);
+
+                                  setPreviewOpen(true);
+                                } catch (error) {
+                                  console.error("Failed to load assessment", error);
+                                }
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+
+
+                            <Button size="sm" variant="ghost" asChild>
+                              <Link to={`/instructor/exam/${exam.id}/edit`}>
+                                <Edit className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+            </CardContent>
+          </Card>
+        </div>
+
+        <AssessmentPreview
+          isOpen={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          assessmentData={previewAssessment}
+          questions={previewQuestions}
+        />
       </div>
-
-      <AssessmentPreview
-        isOpen={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        assessmentData={previewAssessment}
-        questions={previewQuestions}
-      />
-    </div>
+    </InstructorLayout>
   );
 }

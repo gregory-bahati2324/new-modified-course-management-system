@@ -131,4 +131,44 @@ class SubmitExamRequest(BaseModel):
     answers: List[ExamAnswer]
     time_taken: int
     
+class AssessmentSubmissionResponse(BaseModel):
+    id: int
+    student_id: str
+    assessment_id: int
+    assessment_title: str
+    course_id: str
+    submitted_at: Optional[datetime]
+    status: str
+    time_taken: Optional[int]
+    type: str
+    passing_score: Optional[int]
 
+    class Config:
+        orm_mode = True 
+    
+
+
+class AttemptAnswer(BaseModel):
+    question_id: int
+    answer: Any
+
+
+class AttemptQuestion(BaseModel):
+    question_id: int
+    type: str
+    question_text: str
+    points: int
+    correct_answer: Optional[Any]
+
+
+class AssessmentAttemptDetail(BaseModel):
+    attempt_id: int
+    student_id: str
+    assessment_id: int
+    status: str
+    time_taken: Optional[int]
+
+    questions: List[AttemptQuestion]
+    answers: List[AttemptAnswer]
+
+    passing_score: Optional[int]

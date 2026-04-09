@@ -1,6 +1,7 @@
 from sqlalchemy import Column, ForeignKey, String, Text, DateTime, Integer, Boolean, func
 from database import Base
 import uuid
+from sqlalchemy.orm import relationship
 
 class Assignment(Base):
     __tablename__ = "assignments"
@@ -43,4 +44,5 @@ class AssignmentSubmission(Base):
     submission_text = Column(Text, nullable=True)
     file_url = Column(String, nullable=True)
 
-    submitted_at = Column(DateTime, server_default=func.now())    
+    submitted_at = Column(DateTime, server_default=func.now())  
+    assignment = relationship("Assignment", backref="submissions")  

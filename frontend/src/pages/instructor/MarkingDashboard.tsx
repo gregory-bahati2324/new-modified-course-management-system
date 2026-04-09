@@ -27,6 +27,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InstructorLayout } from '@/components/layout/InstructorLayout';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { assignmentService } from '@/services/assignmentService';
+import { assessmentService } from '@/services/assessmentService';
+import { markingGradingService } from '@/services/markingGradingService';
 
 interface SubmissionItem {
   id: string;
@@ -36,73 +39,77 @@ interface SubmissionItem {
   status: 'pending' | 'ai-marked' | 'instructor-reviewed' | 'graded';
   score?: number;
   maxScore: number;
+  courseId: string;
+  courseName: string;
+  type: string;
+  title: string;
 }
 
 export default function MarkingDashboard() {
   const navigate = useNavigate();
   const [selectedCourse, setSelectedCourse] = useState('all');
-  const [selectedModule, setSelectedModule] = useState('all');
-  const [selectedAssessment, setSelectedAssessment] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
   const [isMarking, setIsMarking] = useState(false);
+  const [submissions, setSubmissions] = useState<SubmissionItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const courses = [
     { id: 'all', name: 'All Courses' },
-    { id: '1', name: 'Database Systems' },
-    { id: '2', name: 'Web Development' },
-    { id: '3', name: 'Data Structures' }
+    ...Array.from(
+      new Map(
+        submissions.map(s => [s.courseId, { id: s.courseId, name: s.courseName }])
+      ).values()
+    )
   ];
 
-  const modules = [
-    { id: 'all', name: 'All Modules' },
-    { id: '1', name: 'Introduction' },
-    { id: '2', name: 'Advanced Topics' },
-    { id: '3', name: 'Final Project' }
-  ];
 
   const assessmentTypes = [
     { id: 'all', name: 'All Types' },
     { id: 'assignment', name: 'Assignment' },
     { id: 'quiz', name: 'Quiz' },
     { id: 'test', name: 'Test' },
-    { id: 'exam', name: 'Exam' }
+    { id: 'final', name: 'Exam' }
   ];
 
-  const assessments = [
-    { id: 'all', name: 'All Assessments' },
-    { id: '1', name: 'Midterm Exam' },
-    { id: '2', name: 'SQL Assignment' },
-    { id: '3', name: 'Weekly Quiz 5' }
-  ];
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      setLoading(true);
+      try {
+        const data = await markingGradingService.getStudentSubmissions();
+        console.log("submission data: ", data);
+        setSubmissions(data.map(sub => ({
+          id: sub.id,
+          studentName: sub.student_name,
+          studentAvatar: sub.student_name.charAt(0), // Simple avatar with initial
+          submissionDate: sub.submitted_at,
+          status: sub.grade ? 'graded' : 'pending',
+          score: sub.grade,
+          maxScore: sub.max_score || 100, // This would ideally come from the API
+          courseId: sub.course_id,
+          courseName: sub.course_name,
+          type: sub.type,
+          title: sub.assignment_title
+        })));
+      } catch (error) {
+        toast.error(`Failed to load submissions: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSubmissions();
+  }, []);
 
-  const submissions: SubmissionItem[] = [
-    {
-      id: '1',
-      studentName: 'John Doe',
-      studentAvatar: 'JD',
-      submissionDate: '2024-03-15T10:30:00',
-      status: 'pending',
-      maxScore: 100
-    },
-    {
-      id: '2',
-      studentName: 'Jane Smith',
-      studentAvatar: 'JS',
-      submissionDate: '2024-03-15T11:20:00',
-      status: 'ai-marked',
-      score: 85,
-      maxScore: 100
-    },
-    {
-      id: '3',
-      studentName: 'Mike Johnson',
-      studentAvatar: 'MJ',
-      submissionDate: '2024-03-15T14:15:00',
-      status: 'graded',
-      score: 92,
-      maxScore: 100
-    }
-  ];
+  const filteredSubmissions = submissions.filter(sub => {
+    const matchCourse =
+      selectedCourse === 'all' || sub.courseId === selectedCourse;
+
+    const matchType =
+      selectedType === 'all' || sub.type === selectedType;
+
+    return matchCourse && matchType;
+  });
+
+
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -123,7 +130,7 @@ export default function MarkingDashboard() {
   const handleBulkAIMarking = async () => {
     setIsMarking(true);
     toast.info('AI is marking submissions...', { duration: 2000 });
-    
+
     // Simulate AI marking
     setTimeout(() => {
       setIsMarking(false);
@@ -131,11 +138,15 @@ export default function MarkingDashboard() {
     }, 3000);
   };
 
-  const pendingCount = submissions.filter(s => s.status === 'pending').length;
-  const aiMarkedCount = submissions.filter(s => s.status === 'ai-marked').length;
-  const gradedCount = submissions.filter(s => s.status === 'graded').length;
+  const pendingCount = filteredSubmissions.filter(s => s.status === 'pending').length;
+  const gradedCount = filteredSubmissions.filter(s => s.status === 'graded').length;
+
+  if (loading) {
+    return <div className="p-6">Loading submissions...</div>;
+  }
 
   return (
+    <InstructorLayout>
       <div className="container py-8 space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -167,17 +178,7 @@ export default function MarkingDashboard() {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">AI Marked</p>
-                  <p className="text-3xl font-bold">{aiMarkedCount}</p>
-                </div>
-                <Brain className="h-10 w-10 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
+
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -219,19 +220,7 @@ export default function MarkingDashboard() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Module</label>
-                <Select value={selectedModule} onValueChange={setSelectedModule}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {modules.map(m => (
-                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Assessment Type</label>
                 <Select value={selectedType} onValueChange={setSelectedType}>
@@ -245,19 +234,7 @@ export default function MarkingDashboard() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Assessment</label>
-                <Select value={selectedAssessment} onValueChange={setSelectedAssessment}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assessments.map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+
             </div>
           </CardContent>
         </Card>
@@ -285,7 +262,7 @@ export default function MarkingDashboard() {
                       Use AI to automatically mark all pending submissions using answer keys
                     </p>
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleBulkAIMarking}
                     disabled={isMarking || pendingCount === 0}
                     className="gap-2"
@@ -323,7 +300,7 @@ export default function MarkingDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {submissions.map((submission) => (
+                    {filteredSubmissions.map((submission) => (
                       <TableRow key={submission.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -445,5 +422,6 @@ export default function MarkingDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+    </InstructorLayout>
   );
 }

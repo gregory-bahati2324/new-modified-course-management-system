@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from .schemas import RegisterRequest, RegisterResponse, UserResponse, LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse
 from .database import get_db
-from .crud import create_user, authenticate_user
+from .crud import create_user, authenticate_user, get_student_by_id
 from .models import User
 from .backend_auth_utilities import decode_token, get_current_user, create_access_token, create_refresh_token  # you need JWT helper functions
 import os
@@ -104,5 +104,20 @@ def refresh_token(data: RefreshTokenRequest, db: Session = Depends(get_db)):
         return RefreshTokenResponse(access_token=access_token, token_type="bearer")
     
     except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")     
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")  
+    
+@router.get("/student/{student_id}/details", response_model=UserResponse)
+def get_student_details(student_id: str, db: Session = Depends(get_db)):
+    student = get_student_by_id(db, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    return UserResponse(
+        id=student.id,
+        registrationNumber=student.registrationNumber,
+        first_name=student.first_name,
+        last_name=student.last_name,
+        role=student.role,
+        newsletter=student.newsletter
+    )       
 

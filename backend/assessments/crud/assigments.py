@@ -204,3 +204,24 @@ def get_submission_by_student_and_assignment(
         AssignmentSubmission.assignment_id == assignment_id,
         AssignmentSubmission.student_id == student_id
     ).first()
+    
+def get_submissions_for_course(db: Session, course_id: str):
+    return (
+        db.query(AssignmentSubmission)
+        .join(Assignment, AssignmentSubmission.assignment_id == Assignment.id)
+        .filter(Assignment.course_id == course_id)
+        .all()
+    )       
+    
+def get_submission_for_grading(db: Session, submission_id: str):
+    submission = (
+        db.query(AssignmentSubmission)
+        .join(Assignment, AssignmentSubmission.assignment_id == Assignment.id)
+        .filter(AssignmentSubmission.id == submission_id)
+        .first()
+    )
+
+    if not submission:
+        return None
+
+    return submission    

@@ -58,6 +58,7 @@ class StudentAssignmentResponse(BaseModel):
 
     due_date: Optional[datetime]
     total_points: Optional[int]
+    
 
     file_url: Optional[str]
 
@@ -82,4 +83,32 @@ class SubmissionResponse(BaseModel):
     submitted_at: datetime
 
     class Config:
-        orm_mode = True          
+        orm_mode = True  
+        
+class SubmissionCourseResponse(StudentAssignmentResponse):
+    id: str
+    assignment_id: str
+    student_id: str
+    submission_text: Optional[str]
+    file_url: Optional[str]
+    submitted_at: datetime
+
+    course_id: str
+    course_title: Optional[str] = None
+
+    class Config:
+        orm_mode = True                
+
+
+class AssignmentGradingResponse(BaseModel):
+    submission_id: str
+    student_id: str
+    assignment_id: str
+
+    submission_text: Optional[str]
+    file_url: Optional[str]
+
+    assignment: dict
+
+    class Config:
+        orm_mode = True

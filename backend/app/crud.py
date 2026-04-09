@@ -28,3 +28,6 @@ def authenticate_user(db: Session, registrationNumber: str, password: str):
     if not verify_password(password, user.password):
         raise HttpException(status_code=400, detail="Invalid registration number or password")
     return user
+
+def get_student_by_id(db: Session, student_id: str):
+    return db.query(User).filter(User.id == student_id, User.role == "student").first()

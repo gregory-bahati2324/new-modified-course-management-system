@@ -35,6 +35,12 @@ export const API_CONFIG_PROGRESS = {
   timeout: 30000,
 };
 
+export const API_CONFIG_MARKING_GRADING = {
+  baseURL: import.meta.env.VITE_API_MARKING_GRADING_BASE_URL || 'http://localhost:8005',
+  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  timeout: 30000,
+};
+
 /**
  * API Endpoints
  * Define all API endpoints used in the application
@@ -146,10 +152,9 @@ export const API_ENDPOINTS = {
 
 
   // Grade endpoints - maps to FastAPI /api/grades/*
-  grades: {
-    student: '/api/grades/me',
-    course: (courseId: string) => `/api/grades/courses/${courseId}`,
-    all: '/api/grades',
+  Marking_grading: {
+    student_submissions: 'grading/dashboard',
+    submission_details: (id: string) => `/grading/submissions/${id}`,
   },
 
   // Schedule endpoints - maps to FastAPI /api/schedule/*

@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
 
-from schemas.assigments import AssignmentCreate, AssignmentResponse, StudentAssignmentResponse, SubmissionResponse
-from crud.assigments import create_assignment, delete_assignment, get_assignments_for_instructor, get_assignment, get_submission_by_student_and_assignment, update_assignment, get_assignments_for_courses, get_student_assignment_detail, build_file_url, submit_assignment_service
+from schemas.assigments import AssignmentCreate, AssignmentResponse, StudentAssignmentResponse, SubmissionResponse, SubmissionCourseResponse, AssignmentGradingResponse
+from crud.assigments import create_assignment, delete_assignment, get_assignments_for_instructor, get_assignment, get_submission_by_student_and_assignment, update_assignment, get_assignments_for_courses, get_student_assignment_detail, build_file_url, submit_assignment_service, get_submissions_for_course, get_submission_for_grading
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.enrollment_client import get_student_enrollments, get_course_details
 from database import get_db
@@ -342,4 +342,71 @@ async def submit_assignment(
     if not submission:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
-    return submission    
+    return submission   
+
+@router.get("/course/{course_id}/submissions", response_model=list[SubmissionCourseResponse])
+def get_submissions_for_course_route(
+    course_id: str,
+    db: Session = Depends(get_db),
+    token = Depends(get_current_instructor)
+):
+    submissions = get_submissions_for_course(db, course_id)
+
+    results = []
+
+    for sub in submissions:
+        assignment = sub.assignment  # requires relationship (see below)
+
+        results.append({
+            "id": sub.id,
+            "assignment_id": sub.assignment_id,
+            "student_id": sub.student_id,
+            "submission_text": sub.submission_text,
+            "file_url": sub.file_url,
+            "submitted_at": sub.submitted_at,
+
+            # Assignment fields
+            "title": assignment.title,
+            "description": assignment.description,
+            "instructions": assignment.instructions,
+            "course_id": assignment.course_id,
+            "due_date": assignment.due_date,
+            "total_points": assignment.total_points,
+            "status": assignment.status,
+            "created_at": assignment.created_at,
+            "updated_at": assignment.updated_at,
+
+            "course_title": None  # optional if not fetched
+        })
+
+    return results
+
+
+@router.get("/submissions/{submission_id}/grading", response_model=AssignmentGradingResponse)
+def get_submission_for_grading_route(
+    submission_id: str,
+    db: Session = Depends(get_db),
+    token = Depends(get_current_instructor)
+):
+    submission = get_submission_for_grading(db, submission_id)
+
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    assignment = submission.assignment
+
+    return {
+        "submission_id": submission.id,
+        "student_id": submission.student_id,
+        "assignment_id": submission.assignment_id,
+
+        "submission_text": submission.submission_text,
+        "file_url": submission.file_url,
+
+        "assignment": {
+            "title": assignment.title,
+            "instructions": assignment.instructions,
+            "total_points": assignment.total_points,
+            "due_date": assignment.due_date
+        }
+    }

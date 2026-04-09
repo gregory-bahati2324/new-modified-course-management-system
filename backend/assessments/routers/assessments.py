@@ -3,8 +3,24 @@ import json
 from sqlalchemy.orm import Session
 from models.assessments import Question
 from database import get_db
-from schemas.assessments import AssessmentCreate, SaveProgressRequest,SubmitExamRequest, AssessmentResponse, StudentAssessmentResponse, ExamDetails
-from crud.assessments import create_assessment,save_exam_progress, submit_exam, get_assessment_for_student, get_assessments_for_instructor, get_assessment, start_exam, update_assessment, get_assessments_for_courses
+from schemas.assessments import (AssessmentCreate, 
+            SaveProgressRequest,
+            SubmitExamRequest, 
+            AssessmentResponse, 
+            StudentAssessmentResponse, 
+            ExamDetails, 
+            AssessmentSubmissionResponse, 
+            AssessmentAttemptDetail)
+from crud.assessments import (create_assessment,
+        save_exam_progress, 
+        submit_exam, 
+        get_assessment_for_student, 
+        get_assessments_for_instructor, 
+        get_assessment, start_exam, 
+        update_assessment, 
+        get_assessments_for_courses, 
+        get_submission_for_course, 
+        get_attempt_full_data)
 from crud.questions import list_questions_for_assessment
 from utils.auth import require_role, get_current_user_token, security
 from services.enrollment_client import get_student_enrollments, get_course_details
@@ -266,3 +282,46 @@ async def submit_exam_route(
         "status": attempt.status,
         "submitted_at": attempt.submitted_at
     }
+    
+@router.get("/course/{course_id}/submissions", response_model=list[AssessmentSubmissionResponse])
+def get_submissions_for_course(
+    course_id: str,
+    db: Session = Depends(get_db),
+    token = Depends(get_current_instructor)
+):
+    submissions = get_submission_for_course(db, course_id)
+
+    results = []
+
+    for attempt, assessment in submissions:
+        results.append({
+            "id": attempt.id,
+            "student_id": attempt.student_id,
+            "assessment_id": assessment.id,
+            "assessment_title": assessment.title,
+            "course_id": assessment.course_id,
+            "submitted_at": attempt.submitted_at,
+            "status": attempt.status,
+            "time_taken": attempt.time_taken,
+            "type": assessment.type,
+            "passing_score": assessment.passing_score
+        })
+
+    return results
+
+@router.get("/attempts/{attempt_id}", response_model=AssessmentAttemptDetail)
+def get_attempt_details(
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    token = Depends(get_current_user_token)
+):
+    data = get_attempt_full_data(db, attempt_id)
+
+    if not data:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+
+    # Only owner or instructor allowed
+    if token.role == "student" and data["student_id"] != token.sub:
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    return data

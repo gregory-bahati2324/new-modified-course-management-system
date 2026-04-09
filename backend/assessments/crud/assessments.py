@@ -197,3 +197,71 @@ def submit_exam(db: Session, attempt_id: int, student_id: str, answers: list, ti
     db.refresh(attempt)
 
     return attempt
+
+def get_submission_for_course(db: Session, course_id: str):
+    return (
+        db.query(StudentAssessmentAttempt, Assessment)
+        .join(Assessment, StudentAssessmentAttempt.assessment_id == Assessment.id)
+        .filter(
+            Assessment.course_id == course_id,
+            StudentAssessmentAttempt.status == "submitted"
+        )
+        .all()
+    )
+
+def get_attempt_full_data(db: Session, attempt_id: int):
+    
+    # 🔹 1. Get attempt
+    attempt = db.query(StudentAssessmentAttempt).filter(
+        StudentAssessmentAttempt.id == attempt_id
+    ).first()
+
+    if not attempt:
+        return None
+
+    # 🔹 2. Get assessment
+    assessment = db.query(Assessment).filter(
+        Assessment.id == attempt.assessment_id
+    ).first()
+
+    # 🔹 3. Get questions
+    questions = db.query(Question).filter(
+        Question.assessment_id == attempt.assessment_id
+    ).all()
+
+    # 🔹 4. Get answers
+    answers = db.query(StudentAnswer).filter(
+        StudentAnswer.attempt_id == attempt_id
+    ).all()
+
+    # 🔹 5. Format questions
+    formatted_questions = []
+    for q in questions:
+        formatted_questions.append({
+            "question_id": q.id,
+            "type": q.type,
+            "question_text": q.question_text,
+            "points": q.points,
+            "correct_answer": q.correct_answer
+        })
+
+    # 🔹 6. Format answers
+    formatted_answers = []
+    for a in answers:
+        formatted_answers.append({
+            "question_id": a.question_id,
+            "answer": a.answer
+        })
+
+    return {
+        "attempt_id": attempt.id,
+        "student_id": attempt.student_id,
+        "assessment_id": attempt.assessment_id,
+        "status": attempt.status,
+        "time_taken": attempt.time_taken,
+
+        "questions": formatted_questions,
+        "answers": formatted_answers,
+
+        "passing_score": assessment.passing_score if assessment else None
+    }
