@@ -3,12 +3,19 @@ from models.assessments import Assessment, Question, StudentAnswer, StudentAsses
 from schemas.assessments import AssessmentCreate
 from datetime import datetime, timezone
 from fastapi import HTTPException
-
-# crud/assessments.py
 from sqlalchemy.orm import Session
 from models.assessments import Assessment
 from schemas.assessments import AssessmentCreate
 from datetime import datetime, timezone
+
+import os
+
+BASE_FILE_URL = os.getenv("BASE_FILE_URL", "http://localhost:8003")
+
+def build_file_url(file_path: str):
+    if not file_path:
+        return None
+    return f"{BASE_FILE_URL}/uploads/{file_path}"
 
 def parse_due_date_utc(due_date):
     if due_date is None:
@@ -210,58 +217,156 @@ def get_submission_for_course(db: Session, course_id: str):
     )
 
 def get_attempt_full_data(db: Session, attempt_id: int):
-    
-    # 🔹 1. Get attempt
-    attempt = db.query(StudentAssessmentAttempt).filter(
-        StudentAssessmentAttempt.id == attempt_id
-    ).first()
+    attempt = db.query(StudentAssessmentAttempt).filter_by(id=attempt_id).first()
 
     if not attempt:
         return None
 
-    # 🔹 2. Get assessment
-    assessment = db.query(Assessment).filter(
-        Assessment.id == attempt.assessment_id
-    ).first()
+    assessment = db.query(Assessment).filter_by(id=attempt.assessment_id).first()
 
-    # 🔹 3. Get questions
-    questions = db.query(Question).filter(
-        Question.assessment_id == attempt.assessment_id
-    ).all()
+    questions = db.query(Question).filter_by(assessment_id=assessment.id).all()
 
-    # 🔹 4. Get answers
-    answers = db.query(StudentAnswer).filter(
-        StudentAnswer.attempt_id == attempt_id
-    ).all()
+    answers = db.query(StudentAnswer).filter_by(attempt_id=attempt.id).all()
 
-    # 🔹 5. Format questions
+    # Map answers
+    answers_map = {a.question_id: a.answer for a in answers}
+
     formatted_questions = []
-    for q in questions:
+
+    for index, q in enumerate(questions):
+
+        student_answer = answers_map.get(q.id)
+
+        correct_answer = q.correct_answer
+
+        #  HANDLE FILE UPLOAD QUESTIONS
+        file_url = None
+        file_name = None
+
+        if q.type == "file-upload" and student_answer:
+            file_url = build_file_url(student_answer)
+            file_name = student_answer.split("/")[-1]
+
+        #  HANDLE MATCHING
+        matching_pairs = q.matching_pairs or []
+        student_matching = student_answer if isinstance(student_answer, dict) else {}
+
+        #  HANDLE ORDERING
+        correct_order = q.correct_order or []
+        student_order = student_answer if isinstance(student_answer, list) else []
+
+        #  HANDLE CODING TEST CASES
+        test_cases = q.test_cases or []
+
+        #  AUTO CORRECTNESS
+        is_correct = False
+
+        if q.type in ["multiple-choice", "true-false"]:
+            is_correct = str(student_answer).strip() == str(correct_answer).strip()
+
+        elif q.type == "ordering":
+            total_items = len(correct_order)
+
+            if total_items > 0:
+                points_per_item = q.points / total_items
+                correct_count = 0
+
+                for i in range(total_items):
+                    if i < len(student_order) and student_order[i] == correct_order[i]:
+                        correct_count += 1
+
+                earned_points = round(correct_count * points_per_item, 2)
+                is_correct = correct_count == total_items
+            else:
+                earned_points = 0
+                is_correct = False
+
+        elif q.type == "matching":
+            correct_map = {
+                    pair["left"]: pair["right"]
+                    for pair in matching_pairs
+                }
+            total_items = len(correct_map)
+
+            if total_items > 0:
+                points_per_item = q.points / total_items
+                correct_count = 0
+
+                for left, right in correct_map.items():
+                    if student_matching.get(left) == right:
+                        correct_count += 1
+
+                earned_points = round(correct_count * points_per_item, 2)
+                is_correct = correct_count == total_items
+            else:
+                earned_points = 0
+                is_correct = False
+
+        #  POINTS
+        if q.type in ["multiple-choice", "true-false"]:
+            earned_points = q.points if is_correct else 0
+            is_auto_graded = True
+
+        elif q.type in ["matching", "ordering"]:
+            is_auto_graded = True
+            # earned_points already calculated above
+
+        else:
+            earned_points = None
+            is_auto_graded = False
+
         formatted_questions.append({
             "question_id": q.id,
-            "type": q.type,
-            "question_text": q.question_text,
-            "points": q.points,
-            "correct_answer": q.correct_answer
-        })
+            "questionNumber": index + 1,
+            "questionType": q.type,
+            "question": q.question_text,
 
-    # 🔹 6. Format answers
-    formatted_answers = []
-    for a in answers:
-        formatted_answers.append({
-            "question_id": a.question_id,
-            "answer": a.answer
+            "studentAnswer": student_answer,
+            "correctAnswer": correct_answer,
+            "isAutoGraded": is_auto_graded,
+
+            "earnedPoints": earned_points,
+            "maxPoints": q.points,
+
+            "isCorrect": is_correct,
+
+            #  TYPE-SPECIFIC DATA
+            "options": q.options or [],
+
+            "fileUrl": file_url,
+            "fileName": file_name,
+
+            "matchingPairs": matching_pairs,
+            "studentMatching": student_matching,
+
+            "correctOrder": correct_order,
+            "studentOrder": student_order,
+
+            "testCases": test_cases,
+
+            "feedback": "",
+            "aiSuggestion": ""
         })
 
     return {
         "attempt_id": attempt.id,
         "student_id": attempt.student_id,
-        "assessment_id": attempt.assessment_id,
-        "status": attempt.status,
-        "time_taken": attempt.time_taken,
+        "course_id": assessment.course_id,  # you may enrich later
+        "assessment_title": assessment.title,
+        "submitted_at": attempt.submitted_at,
 
         "questions": formatted_questions,
-        "answers": formatted_answers,
 
-        "passing_score": assessment.passing_score if assessment else None
+        "graded_score": sum(
+            q["earnedPoints"]
+            for q in formatted_questions
+            if q["earnedPoints"] is not None
+        ),
+        "pending_score": sum(
+            q["maxPoints"]
+            for q in formatted_questions
+            if q["earnedPoints"] is None
+        ),
+        "max_score": sum(q["maxPoints"] for q in formatted_questions),
+        
     }

@@ -15,8 +15,9 @@ def grading_dashboard(token=Depends(get_current_user_token),
 @router.get("/submissions/{submission_id}")
 def submission_details(
     submission_id: str,
+    submission_type: str,
     token: str = Depends(get_current_user_token),
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
 ):
     raw_token = credentials.credentials
-    return get_submission_details(raw_token, submission_id)
+    return get_submission_details(raw_token, submission_id, submission_type)

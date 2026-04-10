@@ -42,6 +42,7 @@ interface SubmissionItem {
   courseId: string;
   courseName: string;
   type: string;
+  submission_type: string; // For backward compatibility
   title: string;
 }
 
@@ -76,7 +77,6 @@ export default function MarkingDashboard() {
       setLoading(true);
       try {
         const data = await markingGradingService.getStudentSubmissions();
-        console.log("submission data: ", data);
         setSubmissions(data.map(sub => ({
           id: sub.id,
           studentName: sub.student_name,
@@ -88,6 +88,7 @@ export default function MarkingDashboard() {
           courseId: sub.course_id,
           courseName: sub.course_name,
           type: sub.type,
+          submission_type: sub.submission_type, // For backward compatibility
           title: sub.assignment_title
         })));
       } catch (error) {
@@ -330,7 +331,11 @@ export default function MarkingDashboard() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => navigate(`/instructor/marking/submission/${submission.id}`)}
+                            onClick={() =>
+                              navigate(`/instructor/marking/submission/${submission.id}`, {
+                                state: { submissionType: submission.submission_type }
+                              })
+                            }
                           >
                             Open Submission
                           </Button>

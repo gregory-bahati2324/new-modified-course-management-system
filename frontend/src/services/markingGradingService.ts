@@ -15,6 +15,7 @@ export interface StudentSubmission {
   feedback?: string; // Feedback from the instructor
   max_score?: number; // Maximum score for the assignment
   type: string; // "assignment" or "assessment"
+  submission_type: string; // "assignment" or "assessment" (for backward compatibility)
 }
 
 class MarkingGradingService {
@@ -23,7 +24,7 @@ class MarkingGradingService {
       const token = localStorage.getItem('accessToken');
       const response = await apiMarkingGradingClient.get<StudentSubmission[]>(
         API_ENDPOINTS.Marking_grading.student_submissions,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, }
       );
       return response.data;
     } catch (error) {
@@ -31,14 +32,15 @@ class MarkingGradingService {
     }
   }
 
-  async getSubmissionDetails(submissionId: string) {
+  async getSubmissionDetails(submissionId: string, submissionType: string) {
     try {
       const token = localStorage.getItem('accessToken');
 
       const response = await apiMarkingGradingClient.get(
         API_ENDPOINTS.Marking_grading.submission_details(submissionId),
         {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          params: { submission_type: submissionType } // Pass submission type as query param
         }
       );
 

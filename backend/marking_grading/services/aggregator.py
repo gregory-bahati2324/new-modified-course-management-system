@@ -54,6 +54,7 @@ def get_student_submission_details(token):
 
                 "status": "graded" if sub.get("grade") else "pending",
                 "type": "assignment",
+                "submission_type": "assignment",
 
                 "max_score": sub.get("total_points", 100)
             })
@@ -85,6 +86,7 @@ def get_student_submission_details(token):
 
                 "status": sub.get("status", "pending"),
                 "type": sub.get("type", "assessment"),
+                "submission_type": "assessment",
 
                 "max_score": sub.get("passing_score", 100)
             })
@@ -93,20 +95,33 @@ def get_student_submission_details(token):
 
 
 
-def get_submission_details(token: str, submission_id: str):
+def get_submission_details(token: str, submission_id: str, submission_type: str):
+
     # -----------------------------
-    # 1. Try assignment submission
+    # ASSIGNMENT
     # -----------------------------
-    try:
+    if submission_type == "assignment":
         submission = get_assignment_submission(token, submission_id)
+
+        if not submission:
+            raise ValueError("Submission not found")
 
         student_id = submission["student_id"]
         student = get_student_info(token, student_id)
 
+        #  Normalize file structure for frontend
+        files = []
+        if submission.get("file_url"):
+            files.append({
+                "name": "Submitted File",
+                "url": submission.get("file_url"),
+                "size": "Unknown"
+            })
+
         return {
             "submission": {
-                "id": submission["id"],
-                "studentName": f"{student.get('first_name')} {student.get('last_name')}",
+                "id": submission.get("submission_id"),
+                "studentName": f"{student.get('first_name', '')} {student.get('last_name', '')}".strip(),
                 "registrationNumber": student.get("registration_number"),
                 "courseName": submission.get("course_name"),
                 "title": submission.get("assignment_title"),
@@ -114,43 +129,71 @@ def get_submission_details(token: str, submission_id: str):
                 "type": "assignment"
             },
             "assignment": {
-                "files": submission.get("files", []),
-                "text": submission.get("text"),
+                "files": files,
+                "text": submission.get("submission_text"),   # 🔥 FIXED KEY
                 "notes": submission.get("notes"),
                 "maxScore": submission.get("total_points", 100)
             },
             "grading": {
-                "score": submission.get("grade"),
-                "feedback": submission.get("feedback"),
+                "score": submission.get("grade", 0),
+                "feedback": submission.get("feedback", ""),
                 "maxScore": submission.get("total_points", 100)
             }
         }
 
-    except Exception:
-        pass  # not assignment → try assessment
-
     # -----------------------------
-    # 2. Try assessment attempt
+    # ASSESSMENT
     # -----------------------------
-    attempt = get_attempt(token, submission_id)
+    elif submission_type == "assessment":
+        attempt = get_attempt(token, int(submission_id))
 
-    student_id = attempt["student_id"]
-    student = get_student_info(token, student_id)
+        if not attempt:
+            raise ValueError("Attempt not found")
 
-    return {
-        "submission": {
-            "id": attempt["id"],
-            "studentName": f"{student.get('first_name')} {student.get('last_name')}",
-            "registrationNumber": student.get("registration_number"),
-            "courseName": attempt.get("course_name"),
-            "title": attempt.get("assessment_title"),
-            "submittedAt": attempt.get("submitted_at"),
-            "type": "assessment"
-        },
-        "questions": attempt.get("questions", []),
-        "grading": {
-            "score": attempt.get("score"),
-            "feedback": attempt.get("feedback"),
-            "maxScore": attempt.get("max_score", 100)
+        student_id = attempt["student_id"]
+        student = get_student_info(token, student_id)
+
+        # ✅ USE PRE-FORMATTED QUESTIONS DIRECTLY
+        formatted_questions = [
+                {
+                    **q,
+                    "earnedPoints": q.get("earnedPoints") or 0,
+                    "maxPoints": q.get("maxPoints") or 0,
+                    "isCorrect": q.get("isCorrect", None),
+                }
+                for q in attempt.get("questions", [])
+            ]
+
+        return {
+            "submission": {
+                "id": attempt.get("attempt_id"),
+                "studentName": f"{student.get('first_name', '')} {student.get('last_name', '')}".strip(),
+                "registrationNumber": student.get("registration_number"),
+                "courseName": attempt.get("course_name"),
+                "title": attempt.get("assessment_title"),
+                "submittedAt": attempt.get("submitted_at"),
+                "type": "assessment"
+            },
+
+            # ✅ DIRECT PASS (NO PROCESSING)
+            "questions": formatted_questions,
+
+            "grading": {
+                "score": attempt.get("graded_score", 0),
+                "pendingScore": attempt.get("pending_score", 0),
+                "maxScore": attempt.get("max_score", 0)
+                },
+            "progress": {
+                    "gradedQuestions": len([
+                        q for q in attempt.get("questions", [])
+                        if q.get("isAutoGraded") is True
+                    ]),
+                    "totalQuestions": len(attempt.get("questions", []))
+}
         }
-    }
+
+    # -----------------------------
+    # INVALID TYPE
+    # -----------------------------
+    else:
+        raise ValueError("Invalid submission_type")

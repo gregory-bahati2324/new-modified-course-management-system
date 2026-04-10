@@ -569,276 +569,366 @@ export default function CreateAssessment() {
 
   return (
     
-    <div className="container py-8 space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/instructor/exams')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">
-              {isEditMode ? "Edit Assessment" : "Create Assessment"}
-            </h1>
-            <p className="text-muted-foreground">
-              {isEditMode ? "Update this test, quiz, or exam" : "Create a new test, quiz, or exam"}
-            </p>
+      <div className="container py-8 space-y-6 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/instructor/exams')}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">
+                {isEditMode ? "Edit Assessment" : "Create Assessment"}
+              </h1>
+              <p className="text-muted-foreground">
+                {isEditMode ? "Update this test, quiz, or exam" : "Create a new test, quiz, or exam"}
+              </p>
 
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowPreview(true)}
+              className="gap-2"
+            >
+              <Eye className="h-4 w-4" />
+              Preview
+            </Button>
+            <Badge variant="outline" className="text-lg px-4 py-2">
+              Total: {totalPoints} points
+            </Badge>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowPreview(true)}
-            className="gap-2"
-          >
-            <Eye className="h-4 w-4" />
-            Preview
-          </Button>
-          <Badge variant="outline" className="text-lg px-4 py-2">
-            Total: {totalPoints} points
-          </Badge>
-        </div>
-      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Basic Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileQuestion className="h-5 w-5" />
-                  Assessment Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileQuestion className="h-5 w-5" />
+                    Assessment Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Assessment Title *</Label>
+                      <Input
+                        id="title"
+                        placeholder="e.g., Database Fundamentals Quiz"
+                        value={assessmentData.title}
+                        onChange={(e) => setAssessmentData({ ...assessmentData, title: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="type">Assessment Type</Label>
+                      <Select
+                        value={assessmentData.type}
+                        onValueChange={(value) => setAssessmentData({ ...assessmentData, type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assessmentTypes.map(type => (
+                            <SelectItem key={type.id} value={type.id}>
+                              {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="course">Course</Label>
+                      <Select
+                        value={assessmentData.course}
+                        onValueChange={(value) => setAssessmentData({ ...assessmentData, course: value })}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select course" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {courses.map(course => (
+                            <SelectItem key={course.id} value={course.id}>
+                              {course.title}
+                            </SelectItem>
+                          ))}
+
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="title">Assessment Title *</Label>
-                    <Input
-                      id="title"
-                      placeholder="e.g., Database Fundamentals Quiz"
-                      value={assessmentData.title}
-                      onChange={(e) => setAssessmentData({ ...assessmentData, title: e.target.value })}
-                      required
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Brief description of the assessment"
+                      value={assessmentData.description}
+                      onChange={(e) => setAssessmentData({ ...assessmentData, description: e.target.value })}
+                      rows={3}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Assessment Type</Label>
-                    <Select
-                      value={assessmentData.type}
-                      onValueChange={(value) => setAssessmentData({ ...assessmentData, type: value })}
+                </CardContent>
+              </Card>
+
+              {/* Questions */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Questions</CardTitle>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addQuestion}
+                      className="gap-2"
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {assessmentTypes.map(type => (
-                          <SelectItem key={type.id} value={type.id}>
-                            {type.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Plus className="h-4 w-4" />
+                      Add Question
+                    </Button>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="course">Course</Label>
-                    <Select
-                      value={assessmentData.course}
-                      onValueChange={(value) => setAssessmentData({ ...assessmentData, course: value })}
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select course" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {courses.map(course => (
-                          <SelectItem key={course.id} value={course.id}>
-                            {course.title}
-                          </SelectItem>
-                        ))}
-
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Brief description of the assessment"
-                    value={assessmentData.description}
-                    onChange={(e) => setAssessmentData({ ...assessmentData, description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Questions */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Questions</CardTitle>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addQuestion}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Question
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {questions.map((question, index) => (
-                  <div key={question.id ? `db-${question.id}` : `new-${question.tempId}`} className="space-y-4 p-4 border rounded-lg">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-4">
-                        <div className="flex items-center gap-4">
-                          <Badge variant="secondary">Q{index + 1}</Badge>
-                          <Select
-                            value={question.type}
-                            onValueChange={(value: any) =>
-                              updateQuestion(question.id ?? question.tempId!, { type: value })
-                            }
-                          >
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
-                              <SelectItem value="true-false">True/False</SelectItem>
-                              <SelectItem value="short-answer">Short Answer</SelectItem>
-                              <SelectItem value="essay">Essay</SelectItem>
-                              <SelectItem value="coding">Coding Question</SelectItem>
-                              <SelectItem value="file-upload">File Upload</SelectItem>
-                              <SelectItem value="matching">Matching</SelectItem>
-                              <SelectItem value="ordering">Ordering/Sequence</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <div className="flex items-center gap-2">
-                            <Label>Points:</Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              className="w-20"
-                              value={question.points}
-                              onChange={(e) => updateQuestion(question.id ?? question.tempId!, { points: parseInt(e.target.value) || 1 })}
-                            />
-                          </div>
-                        </div>
-
-                        <Textarea
-                          placeholder="Enter your question here..."
-                          value={question.question_text}
-                          onChange={(e) =>
-                            updateQuestion(question.id ?? question.tempId!, {
-                              question_text: e.target.value
-                            })
-                          }
-                          rows={2}
-                        />
-
-                        {question.type === 'multiple-choice' && (
-                          <div className="space-y-2">
-                            <Label>Answer Options</Label>
-                            {question.options?.map((option, optIndex) => (
-                              <div key={optIndex} className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  name={`correct-${question.id}`}
-                                  checked={question.correct_answer === optIndex}
-                                  onChange={() => updateQuestion(question.id ?? question.tempId!, { correct_answer: optIndex })}
-                                  className="mt-1"
-                                />
-                                <Input
-                                  placeholder={`Option ${optIndex + 1}`}
-                                  value={option}
-                                  onChange={(e) => updateOption(question.id ?? question.tempId!, optIndex, e.target.value)}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {question.type === 'true-false' && (
-                          <div className="space-y-2">
-                            <Label>Correct Answer</Label>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {questions.map((question, index) => (
+                    <div key={question.id ? `db-${question.id}` : `new-${question.tempId}`} className="space-y-4 p-4 border rounded-lg">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-4">
+                          <div className="flex items-center gap-4">
+                            <Badge variant="secondary">Q{index + 1}</Badge>
                             <Select
-                              value={String(question.correct_answer)}
-                              onValueChange={(value) => updateQuestion(question.id ?? question.tempId!, { correct_answer: value })}
+                              value={question.type}
+                              onValueChange={(value: any) =>
+                                updateQuestion(question.id ?? question.tempId!, { type: value })
+                              }
                             >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select correct answer" />
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="true">True</SelectItem>
-                                <SelectItem value="false">False</SelectItem>
+                                <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                                <SelectItem value="true-false">True/False</SelectItem>
+                                <SelectItem value="short-answer">Short Answer</SelectItem>
+                                <SelectItem value="essay">Essay</SelectItem>
+                                <SelectItem value="coding">Coding Question</SelectItem>
+                                <SelectItem value="file-upload">File Upload</SelectItem>
+                                <SelectItem value="matching">Matching</SelectItem>
+                                <SelectItem value="ordering">Ordering/Sequence</SelectItem>
                               </SelectContent>
                             </Select>
-                          </div>
-                        )}
-
-                        {(question.type === 'short-answer' || question.type === 'essay') && (
-                          <div className="space-y-2">
-                            <Label>Model Answer / Answer Key</Label>
-                            <Textarea
-                              placeholder="Enter the model answer or expected response..."
-                              value={question.model_answer || ''}
-                              onChange={(e) => updateQuestion(question.id ?? question.tempId!, { model_answer: e.target.value })}
-                              rows={4}
-                              className="font-mono text-sm"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              This will be used by AI to compare and grade student responses
-                            </p>
-                          </div>
-                        )}
-
-                        {question.type === 'coding' && (
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label>Expected Output</Label>
-                              <Textarea
-                                placeholder="Enter expected code output..."
-                                value={question.model_answer || ''}
-                                onChange={(e) => updateQuestion(question.id ?? question.tempId!, { model_answer: e.target.value })}
-                                rows={3}
-                                className="font-mono text-sm"
+                            <div className="flex items-center gap-2">
+                              <Label>Points:</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                className="w-20"
+                                value={question.points}
+                                onChange={(e) => updateQuestion(question.id ?? question.tempId!, { points: parseInt(e.target.value) || 1 })}
                               />
                             </div>
+                          </div>
+
+                          <Textarea
+                            placeholder="Enter your question here..."
+                            value={question.question_text}
+                            onChange={(e) =>
+                              updateQuestion(question.id ?? question.tempId!, {
+                                question_text: e.target.value
+                              })
+                            }
+                            rows={2}
+                          />
+
+                          {question.type === 'multiple-choice' && (
                             <div className="space-y-2">
-                              <Label>Test Cases (Optional)</Label>
-                              <div className="p-3 border rounded-lg space-y-2 bg-muted/30">
-                                {question.test_cases?.map((tc, tcIndex) => (
-                                  <div key={tcIndex} className="flex gap-2">
+                              <Label>Answer Options</Label>
+                              {question.options?.map((option, optIndex) => (
+                                <div key={optIndex} className="flex items-center gap-2">
+                                  <input
+                                    type="radio"
+                                    name={`correct-${question.id}`}
+                                    checked={question.correct_answer === optIndex}
+                                    onChange={() => updateQuestion(question.id ?? question.tempId!, { correct_answer: optIndex })}
+                                    className="mt-1"
+                                  />
+                                  <Input
+                                    placeholder={`Option ${optIndex + 1}`}
+                                    value={option}
+                                    onChange={(e) => updateOption(question.id ?? question.tempId!, optIndex, e.target.value)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {question.type === 'true-false' && (
+                            <div className="space-y-2">
+                              <Label>Correct Answer</Label>
+                              <Select
+                                value={String(question.correct_answer)}
+                                onValueChange={(value) => updateQuestion(question.id ?? question.tempId!, { correct_answer: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select correct answer" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="true">True</SelectItem>
+                                  <SelectItem value="false">False</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {(question.type === 'short-answer' || question.type === 'essay') && (
+                            <div className="space-y-2">
+                              <Label>Model Answer / Answer Key</Label>
+                              <Textarea
+                                placeholder="Enter the model answer or expected response..."
+                                value={question.model_answer || ''}
+                                onChange={(e) => updateQuestion(question.id ?? question.tempId!, { model_answer: e.target.value })}
+                                rows={4}
+                                className="font-mono text-sm"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                This will be used by AI to compare and grade student responses
+                              </p>
+                            </div>
+                          )}
+
+                          {question.type === 'coding' && (
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <Label>Expected Output</Label>
+                                <Textarea
+                                  placeholder="Enter expected code output..."
+                                  value={question.model_answer || ''}
+                                  onChange={(e) => updateQuestion(question.id ?? question.tempId!, { model_answer: e.target.value })}
+                                  rows={3}
+                                  className="font-mono text-sm"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Test Cases (Optional)</Label>
+                                <div className="p-3 border rounded-lg space-y-2 bg-muted/30">
+                                  {question.test_cases?.map((tc, tcIndex) => (
+                                    <div key={tcIndex} className="flex gap-2">
+                                      <Input
+                                        placeholder="Input"
+                                        className="font-mono text-xs"
+                                        value={tc.input}
+                                        onChange={(e) => updateTestCase(question.id, tcIndex, 'input', e.target.value)}
+                                      />
+                                      <Input
+                                        placeholder="Expected Output"
+                                        className="font-mono text-xs"
+                                        value={tc.expectedOutput}
+                                        onChange={(e) => updateTestCase(question.id, tcIndex, 'expectedOutput', e.target.value)}
+                                      />
+                                    </div>
+                                  ))}
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full"
+                                    onClick={() => addTestCase(question.id)}
+                                  >
+                                    + Add Test Case
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {question.type === 'file-upload' && (
+                            <div className="space-y-4">
+
+                              {/* QUESTION FILE */}
+                              <div className="space-y-2">
+                                <Label>Upload Question File (PDF, DOCX, etc.)</Label>
+
+                                {question.question_file_url && !question.question_file && (
+                                  <p className="text-sm">
+                                    Existing:{" "}
+                                    <a href={question.question_file_url} target="_blank" className="text-blue-600 underline">
+                                      View Question File
+                                    </a>
+                                  </p>
+                                )}
+
+                                <Input
+                                  type="file"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0] || null;
+                                    updateQuestion(question.id, {
+                                      question_file: file,
+                                      question_file_url: null
+                                    });
+                                  }}
+                                />
+                              </div>
+
+                              {/* ANSWER FILE */}
+                              <div className="space-y-2">
+                                <Label>Upload Answer / Solution File</Label>
+
+                                {question.answer_file_url && !question.answer_file && (
+                                  <p className="text-sm">
+                                    Existing:{" "}
+                                    <a href={question.answer_file_url} target="_blank" className="text-green-600 underline">
+                                      View Answer File
+                                    </a>
+                                  </p>
+                                )}
+
+                                <Input
+                                  type="file"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0] || null;
+                                    updateQuestion(question.id, {
+                                      answer_file: file,
+                                      answer_file_url: null
+                                    });
+                                  }}
+                                />
+                              </div>
+
+                            </div>
+                          )}
+
+                          {question.type === 'matching' && (
+                            <div className="space-y-2">
+                              <Label>Matching Pairs</Label>
+                              <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
+                                {question.matching_pairs?.map((pair, pairIndex) => (
+                                  <div key={pairIndex} className="grid grid-cols-2 gap-2">
                                     <Input
-                                      placeholder="Input"
-                                      className="font-mono text-xs"
-                                      value={tc.input}
-                                      onChange={(e) => updateTestCase(question.id, tcIndex, 'input', e.target.value)}
+                                      placeholder="Left item"
+                                      className="text-sm"
+                                      value={pair.left}
+                                      onChange={(e) => updateMatchingPair(question.id, pairIndex, 'left', e.target.value)}
                                     />
                                     <Input
-                                      placeholder="Expected Output"
-                                      className="font-mono text-xs"
-                                      value={tc.expectedOutput}
-                                      onChange={(e) => updateTestCase(question.id, tcIndex, 'expectedOutput', e.target.value)}
+                                      placeholder="Right item (correct match)"
+                                      className="text-sm"
+                                      value={pair.right}
+                                      onChange={(e) => updateMatchingPair(question.id, pairIndex, 'right', e.target.value)}
                                     />
                                   </div>
                                 ))}
@@ -847,300 +937,211 @@ export default function CreateAssessment() {
                                   variant="outline"
                                   size="sm"
                                   className="w-full"
-                                  onClick={() => addTestCase(question.id)}
+                                  onClick={() => addMatchingPair(question.id)}
                                 >
-                                  + Add Test Case
+                                  + Add Pair
                                 </Button>
                               </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {question.type === 'file-upload' && (
-                          <div className="space-y-4">
-
-                            {/* QUESTION FILE */}
+                          {question.type === 'ordering' && (
                             <div className="space-y-2">
-                              <Label>Upload Question File (PDF, DOCX, etc.)</Label>
-
-                              {question.question_file_url && !question.question_file && (
-                                <p className="text-sm">
-                                  Existing:{" "}
-                                  <a href={question.question_file_url} target="_blank" className="text-blue-600 underline">
-                                    View Question File
-                                  </a>
-                                </p>
-                              )}
-
-                              <Input
-                                type="file"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0] || null;
-                                  updateQuestion(question.id, {
-                                    question_file: file,
-                                    question_file_url: null
-                                  });
-                                }}
-                              />
-                            </div>
-
-                            {/* ANSWER FILE */}
-                            <div className="space-y-2">
-                              <Label>Upload Answer / Solution File</Label>
-
-                              {question.answer_file_url && !question.answer_file && (
-                                <p className="text-sm">
-                                  Existing:{" "}
-                                  <a href={question.answer_file_url} target="_blank" className="text-green-600 underline">
-                                    View Answer File
-                                  </a>
-                                </p>
-                              )}
-
-                              <Input
-                                type="file"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0] || null;
-                                  updateQuestion(question.id, {
-                                    answer_file: file,
-                                    answer_file_url: null
-                                  });
-                                }}
-                              />
-                            </div>
-
-                          </div>
-                        )}
-
-                        {question.type === 'matching' && (
-                          <div className="space-y-2">
-                            <Label>Matching Pairs</Label>
-                            <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
-                              {question.matching_pairs?.map((pair, pairIndex) => (
-                                <div key={pairIndex} className="grid grid-cols-2 gap-2">
+                              <Label>Correct Order</Label>
+                              <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
+                                {question.correct_order?.map((item, itemIndex) => (
                                   <Input
-                                    placeholder="Left item"
+                                    key={itemIndex}
+                                    placeholder={`Item ${itemIndex + 1}`}
                                     className="text-sm"
-                                    value={pair.left}
-                                    onChange={(e) => updateMatchingPair(question.id, pairIndex, 'left', e.target.value)}
+                                    value={item}
+                                    onChange={(e) => updateOrderItem(question.id, itemIndex, e.target.value)}
                                   />
-                                  <Input
-                                    placeholder="Right item (correct match)"
-                                    className="text-sm"
-                                    value={pair.right}
-                                    onChange={(e) => updateMatchingPair(question.id, pairIndex, 'right', e.target.value)}
-                                  />
-                                </div>
-                              ))}
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => addMatchingPair(question.id)}
-                              >
-                                + Add Pair
-                              </Button>
+                                ))}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => addOrderItem(question.id)}
+                                >
+                                  + Add Item
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
 
-                        {question.type === 'ordering' && (
-                          <div className="space-y-2">
-                            <Label>Correct Order</Label>
-                            <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
-                              {question.correct_order?.map((item, itemIndex) => (
-                                <Input
-                                  key={itemIndex}
-                                  placeholder={`Item ${itemIndex + 1}`}
-                                  className="text-sm"
-                                  value={item}
-                                  onChange={(e) => updateOrderItem(question.id, itemIndex, e.target.value)}
-                                />
-                              ))}
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => addOrderItem(question.id)}
-                              >
-                                + Add Item
-                              </Button>
-                            </div>
-                          </div>
-                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeQuestion(question.id, question.tempId)}
+                          disabled={questions.length === 1}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
-
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeQuestion(question.id, question.tempId)}
-                        disabled={questions.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
                     </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dueDate">Due Date</Label>
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      required
+                      value={assessmentData.dueDate}
+                      onChange={(e) => setAssessmentData({ ...assessmentData, dueDate: e.target.value })}
+                    />
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dueTime">Due Time</Label>
+                    <Input
+                      id="dueTime"
+                      type="time"
+                      required
+                      value={assessmentData.dueTime}
+                      onChange={(e) => setAssessmentData({ ...assessmentData, dueTime: e.target.value })}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label htmlFor="timeLimit">Time Limit (minutes)</Label>
+                    <Input
+                      id="timeLimit"
+                      type="number"
+                      placeholder="Leave blank for no limit"
+                      value={assessmentData.timeLimit}
+                      onChange={(e) => setAssessmentData({ ...assessmentData, timeLimit: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="attempts">Allowed Attempts</Label>
+                    <Select
+                      value={assessmentData.attempts}
+                      onValueChange={(value) => setAssessmentData({ ...assessmentData, attempts: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 Attempt</SelectItem>
+                        <SelectItem value="2">2 Attempts</SelectItem>
+                        <SelectItem value="3">3 Attempts</SelectItem>
+                        <SelectItem value="unlimited">Unlimited</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="passingScore">Passing Score (%)</Label>
+                    <Input
+                      id="passingScore"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={assessmentData.passingScore}
+                      onChange={(e) => setAssessmentData({ ...assessmentData, passingScore: e.target.value })}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="shuffle">Shuffle Questions</Label>
+                    <Switch
+                      id="shuffle"
+                      checked={assessmentData.shuffleQuestions}
+                      onCheckedChange={(checked) => setAssessmentData({ ...assessmentData, shuffleQuestions: checked })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="showAnswers">Show Correct Answers</Label>
+                    <Switch
+                      id="showAnswers"
+                      checked={assessmentData.showAnswers}
+                      onCheckedChange={(checked) => setAssessmentData({ ...assessmentData, showAnswers: checked })}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Settings */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="dueDate">Due Date</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    required
-                    value={assessmentData.dueDate}
-                    onChange={(e) => setAssessmentData({ ...assessmentData, dueDate: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dueTime">Due Time</Label>
-                  <Input
-                    id="dueTime"
-                    type="time"
-                    required
-                    value={assessmentData.dueTime}
-                    onChange={(e) => setAssessmentData({ ...assessmentData, dueTime: e.target.value })}
-                  />
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                  <Label htmlFor="timeLimit">Time Limit (minutes)</Label>
-                  <Input
-                    id="timeLimit"
-                    type="number"
-                    placeholder="Leave blank for no limit"
-                    value={assessmentData.timeLimit}
-                    onChange={(e) => setAssessmentData({ ...assessmentData, timeLimit: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="attempts">Allowed Attempts</Label>
-                  <Select
-                    value={assessmentData.attempts}
-                    onValueChange={(value) => setAssessmentData({ ...assessmentData, attempts: value })}
+              {/* Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5" />
+                    Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Questions:</span>
+                    <span className="font-medium">{questions.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Points:</span>
+                    <span className="font-medium">{totalPoints}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Time Limit:</span>
+                    <span className="font-medium">
+                      {assessmentData.timeLimit ? `${assessmentData.timeLimit} min` : 'No limit'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Passing Score:</span>
+                    <span className="font-medium">{assessmentData.passingScore}%</span>
+                  </div>
+                  <Separator />
+                  <Button
+                    type="submit"
+                    className="w-full gap-2"
+                    onClick={() => setSubmitStatus("published")}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 Attempt</SelectItem>
-                      <SelectItem value="2">2 Attempts</SelectItem>
-                      <SelectItem value="3">3 Attempts</SelectItem>
-                      <SelectItem value="unlimited">Unlimited</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="passingScore">Passing Score (%)</Label>
-                  <Input
-                    id="passingScore"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={assessmentData.passingScore}
-                    onChange={(e) => setAssessmentData({ ...assessmentData, passingScore: e.target.value })}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="shuffle">Shuffle Questions</Label>
-                  <Switch
-                    id="shuffle"
-                    checked={assessmentData.shuffleQuestions}
-                    onCheckedChange={(checked) => setAssessmentData({ ...assessmentData, shuffleQuestions: checked })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="showAnswers">Show Correct Answers</Label>
-                  <Switch
-                    id="showAnswers"
-                    checked={assessmentData.showAnswers}
-                    onCheckedChange={(checked) => setAssessmentData({ ...assessmentData, showAnswers: checked })}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+                    <Save className="h-4 w-4" />
+                    {isEditMode ? "Save Changes" : "Create Assessment"}
+                  </Button>
 
-            {/* Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5" />
-                  Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Questions:</span>
-                  <span className="font-medium">{questions.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Points:</span>
-                  <span className="font-medium">{totalPoints}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Time Limit:</span>
-                  <span className="font-medium">
-                    {assessmentData.timeLimit ? `${assessmentData.timeLimit} min` : 'No limit'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Passing Score:</span>
-                  <span className="font-medium">{assessmentData.passingScore}%</span>
-                </div>
-                <Separator />
-                <Button
-                  type="submit"
-                  className="w-full gap-2"
-                  onClick={() => setSubmitStatus("published")}
-                >
-                  <Save className="h-4 w-4" />
-                  {isEditMode ? "Save Changes" : "Create Assessment"}
-                </Button>
-
-                <Button
-                  type="submit"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setSubmitStatus("draft");
-                    toast.info("Saved as draft");
-                  }}
-                >
-                  Save as Draft
-                </Button>
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setSubmitStatus("draft");
+                      toast.info("Saved as draft");
+                    }}
+                  >
+                    Save as Draft
+                  </Button>
 
 
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
 
-      <AssessmentPreview
-        isOpen={showPreview}
-        onClose={() => setShowPreview(false)}
-        assessmentData={assessmentData}
-        questions={questions}
-      />
-    </div>
+        <AssessmentPreview
+          isOpen={showPreview}
+          onClose={() => setShowPreview(false)}
+          assessmentData={assessmentData}
+          questions={questions}
+        />
+      </div>
+    
   );
 
 }

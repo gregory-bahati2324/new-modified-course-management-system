@@ -362,7 +362,7 @@ def get_submissions_for_course_route(
             "assignment_id": sub.assignment_id,
             "student_id": sub.student_id,
             "submission_text": sub.submission_text,
-            "file_url": sub.file_url,
+            "file_url": build_file_url(sub.file_url),
             "submitted_at": sub.submitted_at,
 
             # Assignment fields
@@ -401,7 +401,7 @@ def get_submission_for_grading_route(
         "assignment_id": submission.assignment_id,
 
         "submission_text": submission.submission_text,
-        "file_url": submission.file_url,
+        "file_url": build_file_url(submission.file_url),
 
         "assignment": {
             "title": assignment.title,

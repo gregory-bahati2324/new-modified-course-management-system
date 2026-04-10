@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Save, Send, Brain, User, FileText,
   CheckCircle, XCircle, RefreshCw, Download, Eye,
@@ -32,6 +32,7 @@ interface QuestionGrade {
   aiSuggestion?: string;
   feedback?: string;
   isCorrect: boolean;
+  isAutoGraded: boolean;
   // Type-specific fields
   options?: string[]; // MCQ options
   testCases?: { input: string; expectedOutput: string; studentOutput?: string; passed?: boolean }[];
@@ -108,6 +109,8 @@ const getQuestionTypeInfo = (type: string) => {
 export default function MarkingSubmission() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
+  const submission_type = location.state?.submissionType;
   const [submissionData, setSubmissionData] = useState<SubmissionDetailsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAIMarking, setIsAIMarking] = useState(false);
@@ -119,7 +122,8 @@ export default function MarkingSubmission() {
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const data = await markingGradingService.getSubmissionDetails(id!);
+        const data = await markingGradingService.getSubmissionDetails(id!, submission_type);
+        console.log("assessment details: ", data)
         setSubmissionData(data);
 
         // initialize states
@@ -152,10 +156,11 @@ export default function MarkingSubmission() {
   const [assignmentGrade, setAssignmentGrade] = useState({ score: 0, maxScore: 100 });
 
   const totalEarned = submissionType === 'assessment'
-    ? questions.reduce((sum, q) => sum + q.earnedPoints, 0)
+    ? questions.reduce((sum, q) => sum + (q.earnedPoints ?? 0), 0)
     : assignmentGrade.score;
+
   const totalMax = submissionType === 'assessment'
-    ? questions.reduce((sum, q) => sum + q.maxPoints, 0)
+    ? questions.reduce((sum, q) => sum + (q.maxPoints ?? 0), 0)
     : assignmentGrade.maxScore;
   const percentage = totalMax > 0 ? Math.round((totalEarned / totalMax) * 100) : 0;
 
@@ -441,10 +446,14 @@ export default function MarkingSubmission() {
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="outline">Q{q.questionNumber}</Badge>
             <Badge variant="secondary" className="gap-1">{typeInfo.icon}{typeInfo.label}</Badge>
-            {q.isCorrect ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+            {q.isAutoGraded ? (
+              q.isCorrect ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-500" />
+              )
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <Brain className="h-5 w-5 text-yellow-500" />
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -454,7 +463,8 @@ export default function MarkingSubmission() {
               min="0"
               max={q.maxPoints}
               step="0.5"
-              value={q.earnedPoints}
+              value={q.earnedPoints ?? 0}
+              disabled={q.isAutoGraded}
               onChange={(e) => handleAdjustScore(q.questionNumber, parseFloat(e.target.value) || 0)}
               className="w-20 text-center font-bold"
             />
@@ -768,26 +778,31 @@ export default function MarkingSubmission() {
             <Send className="h-4 w-4" /> Approve & Publish
           </Button>
         </div>
-
-        {/* CHANGE: File preview modal */}
-        {viewFileUrl && (
-          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
-            <div className="bg-background w-[90%] h-[90%] rounded-lg overflow-hidden flex flex-col">
-              <div className="flex justify-between items-center p-3 border-b">
-                <h2 className="font-semibold">File Preview</h2>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" asChild>
-                    <a href={viewFileUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="mr-1 h-3 w-3" /> Open
-                    </a>
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setViewFileUrl(null)}>Close</Button>
+        
+          {/* CHANGE: File preview modal */}
+          {viewFileUrl && (
+            <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
+              <div className="bg-background w-[90%] h-[90%] rounded-lg overflow-hidden flex flex-col">
+                <div className="flex justify-between items-center p-3 border-b">
+                  <h2 className="font-semibold">File Preview</h2>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={viewFileUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-1 h-3 w-3" /> Open
+                      </a>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setViewFileUrl(null)}>Close</Button>
+                  </div>
                 </div>
+                <iframe
+                  src={viewFileUrl}
+                  className="flex-1 w-full"
+                  title="File preview"
+                  sandbox="allow-same-origin allow-scripts allow-popups"
+                />
               </div>
-              <iframe src={viewFileUrl} className="flex-1 w-full" title="File preview" />
             </div>
-          </div>
-        )}
+          )}
       </div>
     </InstructorLayout>
   );

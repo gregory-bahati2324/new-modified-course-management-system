@@ -234,7 +234,7 @@ async def submit_exam_route(
 
     final_answers = []
 
-    UPLOAD_DIR = "/app/uploads/uploadAnswers"
+    UPLOAD_DIR = "/uploads/uploadAnswers"
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     # ✅ Merge answers + files
@@ -309,7 +309,7 @@ def get_submissions_for_course(
 
     return results
 
-@router.get("/attempts/{attempt_id}", response_model=AssessmentAttemptDetail)
+@router.get("/attempts/{attempt_id}")
 def get_attempt_details(
     attempt_id: int,
     db: Session = Depends(get_db),

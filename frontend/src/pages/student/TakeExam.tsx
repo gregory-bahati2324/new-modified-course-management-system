@@ -306,6 +306,7 @@ export default function TakeExam() {
   /* CHANGE: Render question based on type */
   const renderQuestion = (question: ExamQuestion) => {
     const answer = answers[question.id];
+    const selectedValues = Object.values((answer || {}) as Record<string, string>);
     const normalizedtype = question.type?.toLowerCase().trim();
     console.log("QUESTION FILE URL:", question.question_file_url);
 
@@ -519,75 +520,145 @@ export default function TakeExam() {
           </div>
         );
 
-      case 'matching':
+      case 'matching': {
+        const currentAnswers = (answer?.answer || {}) as Record<string, string>;
+        const selectedValues = Object.values(currentAnswers);
+
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
               <List className="h-4 w-4" />
               Match items from left column to right column
             </div>
+
             {question.matching_pairs?.map((pair, idx) => (
               <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+
+                {/* LEFT SIDE */}
                 <div className="p-3 bg-muted/50 rounded-lg font-medium">
                   {pair.left}
                 </div>
-                <select
-                  className="p-3 border rounded-lg bg-background"
-                  value={(answer as Record<string, string>)?.[pair.left] || ''}
-                  onChange={(e) => {
-                    const newAnswer = { ...(answer || {}) as Record<string, string>, [pair.left]: e.target.value };
-                    handleAnswer(question.id, newAnswer);
-                  }}
-                >
-                  <option value="">Select match...</option>
-                  {question.matching_pairs?.map((p, i) => (
-                    <option key={i} value={p.right}>{p.right}</option>
-                  ))}
-                </select>
+
+                {/* SELECT */}
+                <div>
+                  <select
+                    className="p-3 border rounded-lg bg-background w-full"
+                    value={currentAnswers[pair.left] || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      let updatedAnswers = { ...currentAnswers };
+
+                      // 🔥 Remove this value if already used elsewhere
+                      Object.keys(updatedAnswers).forEach(key => {
+                        if (updatedAnswers[key] === value) {
+                          delete updatedAnswers[key];
+                        }
+                      });
+
+                      // ✅ Assign new match
+                      updatedAnswers[pair.left] = value;
+
+                      handleAnswer(question.id, updatedAnswers);
+                    }}
+                  >
+                    <option value="">Select match...</option>
+
+                    {question.matching_pairs?.map((p, i) => {
+                      const isUsed = selectedValues.includes(p.right);
+
+                      return (
+                        <option
+                          key={i}
+                          value={p.right}
+                          disabled={isUsed && currentAnswers[pair.left] !== p.right}
+                        >
+                          {isUsed ? `🔒 ${p.right}` : p.right}
+                        </option>
+                      );
+                    })}
+                  </select>
+
+                  {/* ✅ SHOW SELECTED */}
+                  {currentAnswers[pair.left] && (
+                    <p className="text-sm text-green-600 mt-1">
+                      Selected: {currentAnswers[pair.left]}
+                    </p>
+                  )}
+                </div>
+
               </div>
             ))}
           </div>
         );
+      }
 
-      case 'ordering':
-        const items = answer ? [...answer] : [...(question.correct_order || [])].sort(() => Math.random() - 0.5);
+      case 'ordering': {
+        const answer = answers[question.id];
+
+        const items = Array.isArray(answer)
+          ? answer
+          : Array.isArray(question.correct_order)
+            ? [...question.correct_order]
+            : [];
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <ArrowUpDown className="h-4 w-4" />
-              Drag items to arrange them in correct order (or use arrows)
+              Arrange items in correct order
             </div>
+
             <div className="space-y-2">
               {items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 bg-muted/50 rounded-lg flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground font-mono">{idx + 1}.</span>
-                    <span>{item}</span>
-                  </div>
+                <div key={idx} className="p-4 bg-muted/50 rounded-lg flex justify-between">
+                  <span>{item}</span>
+
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       disabled={idx === 0}
                       onClick={() => {
-                        const newItems = [...items];
-                        [newItems[idx - 1], newItems[idx]] = [newItems[idx], newItems[idx - 1]];
-                        handleAnswer(question.id, newItems);
+                        setAnswers(prev => {
+                          const current = Array.isArray(prev[question.id])
+                            ? [...prev[question.id]]
+                            : [...items];
+
+                          if (idx === 0) return prev;
+
+                          [current[idx - 1], current[idx]] =
+                            [current[idx], current[idx - 1]];
+
+                          return {
+                            ...prev,
+                            [question.id]: current
+                          };
+                        });
                       }}
                     >
                       ↑
                     </Button>
+
                     <Button
                       variant="ghost"
                       size="sm"
                       disabled={idx === items.length - 1}
                       onClick={() => {
-                        const newItems = [...items];
-                        [newItems[idx], newItems[idx + 1]] = [newItems[idx + 1], newItems[idx]];
-                        handleAnswer(question.id, newItems);
+                        setAnswers(prev => {
+                          const current = Array.isArray(prev[question.id])
+                            ? [...prev[question.id]]
+                            : [...items];
+
+                          if (idx === items.length - 1) return prev;
+
+                          [current[idx], current[idx + 1]] =
+                            [current[idx + 1], current[idx]];
+
+                          return {
+                            ...prev,
+                            [question.id]: current
+                          };
+                        });
                       }}
                     >
                       ↓
@@ -598,6 +669,7 @@ export default function TakeExam() {
             </div>
           </div>
         );
+      }
 
       default:
         return <p className="text-muted-foreground">Unknown question type</p>;
