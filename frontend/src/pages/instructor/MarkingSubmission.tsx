@@ -778,31 +778,29 @@ export default function MarkingSubmission() {
             <Send className="h-4 w-4" /> Approve & Publish
           </Button>
         </div>
-        
-          {/* CHANGE: File preview modal */}
-          {viewFileUrl && (
-            <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
-              <div className="bg-background w-[90%] h-[90%] rounded-lg overflow-hidden flex flex-col">
-                <div className="flex justify-between items-center p-3 border-b">
-                  <h2 className="font-semibold">File Preview</h2>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={viewFileUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="mr-1 h-3 w-3" /> Open
-                      </a>
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setViewFileUrl(null)}>Close</Button>
-                  </div>
+
+        {/* CHANGE: File preview modal */}
+        {viewFileUrl && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
+            <div className="bg-background w-[90%] h-[90%] rounded-lg overflow-hidden flex flex-col">
+              <div className="flex justify-between items-center p-3 border-b">
+                <h2 className="font-semibold">File Preview</h2>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={viewFileUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-1 h-3 w-3" /> Open
+                    </a>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setViewFileUrl(null)}>Close</Button>
                 </div>
-                <iframe
-                  src={viewFileUrl}
-                  className="flex-1 w-full"
-                  title="File preview"
-                  sandbox="allow-same-origin allow-scripts allow-popups"
-                />
               </div>
+              <iframe
+                src={viewFileUrl}
+                className="flex-1 w-full"
+              />
             </div>
-          )}
+          </div>
+        )}
       </div>
     </InstructorLayout>
   );

@@ -13,7 +13,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Assessment Service")
 
-app.mount("/uploadAnswers", StaticFiles(directory="uploadAnswers"), name="uploadAnswers")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.mount(
     "/uploads/assignments",
     StaticFiles(directory="uploads/assignments"),

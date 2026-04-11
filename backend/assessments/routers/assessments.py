@@ -27,6 +27,7 @@ from services.enrollment_client import get_student_enrollments, get_course_detai
 from services.assessment_status import calculate_student_status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import os
+import random
 
 router = APIRouter(prefix="/assessments", tags=["Assessments"])
 
@@ -141,7 +142,6 @@ def get_exam(
     db: Session = Depends(get_db),
     token = Depends(get_current_user_token)
 ):
-
     assessment = get_assessment_for_student(db, assessment_id)
 
     if not assessment:
@@ -149,13 +149,44 @@ def get_exam(
 
     questions = list_questions_for_assessment(db, assessment_id)
 
+    processed_questions = []
+
+    for q in questions:
+        q_dict = q.copy()  # ✅ FIX HERE
+
+        # ✅ MATCHING SHUFFLE
+        if q_dict.get("type") == "matching" and q_dict.get("matching_pairs"):
+            pairs = q_dict["matching_pairs"]
+
+            left_items = [p["left"] for p in pairs]
+            right_items = [p["right"] for p in pairs]
+
+            random.shuffle(right_items)  # 🔥 BEST PRACTICE
+
+            q_dict["matching_pairs"] = [
+                {"left": l, "right": r}
+                for l, r in zip(left_items, right_items)
+            ]
+
+        # ✅ ORDERING SHUFFLE
+        if q_dict.get("type") == "ordering" and q_dict.get("correct_order"):
+            shuffled = q_dict["correct_order"].copy()
+            random.shuffle(shuffled)
+
+            q_dict["correct_order"] = shuffled
+
+        processed_questions.append(q_dict)
+
+    # ✅ OPTIONAL: shuffle questions
+    if assessment.shuffle_questions:
+        random.shuffle(processed_questions)
+
     return {
         "id": assessment.id,
         "title": assessment.title,
         "time_limit": assessment.time_limit,
-        "questions": questions
-    }  
-    
+        "questions": processed_questions
+    }
     
 @router.post("/{assessment_id}/start")
 def start_exam_route(
@@ -234,7 +265,7 @@ async def submit_exam_route(
 
     final_answers = []
 
-    UPLOAD_DIR = "/uploads/uploadAnswers"
+    UPLOAD_DIR = os.path.join("uploads", "uploadAnswers")
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     # ✅ Merge answers + files
@@ -248,17 +279,23 @@ async def submit_exam_route(
         if q_id in files:
             file = files[q_id]
 
-            file_path = os.path.join(
-                UPLOAD_DIR,
-                f"{attempt_id}_{q_id}_{file.filename}"
-            )
+            filename = f"{attempt_id}_{q_id}_{file.filename}".replace(" ", "_")
 
+            file_path = os.path.join(UPLOAD_DIR, filename)
+
+            # ensure folder exists
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            # save file
             with open(file_path, "wb") as f:
-                f.write(await file.read())
+                content = await file.read()
+                f.write(content)
+
+            relative_path = f"uploadAnswers/{filename}"
 
             final_answers.append({
                 "question_id": q_id,
-                "answer": file_path   # store file path
+                "answer": relative_path
             })
 
         else:
