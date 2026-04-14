@@ -77,6 +77,11 @@ class StudentAssessmentResponse(BaseModel):
     course_title: Optional[str]
     course_code: Optional[str]
     instructor_name: Optional[str]
+    
+    attempt_id: Optional[int]
+    attempt_status: Optional[str]
+    score: Optional[float]
+    is_graded: bool
 
     created_at: datetime
     updated_at: datetime

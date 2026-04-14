@@ -155,6 +155,8 @@ export const API_ENDPOINTS = {
   Marking_grading: {
     student_submissions: 'grading/dashboard',
     submission_details: (id: string) => `/grading/submissions/${id}`,
+    grade_assignment: 'grading/assignments/grade',
+    grade_assessment: 'grading/assessments/grade',
   },
 
   // Schedule endpoints - maps to FastAPI /api/schedule/*

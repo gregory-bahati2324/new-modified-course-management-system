@@ -48,8 +48,10 @@ interface SubmissionDetailsResponse {
   submission: {
     id: string;
     studentName: string;
+    studentId: string;
     registrationNumber: string;
-    courseName: string;
+    course_id: string;
+    assessment_id: number;
     title: string;
     submittedAt: string;
     type: 'assignment' | 'assessment';
@@ -148,6 +150,25 @@ export default function MarkingSubmission() {
     fetchDetails();
   }, [id]);
 
+  const formatAnswer = (answer: any): string => {
+    if (!answer) return '';
+
+    if (typeof answer === 'string') return answer;
+
+    if (typeof answer === 'number') return String(answer);
+
+    if (Array.isArray(answer)) return answer.join(', ');
+
+    if (typeof answer === 'object') {
+      // 🔥 handle your backend structure
+      if ('answer' in answer) return String(answer.answer);
+
+      return JSON.stringify(answer, null, 2);
+    }
+
+    return String(answer);
+  };
+
 
   const submission = submissionData?.submission;
   const submissionType = submission?.type;
@@ -188,10 +209,42 @@ export default function MarkingSubmission() {
     ));
   };
 
-  const handleSaveAsDraft = () => toast.success('Grades saved as draft');
-  const handlePublish = () => {
-    toast.success('Grades published! Student notified.');
-    navigate('/instructor/marking');
+  const handlePublish = async () => {
+    try {
+      if (!submission) return;
+
+      if (submission.type === 'assignment') {
+        console.log("submission id: ", submission.id);
+        console.log("student id: ", submission.studentId);
+        await markingGradingService.gradeAssignment({
+          submission_id: submission.id,
+          assignment_id: submission.id,
+          student_id: submission.studentId,
+          course_id: submission.course_id,
+          score: assignmentGrade.score,
+          max_score: assignmentGrade.maxScore,
+          feedback: overallFeedback,
+          is_published: true
+        });
+      } else {
+        await markingGradingService.gradeAssessment({
+          attempt_id: submission.id,
+          assessment_id: submission.assessment_id,
+          student_id: submission.studentId,
+          course_id: submission.course_id,
+          score: totalEarned,
+          max_score: totalMax,
+          pending_score: 0,
+          feedback: overallFeedback,
+          is_published: true
+        });
+      }
+
+      toast.success('Grades published!');
+      navigate('/instructor/marking');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   /* CHANGE: Render student answer based on question type */
@@ -248,11 +301,11 @@ export default function MarkingSubmission() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Student Answer</Label>
-              <div className="p-3 bg-muted/50 rounded-lg text-sm">{q.studentAnswer || <em className="text-muted-foreground">No answer</em>}</div>
+              <div className="p-3 bg-muted/50 rounded-lg text-sm">{formatAnswer(q.studentAnswer) || <em className="text-muted-foreground">No answer</em>}</div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Model Answer</Label>
-              <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg text-sm">{q.correctAnswer}</div>
+              <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg text-sm">{formatAnswer(q.correctAnswer)}</div>
             </div>
           </div>
         );
@@ -261,9 +314,8 @@ export default function MarkingSubmission() {
         return (
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Student Answer ({(q.studentAnswer || '').split(/\s+/).filter(Boolean).length} words)</Label>
               <div className="p-4 bg-muted/50 rounded-lg text-sm whitespace-pre-wrap leading-relaxed">
-                {q.studentAnswer || <em className="text-muted-foreground">No answer</em>}
+                {formatAnswer(q.studentAnswer) || <em className="text-muted-foreground">No answer</em>}
               </div>
             </div>
             <div className="space-y-1">
@@ -628,14 +680,11 @@ export default function MarkingSubmission() {
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                {submission.title} — {submission.studentName} ({submission.registrationNumber})
+                {submission.title} — {submission.studentName}
               </p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleSaveAsDraft} className="gap-2">
-              <Save className="h-4 w-4" /> Save Draft
-            </Button>
             <Button onClick={handlePublish} className="gap-2">
               <Send className="h-4 w-4" /> Approve & Publish
             </Button>
@@ -768,9 +817,6 @@ export default function MarkingSubmission() {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="outline" onClick={handleSaveAsDraft} className="gap-2">
-            <Save className="h-4 w-4" /> Save as Draft
-          </Button>
           <Button variant="outline" onClick={handleRunAIMarking} className="gap-2">
             <RefreshCw className="h-4 w-4" /> Re-run AI Marking
           </Button>

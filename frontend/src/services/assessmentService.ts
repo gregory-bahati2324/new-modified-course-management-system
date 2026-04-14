@@ -112,6 +112,12 @@ export interface Assessment {
   course_code?: string;
   instructor_name?: string;
 
+  attempt_id?: number | null;
+  attempt_status?: string | null;
+
+  score?: number | null;
+  is_graded?: boolean;
+
   created_at: string;
   updated_at: string;
 }

@@ -1,5 +1,5 @@
 from fastapi import HTTPException, UploadFile
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from schemas.assigments import AssignmentCreate
 from models.assigments import Assignment, AssignmentSubmission
 import os
@@ -214,14 +214,9 @@ def get_submissions_for_course(db: Session, course_id: str):
     )       
     
 def get_submission_for_grading(db: Session, submission_id: str):
-    submission = (
+    return (
         db.query(AssignmentSubmission)
-        .join(Assignment, AssignmentSubmission.assignment_id == Assignment.id)
+        .options(joinedload(AssignmentSubmission.assignment))
         .filter(AssignmentSubmission.id == submission_id)
         .first()
-    )
-
-    if not submission:
-        return None
-
-    return submission    
+    ) 

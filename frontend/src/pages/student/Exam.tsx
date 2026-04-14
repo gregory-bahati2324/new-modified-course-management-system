@@ -62,18 +62,23 @@ export default function StudentExams() {
   /* CHANGE: Helper function to get status badge styling */
   const getStatusBadge = (status: string) => {
     const styles = {
-      upcoming: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-      available: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-      in_progress: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
-      completed: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-      missed: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+      upcoming: 'bg-blue-100 text-blue-700',
+      available: 'bg-green-100 text-green-700',
+      in_progress: 'bg-yellow-100 text-yellow-700',
+      completed: 'bg-gray-100 text-gray-700',
+      missed: 'bg-red-100 text-red-700',
+
+      graded: 'bg-purple-100 text-purple-700'
     };
+
     const labels = {
       upcoming: 'Upcoming',
-      available: 'Available Now',
+      available: 'Available',
       in_progress: 'In Progress',
       completed: 'Completed',
-      missed: 'Missed'
+      missed: 'Missed',
+
+      graded: 'Graded'
     };
     return (
       <Badge className={styles[status as keyof typeof styles] || styles.upcoming}>
@@ -110,15 +115,7 @@ export default function StudentExams() {
     return matchesSearch;
   });
 
-  /* CHANGE: Calculate statistics */
-  /* const stats = {
-    total: exams.length,
-    available: exams.filter(e => e.status === 'available' || e.status === 'in_progress').length,
-    upcoming: exams.filter(e => e.status === 'upcoming').length,
-    completed: exams.filter(e => e.status === 'completed').length,
-    averageScore: exams.filter(e => e.best_score).reduce((sum, e) => sum + (e.best_score || 0), 0) /
-      (exams.filter(e => e.best_score).length || 1)
-  };*/
+
 
   const stats = {
     total: exams.length,
@@ -177,10 +174,16 @@ export default function StudentExams() {
             </div>
 
             {/* Score display for completed exams */}
-            {exam.status === 'completed' && (exam as any).best_score !== undefined && (
+            {exam.status === 'completed' && exam.is_graded && exam.score !== null && (
               <div className="text-right">
-                <div className="text-2xl font-bold text-primary">{(exam as any).best_score}%</div>
-                <p className="text-xs text-muted-foreground">Best Score</p>
+                <div className="text-2xl font-bold text-primary">{exam.score}%</div>
+                <p className="text-xs text-muted-foreground">Score</p>
+              </div>
+            )}
+            {exam.attempt_status === 'submitted' && !exam.is_graded && (
+              <div className="mb-3 text-sm text-yellow-600 flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Waiting for grading...
               </div>
             )}
           </div>
@@ -233,28 +236,21 @@ export default function StudentExams() {
                 {exam.status === 'in_progress' ? 'Continue' : 'Start Exam'}
               </Button>
             )}
-            {exam.status === 'completed' && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => handleViewResult(exam.id)}
-                  className="gap-2"
-                >
-                  <Eye className="h-4 w-4" />
-                  View Results
-                </Button>
-                {Number(attemptsAllowed) !== 1 &&
-                  (attemptsAllowed === 'Unlimited' || attemptsUsed < attemptsAllowed) && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleStartExam(exam.id)}
-                      className="gap-2"
-                    >
-                      <Play className="h-4 w-4" />
-                      Retake
-                    </Button>
-                  )}
-              </>
+            {exam.attempt_status === 'submitted' && exam.is_graded && (
+              <Button
+                variant="outline"
+                onClick={() => handleViewResult(exam.id)}
+                className="gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                View Results
+              </Button>
+            )}
+            {exam.attempt_status === 'submitted' && !exam.is_graded && (
+              <Button variant="outline" disabled className="gap-2">
+                <Clock className="h-4 w-4" />
+                Awaiting Results
+              </Button>
             )}
             {exam.status === 'upcoming' && dueDate && (
               <Button variant="outline" disabled className="gap-2">

@@ -18,11 +18,12 @@ def get_student_enrollments(token: str):
     return response.json()
 
 
-def get_course_details(course_id: str, token: str):
+async def get_course_details(course_id: str, token: str):
     import requests
     response = requests.get(
         f"{ENROLLMENT_SERVICE_URL}/courses/{course_id}/detail",
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=TIMEOUT
     )
     if response.status_code != 200:
         return None

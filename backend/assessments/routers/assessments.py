@@ -20,7 +20,9 @@ from crud.assessments import (create_assessment,
         update_assessment, 
         get_assessments_for_courses, 
         get_submission_for_course, 
-        get_attempt_full_data)
+        get_attempt_full_data,
+        get_student_attempt,
+        enrich_with_grade)
 from crud.questions import list_questions_for_assessment
 from utils.auth import require_role, get_current_user_token, security
 from services.enrollment_client import get_student_enrollments, get_course_details
@@ -79,40 +81,57 @@ def update_assessment_route(
 
     
 @router.get("/students/asess", response_model=list[StudentAssessmentResponse])
-def get_student_assessments_for_course(
+async def get_student_assessments_for_course(
     db: Session = Depends(get_db),
     token_data = Depends(get_current_user_token),
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
 ):
-    """
-    Return all published assessments for a single course.
-    No external service calls; only uses the assessments table.
-    """
     raw_token = credentials.credentials
+    student_id = token_data.sub
+
     enrollments = get_student_enrollments(raw_token)
-    
+
     if not enrollments:
         return []
 
     course_ids = [e["course_id"] for e in enrollments]
-    
-    assessments = get_assessments_for_courses(db, course_ids)  # reuse CRUD function
+
+    assessments = get_assessments_for_courses(db, course_ids)
 
     results = []
+    
+    course_cache = {}
 
     for assessment in assessments:
-        
-        try:
-            course = get_course_details(
-                assessment.course_id,
-                raw_token
-            )
-        except Exception:
-            course = None
-            
-        student_status = calculate_student_status(assessment)    
+
+        course_id = assessment.course_id
+
+        if course_id in course_cache:
+            course = course_cache[course_id]
+        else:
+            try:
+                course = await get_course_details(course_id, raw_token)
+            except:
+                course = None
+
+            course_cache[course_id] = course
+
+        student_status = calculate_student_status(assessment)
+
+        # get attempt
+        attempt = get_student_attempt(db, student_id, assessment.id)
+
+        # grading info
+        grade_info = {
+            "score": None,
+            "graded": False
+        }
+
+        if attempt and attempt.status == "submitted":
+            grade_info = enrich_with_grade(attempt.id, raw_token)
 
         results.append({
+            
             "id": assessment.id,
             "title": assessment.title,
             "type": assessment.type,
@@ -126,15 +145,23 @@ def get_student_assessments_for_course(
             "shuffle_questions": assessment.shuffle_questions,
             "show_answers": assessment.show_answers,
             "status": student_status,
+
             "course_title": course.get("title") if course else None,
             "course_code": course.get("code") if course else None,
             "instructor_name": course.get("instructor_name") if course else None,
+
             "created_at": assessment.created_at,
             "updated_at": assessment.updated_at,
+
+            
+            "attempt_id": attempt.id if attempt else None,
+            "attempt_status": attempt.status if attempt else None,
+
+            "score": grade_info["score"],
+            "is_graded": grade_info["graded"],
         })
 
     return results
-    
 
 @router.get("/{assessment_id}/exam", response_model=ExamDetails)
 def get_exam(

@@ -382,11 +382,11 @@ def get_submissions_for_course_route(
     return results
 
 
-@router.get("/submissions/{submission_id}/grading", response_model=AssignmentGradingResponse)
+@router.get("/submissions/{submission_id}/grading")
 def get_submission_for_grading_route(
     submission_id: str,
     db: Session = Depends(get_db),
-    token = Depends(get_current_instructor)
+    token=Depends(get_current_instructor)
 ):
     submission = get_submission_for_grading(db, submission_id)
 
@@ -396,17 +396,19 @@ def get_submission_for_grading_route(
     assignment = submission.assignment
 
     return {
-        "submission_id": submission.id,
-        "student_id": submission.student_id,
-        "assignment_id": submission.assignment_id,
-
-        "submission_text": submission.submission_text,
-        "file_url": build_file_url(submission.file_url),
-
+        "submission": {
+            "id": submission.id,
+            "student_id": submission.student_id,
+            "submitted_at": submission.submitted_at,
+            "submission_text": submission.submission_text,
+            "file_url": build_file_url(submission.file_url),
+        },
         "assignment": {
+            "id": assignment.id,
             "title": assignment.title,
             "instructions": assignment.instructions,
+            "course_id": assignment.course_id,
+            "due_date": assignment.due_date,
             "total_points": assignment.total_points,
-            "due_date": assignment.due_date
         }
     }

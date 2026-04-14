@@ -1,5 +1,3 @@
-# services/aggregator.py
-
 from services.course_client import get_instructor_courses, get_course_enrollments
 from services.assessment_client import (
     get_assignments,
@@ -8,7 +6,13 @@ from services.assessment_client import (
     get_attempt
 )
 from services.auth_student_client import get_student_info
+from crud.grading import (
+    get_assignment_grade,
+    get_assessment_grade
+)
+from database import SessionLocal
 
+db = SessionLocal()
 
 def get_student_submission_details(token):
     courses = get_instructor_courses(token)
@@ -34,6 +38,8 @@ def get_student_submission_details(token):
 
             # get student info
             student = get_student_info(token, student_id)
+            
+            grade_record = get_assignment_grade(db, sub["id"])
 
             all_submissions.append({
                 "id": sub["id"],
@@ -49,10 +55,13 @@ def get_student_submission_details(token):
                 "submitted_at": sub["submitted_at"],
                 "file_url": sub.get("file_url"),
 
-                "grade": sub.get("grade"),
+                "grade": grade_record.score if grade_record else None,
                 "feedback": sub.get("feedback"),
 
-                "status": "graded" if sub.get("grade") else "pending",
+                "status": (
+                    "graded" if grade_record and grade_record.is_published
+                    else "pending"
+                ),
                 "type": "assignment",
                 "submission_type": "assignment",
 
@@ -66,6 +75,8 @@ def get_student_submission_details(token):
             student_id = sub["student_id"]
 
             student = get_student_info(token, student_id)
+            
+            grade_record = get_assessment_grade(db, sub["id"])
 
             all_submissions.append({
                 "id": sub["id"],
@@ -81,10 +92,13 @@ def get_student_submission_details(token):
                 "submitted_at": sub["submitted_at"],
                 "file_url": None,
 
-                "grade": sub.get("score"),
+                "grade": grade_record.score if grade_record else None,
                 "feedback": sub.get("feedback"),
 
-                "status": sub.get("status", "pending"),
+                "status": (
+                    "graded" if grade_record and grade_record.is_published
+                    else "pending"
+                ),
                 "type": sub.get("type", "assessment"),
                 "submission_type": "assessment",
 
@@ -93,7 +107,7 @@ def get_student_submission_details(token):
 
     return all_submissions
 
-
+db.close()
 
 def get_submission_details(token: str, submission_id: str, submission_type: str):
 
@@ -106,38 +120,48 @@ def get_submission_details(token: str, submission_id: str, submission_type: str)
         if not submission:
             raise ValueError("Submission not found")
 
-        student_id = submission["student_id"]
-        student = get_student_info(token, student_id)
+        # 🔹 Split clean structure
+        sub = submission.get("submission", {})
+        assignment = submission.get("assignment", {})
 
-        #  Normalize file structure for frontend
+        # 🔹 Student
+        student_id = sub.get("student_id")
+        student = get_student_info(token, student_id) if student_id else {}
+
+        # 🔹 Files normalization
         files = []
-        if submission.get("file_url"):
+        if sub.get("file_url"):
             files.append({
                 "name": "Submitted File",
-                "url": submission.get("file_url"),
+                "url": sub.get("file_url"),
                 "size": "Unknown"
             })
 
         return {
             "submission": {
-                "id": submission.get("submission_id"),
+                "id": sub.get("id"),
+                "studentId": student_id,
                 "studentName": f"{student.get('first_name', '')} {student.get('last_name', '')}".strip(),
                 "registrationNumber": student.get("registration_number"),
-                "courseName": submission.get("course_name"),
-                "title": submission.get("assignment_title"),
-                "submittedAt": submission.get("submitted_at"),
+
+                # course_name not provided
+                "courseName": assignment.get("course_id"),
+
+                "title": assignment.get("title"),
+                "submittedAt": sub.get("submitted_at"),
                 "type": "assignment"
             },
+
             "assignment": {
                 "files": files,
-                "text": submission.get("submission_text"),   # 🔥 FIXED KEY
-                "notes": submission.get("notes"),
-                "maxScore": submission.get("total_points", 100)
+                "text": sub.get("submission_text"),
+                "notes": None,  # you can extend later
+                "maxScore": assignment.get("total_points", 0)
             },
+
             "grading": {
-                "score": submission.get("grade", 0),
-                "feedback": submission.get("feedback", ""),
-                "maxScore": submission.get("total_points", 100)
+                "score": 0,  # not graded yet (or fetch later)
+                "maxScore": assignment.get("total_points", 0)
             }
         }
 
@@ -153,7 +177,7 @@ def get_submission_details(token: str, submission_id: str, submission_type: str)
         student_id = attempt["student_id"]
         student = get_student_info(token, student_id)
 
-        # ✅ USE PRE-FORMATTED QUESTIONS DIRECTLY
+        # USE PRE-FORMATTED QUESTIONS DIRECTLY
         formatted_questions = [
                 {
                     **q,
@@ -167,15 +191,17 @@ def get_submission_details(token: str, submission_id: str, submission_type: str)
         return {
             "submission": {
                 "id": attempt.get("attempt_id"),
+                "assessment_id": attempt.get("assessment_id"),
                 "studentName": f"{student.get('first_name', '')} {student.get('last_name', '')}".strip(),
+                "studentId": student_id,
                 "registrationNumber": student.get("registration_number"),
-                "courseName": attempt.get("course_name"),
+                "course_id": attempt.get("course_id"),
                 "title": attempt.get("assessment_title"),
                 "submittedAt": attempt.get("submitted_at"),
                 "type": "assessment"
             },
 
-            # ✅ DIRECT PASS (NO PROCESSING)
+            #  DIRECT PASS (NO PROCESSING)
             "questions": formatted_questions,
 
             "grading": {

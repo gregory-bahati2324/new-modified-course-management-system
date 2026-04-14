@@ -10,6 +10,7 @@ import ViewMyAssignment from "./pages/student/ViewMyAssignment.tsx";
 import SubmitAssignment from "./pages/student/SubmitAssignment.tsx";
 import Exams from "./pages/student/Exam.tsx";
 import ExamHistory from "./pages/student/ExamHistory.tsx";
+import ExamResultPage from "./pages/student/ExamResult.tsx";
 import TakeExam from "./pages/student/TakeExam.tsx";
 import StudentSchedule from "./pages/student/Schedule.tsx";
 import StudentGrades from "./pages/student/Grades.tsx";
@@ -119,6 +120,12 @@ export const navItems = [
     to: "/student/exam-history",
     icon: <Award className="h-4 w-4" />,
     page: <StudentLayout><ExamHistory /></StudentLayout>,
+  },
+  {
+    title: "Exam Results",
+    to: "/student/exam/:examId/result",
+    icon: <Award className="h-4 w-4" />,
+    page: <StudentLayout><ExamResultPage /></StudentLayout>,
   },
   {
     title: "Take Exam",

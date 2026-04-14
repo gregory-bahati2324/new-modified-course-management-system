@@ -105,12 +105,19 @@ services:
     ports:
       - "8005:8000"
     depends_on:
-      - course_service
-      - assessment_service
-      - progress_service
+      postgres:
+        condition: service_healthy
+      course_service:
+        condition: service_started
+      assessment_service:
+        condition: service_started
+      progress_service:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/marking_db
     volumes:
       - ./backend/marking_grading:/app
-    restart: always  
+    restart: always
 
 volumes:
   postgres_data:

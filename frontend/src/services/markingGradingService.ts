@@ -49,6 +49,55 @@ class MarkingGradingService {
       throw new Error(handleApiError(error));
     }
   }
+  async gradeAssignment(payload: {
+    submission_id: string;
+    assignment_id: string;
+    student_id: string;
+    course_id?: string;
+    score: number;
+    max_score: number;
+    feedback?: string;
+    is_published?: boolean;
+  }) {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const response = await apiMarkingGradingClient.post(
+        API_ENDPOINTS.Marking_grading.grade_assignment,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+  async gradeAssessment(payload: {
+    attempt_id: string;
+    assessment_id: number;
+    student_id: string;
+    course_id?: string;
+    score: number;
+    max_score: number;
+    pending_score?: number;
+    feedback?: string;
+    is_published?: boolean;
+  }) {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const response = await apiMarkingGradingClient.post(
+        API_ENDPOINTS.Marking_grading.grade_assessment,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
 }
 
 export const markingGradingService = new MarkingGradingService();

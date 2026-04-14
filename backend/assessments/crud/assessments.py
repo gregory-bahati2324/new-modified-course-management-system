@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from models.assessments import Assessment
 from schemas.assessments import AssessmentCreate
 from datetime import datetime, timezone
+from services.enrollment_client import get_course_details
+from services.grading_client import get_assessment_grade
 
 import os
 
@@ -227,6 +229,7 @@ def get_attempt_full_data(db: Session, attempt_id: int):
     questions = db.query(Question).filter_by(assessment_id=assessment.id).all()
 
     answers = db.query(StudentAnswer).filter_by(attempt_id=attempt.id).all()
+    
 
     # Map answers
     answers_map = {a.question_id: a.answer for a in answers}
@@ -353,6 +356,7 @@ def get_attempt_full_data(db: Session, attempt_id: int):
         "student_id": attempt.student_id,
         "course_id": assessment.course_id,  # you may enrich later
         "assessment_title": assessment.title,
+        "assessment_id": attempt.assessment_id,
         "submitted_at": attempt.submitted_at,
 
         "questions": formatted_questions,
@@ -370,3 +374,24 @@ def get_attempt_full_data(db: Session, attempt_id: int):
         "max_score": sum(q["maxPoints"] for q in formatted_questions),
         
     }
+    
+def get_student_attempt(db: Session, student_id: str, assessment_id: int):
+    return db.query(StudentAssessmentAttempt).filter(
+        StudentAssessmentAttempt.student_id == student_id,
+        StudentAssessmentAttempt.assessment_id == assessment_id
+    ).first()    
+    
+    
+def enrich_with_grade(attempt_id: int, token: str):
+    grade_data = get_assessment_grade(attempt_id, token)
+
+    if not grade_data:
+        return {
+            "score": None,
+            "graded": False
+        }
+
+    return {
+        "score": grade_data.get("score"),
+        "graded": True
+    }    
