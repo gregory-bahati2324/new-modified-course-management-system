@@ -77,6 +77,7 @@ export default function MarkingDashboard() {
       setLoading(true);
       try {
         const data = await markingGradingService.getStudentSubmissions();
+        console.log("submissions: ", data);
         setSubmissions(data.map(sub => ({
           id: sub.id,
           studentName: sub.student_name,

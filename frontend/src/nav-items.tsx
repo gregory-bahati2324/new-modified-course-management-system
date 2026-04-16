@@ -123,7 +123,7 @@ export const navItems = [
   },
   {
     title: "Exam Results",
-    to: "/student/exam/:examId/result",
+    to: "/student/exam/:attemptId/result",
     icon: <Award className="h-4 w-4" />,
     page: <StudentLayout><ExamResultPage /></StudentLayout>,
   },

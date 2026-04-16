@@ -94,7 +94,21 @@ def upsert_assessment_grade(db: Session, data: dict, instructor_id: str):
 
     return grade
 
-def get_assessment_grade(db: Session, attempt_id: str):
+def get_assessment_grade(db: Session, attempt_id: int):
     return db.query(AssessmentGrade).filter(
         AssessmentGrade.attempt_id == attempt_id
     ).first()
+    
+    
+def get_assessment_grade_for_student(db: Session, attempt_id: int):
+    data = db.query(AssessmentGrade).filter(
+        AssessmentGrade.attempt_id == attempt_id
+    ).first()
+    
+    if not data:
+        raise HTTPException(status_code=404, detail="Grade not found")
+    
+    return {
+        "score": data.score,
+        "graded": data.is_published
+    }    

@@ -19,6 +19,18 @@ def build_file_url(file_path: str):
         return None
     return f"{BASE_FILE_URL}/uploads/{file_path}"
 
+def build_file_url_2(file_path: str):
+    if not file_path:
+        return None
+
+    if file_path.startswith("/app/uploads/"):
+        file_path = file_path.replace("/app/uploads/", "")
+
+    # remove leading slash if exists
+    file_path = file_path.lstrip("/")
+
+    return f"{BASE_FILE_URL}/uploads/{file_path}"
+
 def parse_due_date_utc(due_date):
     if due_date is None:
         return None
@@ -92,7 +104,6 @@ def get_assessment_for_student(db: Session, assessment_id: int):
         Assessment.status == "published"
     ).first()    
 
-# crud/assessments.py (excerpt)
 def update_assessment(db: Session, assessment_id: int, instructor_id: str, data):
     assessment = get_assessment(db, assessment_id, instructor_id)
     if not assessment:
@@ -240,16 +251,42 @@ def get_attempt_full_data(db: Session, attempt_id: int):
 
         student_answer = answers_map.get(q.id)
 
-        correct_answer = q.correct_answer
+        correct_answer = None
+        correct_file = None
+
+        if q.type in ["multiple-choice", "true-false"]:
+            correct_answer = q.correct_answer
+            
+        if q.type == "matching":
+            correct_answer = {
+                    pair["left"]: pair["right"]
+                    for pair in (q.matching_pairs or [])
+                }
+        elif q.type == "ordering":
+            correct_answer = q.correct_order        
+
+        elif q.type in ["short-answer", "essay"]:
+            correct_answer = q.model_answer   
+
+        elif q.type == "file-upload":
+            correct_file = q.answer_file      
 
         #  HANDLE FILE UPLOAD QUESTIONS
         file_url = None
         file_name = None
 
         if q.type == "file-upload" and student_answer:
-            file_url = build_file_url(student_answer)
+            file_url = build_file_url_2(student_answer)
             file_name = student_answer.split("/")[-1]
+            
 
+        correct_file_url = None
+        correct_file_name = None
+
+        if q.type == "file-upload" and correct_file:
+            correct_file_url = build_file_url_2(correct_file)
+            correct_file_name = correct_file.split("/")[-1]
+            
         #  HANDLE MATCHING
         matching_pairs = q.matching_pairs or []
         student_matching = student_answer if isinstance(student_answer, dict) else {}
@@ -338,6 +375,12 @@ def get_attempt_full_data(db: Session, attempt_id: int):
 
             "fileUrl": file_url,
             "fileName": file_name,
+            
+            "fileUrl": file_url,
+            "fileName": file_name,
+
+            "correctFileUrl": correct_file_url,
+            "correctFileName": correct_file_name,
 
             "matchingPairs": matching_pairs,
             "studentMatching": student_matching,
@@ -382,8 +425,9 @@ def get_student_attempt(db: Session, student_id: str, assessment_id: int):
     ).first()    
     
     
-def enrich_with_grade(attempt_id: int, token: str):
-    grade_data = get_assessment_grade(attempt_id, token)
+    
+def enrich_with_grade(attempt_id: int):
+    grade_data = get_assessment_grade(attempt_id)
 
     if not grade_data:
         return {
@@ -392,6 +436,6 @@ def enrich_with_grade(attempt_id: int, token: str):
         }
 
     return {
-        "score": grade_data.get("score"),
+        "score": grade_data["score"],
         "graded": True
     }    

@@ -128,7 +128,7 @@ async def get_student_assessments_for_course(
         }
 
         if attempt and attempt.status == "submitted":
-            grade_info = enrich_with_grade(attempt.id, raw_token)
+            grade_info = enrich_with_grade(attempt.id)
 
         results.append({
             
@@ -389,3 +389,56 @@ def get_attempt_details(
         raise HTTPException(status_code=403, detail="Not allowed")
 
     return data
+
+
+@router.get("/attempts/{attempt_id}/result")
+async def get_exam_result(
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    token = Depends(get_current_user_token),
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+):
+    raw_token = credentials.credentials
+    data = get_attempt_full_data(db, attempt_id)
+    attempt = get_student_attempt(db, token.sub, attempt_id)
+    assessment = get_assessment_for_student(db, attempt.assessment_id) if attempt else None
+    course_details = await get_course_details(assessment.course_id, raw_token) if assessment else None
+
+    if not data:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+
+    if token.role == "student" and data["student_id"] != token.sub:
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    grade_info = enrich_with_grade(attempt_id)
+
+    result = {
+        "exam_title": data["assessment_title"],
+        "course_title": course_details.get("title") if course_details else None,
+        "score": grade_info["score"],
+        "total_points": assessment.passing_score if assessment else 0,
+        "show_answers": True,
+        "question_results": []
+    }
+
+    for q in data["questions"]:
+        result["question_results"].append({
+                "question_id": q["question_id"],
+                "type": q["questionType"],
+                "question_text": q["question"],
+
+                "options": q.get("options"),
+
+                "student_answer": q.get("studentAnswer"),
+                "correct_answer": q.get("correctAnswer"),
+
+                "file_url": q.get("fileUrl"),
+                "file_name": q.get("fileName"),
+
+                "correct_file_url": q.get("correctFileUrl"),
+                "correct_file_name": q.get("correctFileName"),
+
+                "is_correct": q.get("isCorrect")
+            })
+
+    return result

@@ -136,6 +136,7 @@ export const API_ENDPOINTS = {
     saveAttempt: '/assessments/attempts/save',
     submitExam: '/assessments/attempts/submit',
     getSubmissions: (id: string) => `/assessments/${id}/submissions`,
+    getExamResults: (attemptId: number) => `/assessments/attempts/${attemptId}/result`,
   },
   // Add a new “questions” group for question-related endpoints
   questions: {

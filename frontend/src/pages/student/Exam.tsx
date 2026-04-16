@@ -141,8 +141,15 @@ export default function StudentExams() {
     navigate(`/student/exam/${examId}/take`);
   };
 
-  const handleViewResult = (examId: string) => {
-    navigate(`/student/exam/${examId}/result`);
+  const handleViewResult = (attemptId?: number | null) => {
+    console.log("attemptId: ", attemptId);
+
+    if (!attemptId) {
+      console.error("Invalid attemptId:", attemptId);
+      return;
+    }
+
+    navigate(`/student/exam/${attemptId}/result`);
   };
 
   /* CHANGE: Exam card component */
@@ -176,7 +183,7 @@ export default function StudentExams() {
             {/* Score display for completed exams */}
             {exam.status === 'completed' && exam.is_graded && exam.score !== null && (
               <div className="text-right">
-                <div className="text-2xl font-bold text-primary">{exam.score}%</div>
+                <div className="text-2xl font-bold text-primary">{exam.score}/{exam.passing_score}</div>
                 <p className="text-xs text-muted-foreground">Score</p>
               </div>
             )}
@@ -200,33 +207,7 @@ export default function StudentExams() {
               <Clock className="h-4 w-4 text-muted-foreground" />
               <span>{exam.time_limit ? `${exam.time_limit} min` : 'No limit'}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <FileQuestion className="h-4 w-4 text-muted-foreground" />
-              <span>{(exam as any).question_count ?? 'N/A'} questions</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-muted-foreground" />
-              <span>{(exam as any).total_points ?? 'N/A'} points</span>
-            </div>
           </div>
-
-          {/* Progress bar for attempts */}
-          {attemptsAllowed !== 'Unlimited' && (
-            <div className="mb-4">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Attempts: {attemptsUsed}/{attemptsAllowed}</span>
-                <span>
-                  {attemptsAllowed === 'Unlimited'
-                    ? 'Unlimited'
-                    : `${Number(attemptsAllowed) - attemptsUsed} remaining`}
-                </span>
-              </div>
-              <Progress
-                value={attemptsAllowed === 'Unlimited' ? 0 : (attemptsUsed / Number(attemptsAllowed)) * 100}
-                className="h-2"
-              />
-            </div>
-          )}
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
@@ -236,10 +217,10 @@ export default function StudentExams() {
                 {exam.status === 'in_progress' ? 'Continue' : 'Start Exam'}
               </Button>
             )}
-            {exam.attempt_status === 'submitted' && exam.is_graded && (
+            {exam.attempt_status === 'submitted' && exam.is_graded && exam.attempt_id && (
               <Button
                 variant="outline"
-                onClick={() => handleViewResult(exam.id)}
+                onClick={() => handleViewResult(exam.attempt_id)}
                 className="gap-2"
               >
                 <Eye className="h-4 w-4" />

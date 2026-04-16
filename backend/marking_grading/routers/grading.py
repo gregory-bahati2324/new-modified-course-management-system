@@ -13,6 +13,7 @@ from schemas.grading import (
 )
 
 from crud.grading import (
+    get_assessment_grade_for_student,
     upsert_assignment_grade,
     get_assignment_grade,
     upsert_assessment_grade,
@@ -107,6 +108,19 @@ def get_assessment_grade_route(
     db: Session = Depends(get_db)
 ):
     grade = get_assessment_grade(db, attempt_id)
+
+    if not grade:
+        raise HTTPException(status_code=404, detail="Grade not found")
+
+    return grade
+
+@router.get("/grading/assessments/{attempt_id}/grade", response_model=AssessmentGradeResponse)
+def get_assessment_grade_route(
+    attempt_id: int,
+    student_id: str,
+    db: Session = Depends(get_db)
+):
+    grade = get_assessment_grade_for_student(db, attempt_id)
 
     if not grade:
         raise HTTPException(status_code=404, detail="Grade not found")

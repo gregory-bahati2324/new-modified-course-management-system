@@ -286,6 +286,22 @@ class AssessmentService {
       throw new Error(handleApiError(error));
     }
   }
+  async getExamResult(attemptId: number) {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const response = await apiAssessmentClient.get(
+        API_ENDPOINTS.assessments.getExamResults(attemptId),
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
 }
 
 export const assessmentService = new AssessmentService();
