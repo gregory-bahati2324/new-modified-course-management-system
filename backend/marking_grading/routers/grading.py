@@ -17,7 +17,8 @@ from crud.grading import (
     upsert_assignment_grade,
     get_assignment_grade,
     upsert_assessment_grade,
-    get_assessment_grade
+    get_assessment_grade,
+    get_assignment_grade_for_student
 )
 
 from services.aggregator import (
@@ -71,12 +72,12 @@ def grade_assignment(
     )
 
 
-@router.get("/assignments/{submission_id}/grade", response_model=AssignmentGradeResponse)
+@router.get("/assignments/{submission_id}/grade")
 def get_assignment_grade_route(
     submission_id: str,
     db: Session = Depends(get_db)
 ):
-    grade = get_assignment_grade(db, submission_id)
+    grade = get_assignment_grade_for_student(db, submission_id)
 
     if not grade:
         raise HTTPException(status_code=404, detail="Grade not found")

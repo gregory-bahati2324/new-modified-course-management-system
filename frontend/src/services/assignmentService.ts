@@ -48,6 +48,7 @@ export interface StudentAssignment {
   graded: boolean;
 
   status: 'pending' | 'submitted' | 'overdue';
+  score?: number;
 
   created_at: string;
   updated_at: string;

@@ -24,6 +24,13 @@ class Course(Base):
     prerequisites = Column(Text, nullable=True)  # store as comma-separated or JSON string
     learning_outcomes = Column(Text, nullable=True)  # store as comma-separated or JSON
     tags = Column(Text, nullable=True)  # store as comma-separated or JSON string
+    require_assignments = Column(Boolean, default=False)
+    require_assessments = Column(Boolean, default=False)
+
+    min_assignments_required = Column(Integer, default=0)
+    min_assessments_required = Column(Integer, default=0)
+
+    content_version = Column(Integer, default=1) 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 

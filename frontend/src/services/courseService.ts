@@ -18,6 +18,11 @@ export interface CreateCourseRequest {
   prerequisites?: string;
   learning_outcomes?: string;
   tags?: string[];
+  require_assignments?: boolean;
+  require_assessments?: boolean;
+  min_assignments_required?: number;
+  min_assessments_required?: number;
+  
   is_published?: boolean;
   allow_self_enrollment?: boolean;
   certificate?: boolean;

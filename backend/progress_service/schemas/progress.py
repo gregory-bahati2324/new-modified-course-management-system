@@ -78,6 +78,9 @@ class CourseProgressResponse(BaseModel):
 
     completed_at: datetime | None = None
     last_accessed_at: datetime | None = None
+    
+    assignment_summary: dict | None = None
+    assessment_summary: dict | None = None
 
     class Config:
         orm_mode = True

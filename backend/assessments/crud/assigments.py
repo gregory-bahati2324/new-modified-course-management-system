@@ -220,3 +220,44 @@ def get_submission_for_grading(db: Session, submission_id: str):
         .filter(AssignmentSubmission.id == submission_id)
         .first()
     ) 
+    
+def get_total_assignment_for_course(db: Session, course_id: str):
+    return db.query(Assignment).filter(
+        Assignment.course_id == course_id,
+        Assignment.status == "published"
+    ).count()
+    
+def get_published_assignments(db: Session, course_id: str):
+    return db.query(Assignment).filter(
+        Assignment.course_id == course_id,
+        Assignment.status == "published"
+    ).all()
+            
+def get_student_submission(db: Session, assignment_id: str, student_id: str):
+    return get_submission_by_student_and_assignment(
+        db, assignment_id, student_id
+    )      
+    
+    
+def build_assignment_summary(db: Session, course_id: str, student_id: str):
+    assignments = get_published_assignments(db, course_id)
+
+    total_assignments = len(assignments)
+    submitted_count = 0
+
+    for assignment in assignments:
+        submission = get_student_submission(
+            db,
+            assignment.id,
+            student_id
+        )
+
+        if submission:
+            submitted_count += 1
+
+    return {
+        "course_id": course_id,
+        "student_id": student_id,
+        "total_assignments": total_assignments,
+        "submitted": submitted_count
+    }          

@@ -66,6 +66,7 @@ class StudentAssignmentResponse(BaseModel):
     submitted: bool = False
     graded: bool = False
     status: str  # pending / submitted / overdue
+    score: Optional[float] = None
 
     created_at: datetime
     updated_at: datetime

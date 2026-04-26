@@ -419,6 +419,72 @@ export default function CreateCourse() {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Completion Rules</CardTitle>
+              <CardDescription>
+                Define what students must complete to finish this course
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+
+              {/* Require Assignments */}
+              <div className="flex items-center justify-between">
+                <Label>Require Assignments</Label>
+                <Switch
+                  checked={courseData.require_assignments || false}
+                  onCheckedChange={(checked) =>
+                    setCourseData({ ...courseData, require_assignments: checked })
+                  }
+                />
+              </div>
+
+              {courseData.require_assignments && (
+                <div className="space-y-2">
+                  <Label>Minimum Assignments Required</Label>
+                  <Input
+                    type="number"
+                    value={courseData.min_assignments_required || 0}
+                    onChange={(e) =>
+                      setCourseData({
+                        ...courseData,
+                        min_assignments_required: Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+              )}
+
+              {/* Require Assessments */}
+              <div className="flex items-center justify-between">
+                <Label>Require Assessments</Label>
+                <Switch
+                  checked={courseData.require_assessments || false}
+                  onCheckedChange={(checked) =>
+                    setCourseData({ ...courseData, require_assessments: checked })
+                  }
+                />
+              </div>
+
+              {courseData.require_assessments && (
+                <div className="space-y-2">
+                  <Label>Minimum Assessments Required</Label>
+                  <Input
+                    type="number"
+                    value={courseData.min_assessments_required || 0}
+                    onChange={(e) =>
+                      setCourseData({
+                        ...courseData,
+                        min_assessments_required: Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+              )}
+
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar */}

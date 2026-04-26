@@ -19,6 +19,29 @@ export interface CourseProgress {
   progress_percentage: number;
   is_completed: boolean;
   last_accessed_at: string | null;
+
+  assignment_summary?: {
+    total_assignments: number;
+    submitted: number;
+  };
+
+  assessment_summary?: {
+    total_assessments: number;
+    attempted: number;
+    submitted: number;
+  };
+
+  assignment_progress?: {
+    submitted: number;
+    required: number;
+    total: number;
+  };
+
+  assessment_progress?: {
+    submitted: number;
+    required: number;
+    total: number;
+  };
 }
 
 export interface ModuleProgress {
@@ -78,12 +101,12 @@ export class ProgressService {
       );
       return response.data;
     } catch (error: any) {
-      
+
       if (error.response?.status === 404) {
         return null;
       }
 
-      
+
       throw new Error(handleApiError(error));
     }
   }

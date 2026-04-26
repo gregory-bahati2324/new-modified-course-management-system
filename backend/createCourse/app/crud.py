@@ -40,6 +40,10 @@ def create_course(db: Session, course_in: schemas.CourseCreate, instructor_id: s
         certificate=course_in.certificate if course_in.certificate is not None else True,
         max_students=course_in.max_students,
         tags=_tags_to_str(course_in.tags),
+        require_assignments=course_in.require_assignments or False,
+        require_assessments=course_in.require_assessments or False,
+        min_assignments_required=course_in.min_assignments_required or 0,
+        min_assessments_required=course_in.min_assessments_required or 0,
     )
     db.add(new)
     db.commit()

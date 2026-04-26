@@ -9,7 +9,7 @@ class AssignmentGradeBase(BaseModel):
     submission_id: str
     assignment_id: str
     student_id: str
-    course_id: Optional[str] = None
+    course_id: str
 
     score: float
     max_score: float
@@ -38,7 +38,7 @@ class AssessmentGradeBase(BaseModel):
     attempt_id: int
     assessment_id: int
     student_id: str
-    course_id: Optional[str] = None
+    course_id: str
 
     score: float
     max_score: float

@@ -22,6 +22,17 @@ export interface StudentCourse {
   rating?: number;
   students?: number;
   last?: string | null;
+  assignment_progress?: {
+    submitted: number;
+    required: number;
+    total: number;
+  };
+
+  assessment_progress?: {
+    submitted: number;
+    required: number;
+    total: number;
+  };
 }
 
 
@@ -46,6 +57,7 @@ export default function StudentCourses() {
             try {
               const progress =
                 await progressService.getCourseProgress(course.id);
+              console.log("progress data", progress);
 
               return {
                 id: course.id,
@@ -58,6 +70,21 @@ export default function StudentCourses() {
                 progress: progress.progress_percentage,
                 completed: progress.is_completed,
                 last: progress.last_accessed_at,
+                assignment_progress: progress.assignment_summary
+                  ? {
+                    submitted: progress.assignment_summary.submitted,
+                    required: progress.assignment_summary.total_assignments,
+                    total: progress.assignment_summary.total_assignments,
+                  }
+                  : undefined,
+
+                assessment_progress: progress.assessment_summary
+                  ? {
+                    submitted: progress.assessment_summary.submitted,
+                    required: progress.assessment_summary.total_assessments,
+                    total: progress.assessment_summary.total_assessments,
+                  }
+                  : undefined,
               };
             } catch {
               // If progress not found yet (new enrollment)
@@ -160,6 +187,49 @@ export default function StudentCourses() {
                       </div>
                       <Progress value={course.progress} className="h-2" />
                     </div>
+
+                    {course.assignment_progress && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Assignments</span>
+                          <span>
+                            {course.assignment_progress.submitted} / {course.assignment_progress.total}
+                          </span>
+                        </div>
+                        <Progress
+                          value={
+                            course.assignment_progress.total > 0
+                              ? (course.assignment_progress.submitted /
+                                course.assignment_progress.total) *
+                              100
+                              : 0
+                          }
+                          className="h-1.5"
+                        />
+                      </div>
+                    )}
+
+
+                    {course.assessment_progress && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Assessments</span>
+                          <span>
+                            {course.assessment_progress.submitted} / {course.assessment_progress.total}
+                          </span>
+                        </div>
+                        <Progress
+                          value={
+                            course.assessment_progress.total > 0
+                              ? (course.assessment_progress.submitted /
+                                course.assessment_progress.total) *
+                              100
+                              : 0
+                          }
+                          className="h-1.5"
+                        />
+                      </div>
+                    )}
 
                     {/* Meta */}
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">

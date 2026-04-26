@@ -18,6 +18,12 @@ class CourseBase(BaseModel):
     certificate: Optional[bool] = True
     max_students: Optional[int] = None
     tags: Optional[List[str]] = []
+    require_assignments: Optional[bool] = False
+    require_assessments: Optional[bool] = False
+
+    min_assignments_required: Optional[int] = 0
+    min_assessments_required: Optional[int] = 0
+
 
 class CourseCreate(CourseBase):
     prerequisites: Optional[str] = None

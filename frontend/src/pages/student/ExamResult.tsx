@@ -75,10 +75,14 @@ export default function ExamResultPage() {
     switch (q.type) {
       case 'multiple-choice':
         return q.options?.map((opt, i) => (
-          <div key={i} className={cn(
-            'p-2 rounded',
-            value === i && (isCorrectAnswer ? 'bg-green-200' : 'bg-muted')
-          )}>
+          <div
+            key={i}
+            className={cn(
+              'p-2 rounded',
+              Number(value) === i &&
+              (isCorrectAnswer ? 'bg-green-200' : 'bg-red-200')
+            )}
+          >
             {opt}
           </div>
         ));
@@ -86,7 +90,6 @@ export default function ExamResultPage() {
       case 'true-false':
       case 'short-answer':
       case 'essay':
-      case 'coding':
         return <p>{value || 'No answer'}</p>;
 
       case 'matching':

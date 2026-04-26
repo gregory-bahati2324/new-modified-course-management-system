@@ -20,6 +20,10 @@ class StudentCourseProgress(Base):
     # 🔗 ASSESSMENT INTEGRATION
     assessment_required = Column(Boolean, default=False)
     assessment_passed = Column(Boolean, default=False)
+    
+    assignment_required = Column(Boolean, default=False)
+    assignment_completed = Column(Boolean, default=False)
+    assessment_completed = Column(Boolean, default=False)
 
     # 🎓 CERTIFICATE INTEGRATION
     certificate_eligible = Column(Boolean, default=False)

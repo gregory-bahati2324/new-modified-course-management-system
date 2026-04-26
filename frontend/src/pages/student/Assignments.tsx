@@ -209,7 +209,11 @@ export default function StudentAssignments() {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>Submitted: {(assignment as any).submittedDate}</span>
                       <span>•</span>
-                      <span>{assignment.total_points} points</span>
+                      <span>
+                        {assignment.score !== undefined && assignment.score !== null
+                          ? `Score: ${assignment.score}/${assignment.total_points}`
+                          : "Not graded yet"}
+                      </span>
                     </div>
                     <Button
                       variant="outline"

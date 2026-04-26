@@ -52,6 +52,7 @@ interface SubmissionDetailsResponse {
     registrationNumber: string;
     course_id: string;
     assessment_id: number;
+    courseName: string;
     title: string;
     submittedAt: string;
     type: 'assignment' | 'assessment';
@@ -220,7 +221,7 @@ export default function MarkingSubmission() {
           submission_id: submission.id,
           assignment_id: submission.id,
           student_id: submission.studentId,
-          course_id: submission.course_id,
+          course_id: submission.courseName,
           score: assignmentGrade.score,
           max_score: assignmentGrade.maxScore,
           feedback: overallFeedback,

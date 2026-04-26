@@ -11,7 +11,7 @@ from schemas.assessments import (AssessmentCreate,
             ExamDetails, 
             AssessmentSubmissionResponse, 
             AssessmentAttemptDetail)
-from crud.assessments import (create_assessment,
+from crud.assessments import (create_assessment, get_student_assessment_summary,
         save_exam_progress, 
         submit_exam, 
         get_assessment_for_student, 
@@ -284,11 +284,6 @@ async def submit_exam_route(
             except:
                 continue
             
-    if not files:
-        raise HTTPException(
-            status_code=400,
-            detail=f"DEBUG: No files received. Keys received: {list(form.keys())}"
-        )        
 
     final_answers = []
 
@@ -442,3 +437,18 @@ async def get_exam_result(
             })
 
     return result
+
+
+@router.get("/student/{course_id}/summary")
+def get_student_assessment_summary_route(
+    course_id: str,
+    db: Session = Depends(get_db),
+    token = Depends(get_current_user_token)
+):
+    student_id = token.sub
+
+    return get_student_assessment_summary(
+        db=db,
+        course_id=course_id,
+        student_id=student_id
+    )

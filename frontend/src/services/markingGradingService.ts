@@ -53,7 +53,7 @@ class MarkingGradingService {
     submission_id: string;
     assignment_id: string;
     student_id: string;
-    course_id?: string;
+    course_id: string;
     score: number;
     max_score: number;
     feedback?: string;
@@ -77,7 +77,7 @@ class MarkingGradingService {
     attempt_id: string;
     assessment_id: number;
     student_id: string;
-    course_id?: string;
+    course_id: string;
     score: number;
     max_score: number;
     pending_score?: number;

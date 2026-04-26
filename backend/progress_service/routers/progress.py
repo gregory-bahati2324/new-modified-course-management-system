@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from database import get_db
 from auth_utils import get_current_user_token, TokenData
@@ -161,27 +162,36 @@ def get_module_progress_route(
 def get_course_progress_route(
     course_id: str,
     db: Session = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user_token)
+    current_user: TokenData = Depends(get_current_user_token),
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
 ):
     student_id = current_user.sub
+    token = credentials.credentials
 
-    # 🔥 STEP 1: sync lesson versions
+    # STEP 1: sync
     sync_lesson_versions(db, student_id, course_id)
 
-    # 🔥 STEP 2: fetch updated structure
+    # STEP 2: structure
     total_modules = get_total_modules(course_id)
     total_lessons = get_total_lessons_in_course(course_id)
 
-    # 🔥 STEP 3: recalc progress
+    # STEP 3: recalc
     recalculate_course_progress(
         db=db,
         student_id=student_id,
         course_id=course_id,
         total_modules=total_modules,
-        total_lessons=total_lessons
+        total_lessons=total_lessons,
+        token=token
     )
 
+    # STEP 4: DB data
     progress = get_course_progress(db, student_id, course_id)
+
+    # STEP 5: external data 🔥
+    from services.calculator import evaluate_external_progress
+
+    external = evaluate_external_progress(course_id, token)
 
     if not progress:
         return {
@@ -192,10 +202,18 @@ def get_course_progress_route(
             "total_lessons": total_lessons,
             "progress_percentage": 0,
             "is_completed": False,
-            "last_accessed_at": None
+            "last_accessed_at": None,
+
+            "assignment_summary": external["assignment_summary"],
+            "assessment_summary": external["assessment_summary"]
         }
 
-    return progress
+    #  MERGE DB + EXTERNAL
+    return {
+        **progress.__dict__,
+        "assignment_summary": external["assignment_summary"],
+        "assessment_summary": external["assessment_summary"]
+    }
         
 @router.get(
     "/courses/{course_id}/lessons",

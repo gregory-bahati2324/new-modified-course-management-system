@@ -4,9 +4,10 @@ from typing import Optional
 from datetime import datetime
 
 from schemas.assigments import AssignmentCreate, AssignmentResponse, StudentAssignmentResponse, SubmissionResponse, SubmissionCourseResponse, AssignmentGradingResponse
-from crud.assigments import create_assignment, delete_assignment, get_assignments_for_instructor, get_assignment, get_submission_by_student_and_assignment, update_assignment, get_assignments_for_courses, get_student_assignment_detail, build_file_url, submit_assignment_service, get_submissions_for_course, get_submission_for_grading
+from crud.assigments import build_assignment_summary, create_assignment, delete_assignment, get_assignments_for_instructor, get_assignment, get_submission_by_student_and_assignment, get_total_assignment_for_course, update_assignment, get_assignments_for_courses, get_student_assignment_detail, build_file_url, submit_assignment_service, get_submissions_for_course, get_submission_for_grading
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.enrollment_client import get_student_enrollments, get_course_details
+from services.grading_client import get_assignment_grade
 from database import get_db
 from utils.auth import get_current_user_token, require_role
 
@@ -192,7 +193,7 @@ def delete_assignment_route(
 
 
 @router.get("/student/assignments", response_model=list[StudentAssignmentResponse])
-def get_student_assignments(
+async def get_student_assignments(
     db: Session = Depends(get_db),
     token_data = Depends(get_current_user_token),
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
@@ -216,7 +217,7 @@ def get_student_assignments(
 
         # ---------------- COURSE DETAILS ----------------
         try:
-            course = get_course_details(assignment.course_id, raw_token)
+            course = await get_course_details(assignment.course_id, raw_token)
         except Exception:
             course = None
 
@@ -230,6 +231,9 @@ def get_student_assignments(
             assignment.id,
             student_id
         )
+        grade = None
+        if submission:
+            grade = get_assignment_grade(submission.id)
 
         if submission:
             status = "submitted"
@@ -252,6 +256,8 @@ def get_student_assignments(
             "submitted": assignment.submitted,
             "graded": assignment.graded,
             "status": status,
+            "submission_id": submission.id if submission else None,
+            "score": grade["score"] if grade else None,
             "created_at": assignment.created_at,
             "updated_at": assignment.updated_at,
         })
@@ -260,7 +266,7 @@ def get_student_assignments(
 
 
 @router.get("/student/{assignment_id}/details", response_model=StudentAssignmentResponse)
-def get_student_assignment_detail_route(
+async def get_student_assignment_detail_route(
     assignment_id: str,
     db: Session = Depends(get_db),
     token_data = Depends(get_current_user_token),
@@ -280,7 +286,7 @@ def get_student_assignment_detail_route(
 
     # ---------------- COURSE DETAILS ----------------
     try:
-        course = get_course_details(assignment.course_id, raw_token)
+        course = await get_course_details(assignment.course_id, raw_token)
     except Exception:
         course = None
 
@@ -356,6 +362,7 @@ def get_submissions_for_course_route(
 
     for sub in submissions:
         assignment = sub.assignment  # requires relationship (see below)
+        grade = get_assignment_grade(sub.id)
 
         results.append({
             "id": sub.id,
@@ -376,7 +383,8 @@ def get_submissions_for_course_route(
             "created_at": assignment.created_at,
             "updated_at": assignment.updated_at,
 
-            "course_title": None  # optional if not fetched
+            "course_title": None , # optional if not fetched
+            "grade": grade
         })
 
     return results
@@ -412,3 +420,13 @@ def get_submission_for_grading_route(
             "total_points": assignment.total_points,
         }
     }
+    
+@router.get("/student/{course_id}/summary")
+def get_student_assignment_summary(
+    course_id: str,
+    db: Session = Depends(get_db),
+    token=Depends(get_current_user_token)
+):
+    student_id = token.sub
+
+    return build_assignment_summary(db, course_id, student_id)

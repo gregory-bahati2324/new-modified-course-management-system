@@ -191,3 +191,17 @@ def update_enrollment(enrollment_id: str, payload: schemas.EnrollmentBase, db: S
             raise HTTPException(status_code=403, detail="Not allowed to update this enrollment")
     updated = crud.update_enrollment(db, enrollment_id, payload)
     return schemas.EnrollmentOut.from_orm(updated)  
+
+
+@router.get("/{course_id}/progress-rules")
+def get_progress_rules(course_id: str, db: Session = Depends(database.get_db)):
+    course = crud.get_course(db, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    return {
+        "require_assignments": course.require_assignments,
+        "require_assessments": course.require_assessments,
+        "min_assignments_required": course.min_assignments_required,
+        "min_assessments_required": course.min_assessments_required,
+    }

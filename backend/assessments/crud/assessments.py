@@ -284,9 +284,9 @@ def get_attempt_full_data(db: Session, attempt_id: int):
         correct_file_name = None
 
         if q.type == "file-upload" and correct_file:
-            correct_file_url = build_file_url_2(correct_file)
-            correct_file_name = correct_file.split("/")[-1]
-            
+            correct_file_path = f"questions/{correct_file}" 
+            correct_file_url = build_file_url_2(correct_file_path)
+            correct_file_name = correct_file
         #  HANDLE MATCHING
         matching_pairs = q.matching_pairs or []
         student_matching = student_answer if isinstance(student_answer, dict) else {}
@@ -438,4 +438,41 @@ def enrich_with_grade(attempt_id: int):
     return {
         "score": grade_data["score"],
         "graded": True
-    }    
+    }  
+    
+    
+def get_student_assessment_summary(
+    db: Session,
+    course_id: str,
+    student_id: str
+):
+    # 1. Get all published assessments
+    assessments = db.query(Assessment).filter(
+        Assessment.course_id == course_id,
+        Assessment.status == "published"
+    ).all()
+
+    total = len(assessments)
+
+    attempted = 0
+    submitted = 0
+
+    for a in assessments:
+        attempt = db.query(StudentAssessmentAttempt).filter(
+            StudentAssessmentAttempt.student_id == student_id,
+            StudentAssessmentAttempt.assessment_id == a.id
+        ).first()
+
+        if attempt:
+            attempted += 1
+
+            if attempt.status == "submitted":
+                submitted += 1
+
+    return {
+        "course_id": course_id,
+        "student_id": student_id,
+        "total_assessments": total,
+        "attempted": attempted,
+        "submitted": submitted
+    }      
