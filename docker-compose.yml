@@ -119,5 +119,20 @@ services:
       - ./backend/marking_grading:/app
     restart: always
 
+  scheduling_service:
+    build: ./backend/scheduling_service
+    container_name: scheduling_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8006:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/scheduling_db
+    volumes:
+      - ./backend/scheduling_service:/app
+    restart: always
+
 volumes:
   postgres_data:

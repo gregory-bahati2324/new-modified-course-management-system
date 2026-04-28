@@ -58,10 +58,11 @@ def complete_lesson_route(
     data: LessonProgressCreate,
     db: Session = Depends(get_db),
     current_user: TokenData = Depends(get_current_user_token),
-):
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()
+    )):
     student_id = current_user.sub
+    token = credentials.credentials
 
-    # 🔥 ensure versions are synced first
     sync_lesson_versions(db, student_id, data.course_id)
 
     progress = complete_lesson(
@@ -92,6 +93,7 @@ def complete_lesson_route(
         course_id=data.course_id,
         total_modules=total_modules_course,
         total_lessons=total_lessons_course,
+        token=token
     )
 
     return progress

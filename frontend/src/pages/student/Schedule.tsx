@@ -1,235 +1,151 @@
-import { Calendar as CalendarIcon, Clock, MapPin, Video, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, Clock, MapPin, Video, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { courseService } from '@/services/courseService';
+import { scheduleService, Schedule } from '@/services/scheduleService';
 
 export default function StudentSchedule() {
-  const schedule = [
-    {
-      id: 1,
-      title: "Database Systems Lecture",
-      course: "Advanced Database Systems",
-      instructor: "Dr. Sarah Johnson",
-      day: "Monday",
-      time: "09:00 - 11:00",
-      location: "Room A101",
-      type: "lecture",
-      color: "bg-blue-500"
-    },
-    {
-      id: 2,
-      title: "ML Lab Session",
-      course: "Machine Learning Fundamentals",
-      instructor: "Prof. Michael Chen",
-      day: "Monday",
-      time: "14:00 - 16:00",
-      location: "Computer Lab 2",
-      type: "lab",
-      color: "bg-green-500"
-    },
-    {
-      id: 3,
-      title: "Software Engineering Tutorial",
-      course: "Software Engineering Principles",
-      instructor: "Dr. Emily Davis",
-      day: "Tuesday",
-      time: "10:00 - 12:00",
-      location: "Online",
-      type: "tutorial",
-      color: "bg-purple-500"
-    },
-    {
-      id: 4,
-      title: "Database Lab",
-      course: "Advanced Database Systems",
-      instructor: "Dr. Sarah Johnson",
-      day: "Wednesday",
-      time: "13:00 - 15:00",
-      location: "Computer Lab 1",
-      type: "lab",
-      color: "bg-blue-500"
-    },
-    {
-      id: 5,
-      title: "ML Project Discussion",
-      course: "Machine Learning Fundamentals",
-      instructor: "Prof. Michael Chen",
-      day: "Thursday",
-      time: "15:00 - 17:00",
-      location: "Online",
-      type: "discussion",
-      color: "bg-green-500"
-    },
-    {
-      id: 6,
-      title: "SE Code Review",
-      course: "Software Engineering Principles",
-      instructor: "Dr. Emily Davis",
-      day: "Friday",
-      time: "09:00 - 11:00",
-      location: "Room B204",
-      type: "workshop",
-      color: "bg-purple-500"
-    }
-  ];
+  const [sessions, setSessions] = useState<Schedule[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const upcomingEvents = [
-    {
-      title: "Mid-Term Exam: Database Systems",
-      date: "Dec 18, 2024",
-      time: "09:00 AM",
-      location: "Main Hall",
-      type: "exam"
-    },
-    {
-      title: "Project Presentation: ML",
-      date: "Dec 20, 2024",
-      time: "14:00 PM",
-      location: "Online",
-      type: "presentation"
-    },
-    {
-      title: "Final Project Submission",
-      date: "Dec 22, 2024",
-      time: "23:59 PM",
-      location: "Online Portal",
-      type: "deadline"
-    }
-  ];
+  useEffect(() => {
+    const fetchStudentSchedule = async () => {
+      try {
+        setLoading(true);
 
-  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+        // ✅ 1. Get enrolled courses
+        const courses = await courseService.getEnrolledCourses();
+
+        // ✅ 2. Fetch sessions for each course
+        const allSessions: Schedule[] = [];
+
+        for (const course of courses) {
+          const courseSessions = await scheduleService.getCourseSchedules(course.id);
+          allSessions.push(...courseSessions);
+        }
+
+        // ✅ 3. Sort by date
+        allSessions.sort((a, b) =>
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+
+        setSessions(allSessions);
+
+      } catch (error) {
+        console.error("Failed to load student schedule:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudentSchedule();
+  }, []);
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'lecture': return <Users className="h-4 w-4" />;
+      case 'lab': return <Users className="h-4 w-4" />;
+      case 'presentation': return <Video className="h-4 w-4" />;
+      default: return <Calendar className="h-4 w-4" />;
+    }
+  };
 
   return (
-      <div className="container py-8 space-y-8 animate-fade-in">
-        <div>
-          <h1 className="text-3xl font-bold">My Schedule</h1>
-          <p className="text-muted-foreground">View your weekly class schedule and upcoming events</p>
-        </div>
+    <div className="container py-8 space-y-6 animate-fade-in max-w-full">
+      
+      {/* HEADER */}
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold">
+          My Schedule
+        </h1>
+        <p className="text-muted-foreground">
+          View your upcoming sessions
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Weekly Schedule */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarIcon className="h-5 w-5" />
-                  Weekly Schedule
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {days.map((day) => {
-                  const daySchedule = schedule.filter(s => s.day === day);
-                  return (
-                    <div key={day} className="space-y-3">
-                      <h3 className="font-semibold text-lg border-b pb-2">{day}</h3>
-                      {daySchedule.length > 0 ? (
-                        <div className="space-y-3">
-                          {daySchedule.map((session) => (
-                            <div key={session.id} className="flex items-start gap-4 p-4 rounded-lg border hover:bg-accent transition-colors">
-                              <div className={`w-1 self-stretch rounded ${session.color}`} />
-                              <div className="flex-1 space-y-2">
-                                <div className="flex items-start justify-between">
-                                  <div>
-                                    <h4 className="font-semibold">{session.title}</h4>
-                                    <p className="text-sm text-muted-foreground">{session.course}</p>
-                                    <p className="text-sm text-muted-foreground">{session.instructor}</p>
-                                  </div>
-                                  <Badge variant="outline">
-                                    {session.type}
-                                  </Badge>
-                                </div>
-                                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="h-4 w-4" />
-                                    {session.time}
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    {session.location === "Online" ? (
-                                      <Video className="h-4 w-4" />
-                                    ) : (
-                                      <MapPin className="h-4 w-4" />
-                                    )}
-                                    {session.location}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+      {/* LIST */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Upcoming Sessions
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <div className="space-y-4">
+            {loading ? (
+              <p className="text-muted-foreground">Loading sessions...</p>
+            ) : sessions.length === 0 ? (
+              <p className="text-muted-foreground">No sessions available</p>
+            ) : (
+              sessions.map((session) => (
+                <div
+                  key={session.id}
+                  className="flex flex-col md:flex-row md:items-center md:justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors gap-4"
+                >
+                  {/* LEFT */}
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                      {getTypeIcon(session.type)}
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
+                        <div>
+                          <h3 className="font-semibold">{session.title}</h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {session.description}
+                          </p>
                         </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground pl-4">No classes scheduled</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </div>
 
-          {/* Upcoming Events */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Upcoming Events</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {upcomingEvents.map((event, index) => (
-                  <div key={index} className="p-4 rounded-lg border space-y-2">
-                    <div className="flex items-start justify-between">
-                      <h4 className="font-semibold text-sm">{event.title}</h4>
-                      <Badge variant={
-                        event.type === 'exam' ? 'destructive' :
-                        event.type === 'presentation' ? 'default' :
-                        'secondary'
-                      }>
-                        {event.type}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <CalendarIcon className="h-3 w-3" />
-                        {event.date}
+                        <Badge variant="outline">
+                          {session.type}
+                        </Badge>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {event.time}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {event.location}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {new Date(session.date).toLocaleDateString()}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          {session.start_time} - {session.end_time}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {session.is_online ? (
+                            <Video className="h-4 w-4" />
+                          ) : (
+                            <MapPin className="h-4 w-4" />
+                          )}
+                          {session.is_online ? "Online" : session.location}
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
 
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle>This Week</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Total Classes</span>
-                  <span className="text-2xl font-bold">{schedule.length}</span>
+                  {/* RIGHT (ONLY JOIN) */}
+                  <div className="flex flex-wrap gap-2">
+                    {session.is_online && session.meeting_link && (
+                      <a href={session.meeting_link} target="_blank">
+                        <button className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700">
+                          <Video className="inline mr-1 h-4 w-4" />
+                          Join
+                        </button>
+                      </a>
+                    )}
+                  </div>
+
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Lectures</span>
-                  <span className="text-lg font-semibold">{schedule.filter(s => s.type === 'lecture').length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Labs</span>
-                  <span className="text-lg font-semibold">{schedule.filter(s => s.type === 'lab').length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Online Sessions</span>
-                  <span className="text-lg font-semibold">{schedule.filter(s => s.location === 'Online').length}</span>
-                </div>
-              </CardContent>
-            </Card>
+              ))
+            )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

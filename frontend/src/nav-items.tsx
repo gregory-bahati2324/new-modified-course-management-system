@@ -64,7 +64,7 @@ import NotFound from "./pages/NotFound.tsx";
 import StudentLayout from "./components/layout/StudentLayout.tsx";
 import { InstructorLayout } from "./components/layout/InstructorLayout.tsx";
 import { AdminLayout } from "./components/layout/AdminLayout.tsx";
-import { title } from "process";
+
 
 export const navItems = [
   {
@@ -222,6 +222,12 @@ export const navItems = [
     to: "/instructor/schedule-session",
     icon: <Calendar className="h-4 w-4" />,
     page: <ScheduleSession />,
+  },
+  {
+    title: "Edit Schedule Session",
+    to: "/instructor/schedule-session/:id",
+    icon: <Edit className="h-4 w-4" />,
+    page: <ScheduleSession />, 
   },
   {
     title: "Edit Course Description",

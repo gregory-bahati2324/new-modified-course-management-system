@@ -1,9 +1,4 @@
-/**
- * API Configuration
- * Toggle between mock data and real backend
- */
 
-import { get } from "http";
 
 export const API_CONFIG = {
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
@@ -37,6 +32,12 @@ export const API_CONFIG_PROGRESS = {
 
 export const API_CONFIG_MARKING_GRADING = {
   baseURL: import.meta.env.VITE_API_MARKING_GRADING_BASE_URL || 'http://localhost:8005',
+  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  timeout: 30000,
+};
+
+export const API_CONFIG_SCHEDULING = {
+  baseURL: import.meta.env.VITE_API_SCHEDULING_BASE_URL || 'http://localhost:8006',
   useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
   timeout: 30000,
 };
@@ -162,11 +163,13 @@ export const API_ENDPOINTS = {
 
   // Schedule endpoints - maps to FastAPI /api/schedule/*
   schedule: {
-    list: '/api/schedule',
-    create: '/api/schedule',
-    update: (id: string) => `/api/schedule/${id}`,
-    delete: (id: string) => `/api/schedule/${id}`,
-    upcoming: '/api/schedule/upcoming',
+    list: '/sessions',
+    create: '/sessions/create',
+    update: (id: string) => `/sessions/${id}`,
+    delete: (id: string) => `/sessions/${id}`,
+    course: (id: string) => `/sessions/course/${id}`,
+    upcoming: '/sessions/upcoming',
+    my: '/sessions/my'
   },
 
   // Forum endpoints - maps to FastAPI /api/forums/*

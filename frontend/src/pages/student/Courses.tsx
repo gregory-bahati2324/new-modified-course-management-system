@@ -138,10 +138,6 @@ export default function StudentCourses() {
             Continue your learning journey
           </p>
         </div>
-        <Button onClick={() => navigate('/courses')}>
-          <BookOpen className="mr-2 h-4 w-4" />
-          Browse All Courses
-        </Button>
       </div>
 
       {/* Tabs */}
@@ -258,13 +254,6 @@ export default function StudentCourses() {
                       <PlayCircle className="mr-2 h-4 w-4" />
                       Continue Learning
                     </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => navigate(`/course/${course.id}`)}
-                    >
-                      View Details
-                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -304,9 +293,6 @@ export default function StudentCourses() {
                   <div className="flex flex-col gap-2 lg:w-48">
                     <Button onClick={() => navigate('/certificates')}>
                       View Certificate
-                    </Button>
-                    <Button variant="outline">
-                      Review Course
                     </Button>
                   </div>
                 </div>

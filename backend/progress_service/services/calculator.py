@@ -167,15 +167,75 @@ def recalculate_course_progress(
         student_lesson_progress.StudentLessonProgress.is_completed.is_(True)
     ).count()
 
-    progress_percent = int((completed_lessons / total_lessons) * 100) if total_lessons else 0
+    # -----------------------------
+    # LESSON PROGRESS
+    # -----------------------------
+    lesson_progress = (
+        completed_lessons / total_lessons
+    ) if total_lessons > 0 else 0
 
+
+    # -----------------------------
+    # EXTERNAL PROGRESS
+    # -----------------------------
+    external = evaluate_external_progress(course_id, token)
+
+    assignment_total = external["assignment_progress"]["total"]
+    assignment_submitted = external["assignment_progress"]["submitted"]
+
+    assessment_total = external["assessment_progress"]["total"]
+    assessment_submitted = external["assessment_progress"]["submitted"]
+
+
+    # -----------------------------
+    # ASSIGNMENT PROGRESS
+    # -----------------------------
+    assignment_progress = (
+        assignment_submitted / assignment_total
+    ) if assignment_total > 0 else None
+
+
+    # -----------------------------
+    # ASSESSMENT PROGRESS
+    # -----------------------------
+    assessment_progress = (
+        assessment_submitted / assessment_total
+    ) if assessment_total > 0 else None
+
+
+    # -----------------------------
+    # COMBINE DYNAMICALLY
+    # -----------------------------
+    components = []
+
+    # lessons always included
+    components.append(lesson_progress)
+
+    # only include if they exist
+    if assignment_progress is not None:
+        components.append(assignment_progress)
+
+    if assessment_progress is not None:
+        components.append(assessment_progress)
+
+    final_progress = sum(components) / len(components)
+
+    progress_percent = int(final_progress * 100)
     # -----------------------------
     #  EXTERNAL PROGRESS 
     # -----------------------------
     external = evaluate_external_progress(course_id, token)
 
-    assignments_ok = external["assignments_ok"]
-    assessments_ok = external["assessments_ok"]
+    assignments_ok = (
+    assignment_total == 0 or
+    assignment_submitted == assignment_total
+    )
+
+
+    assessments_ok = (
+    assessment_total == 0 or
+    assessment_submitted == assessment_total
+    )
 
     # -----------------------------
     # FINAL COMPLETION LOGIC
