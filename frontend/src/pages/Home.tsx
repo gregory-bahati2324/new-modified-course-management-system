@@ -1,290 +1,211 @@
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Users, Award, Globe, ChevronRight, Play, Star } from 'lucide-react';
+import { BookOpen, Search, Clock, ArrowRight, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import heroImage from '@/assets/hero-image.jpg';
+import { Skeleton } from '@/components/ui/skeleton';
+import { courseService, type Course } from '@/services/courseService';
 
 export default function Home() {
+  const [courses, setCourses] = useState<Course[] | null>(null);
+  const [courseError, setCourseError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    courseService.getPublicCourses(8)
+      .then((data) => {
+        if (!cancelled) setCourses(data);
+      })
+      .catch(() => {
+        if (!cancelled) setCourseError('Courses could not be loaded. Please try again later.');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const submitSearch = (event: FormEvent) => {
+    event.preventDefault();
+    window.location.href = search.trim()
+      ? `/courses?q=${encodeURIComponent(search.trim())}`
+      : '/courses';
+  };
+
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-hero-gradient">
-        <div className="absolute inset-0">
-          <img
-            src={heroImage}
-            alt="MUST Campus"
-            className="w-full h-full object-cover opacity-20"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-primary/60" />
-        </div>
-        
-        <div className="relative container py-24 lg:py-32">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8 animate-fade-up">
-              <div className="space-y-4">
-                <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
-                  Welcome to MUST Learning Hub
-                </Badge>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-                  Empowering Minds Through
-                  <span className="text-white/90 block mt-2">
-                    Excellence in Education
-                  </span>
-                </h1>
-                <p className="text-xl text-white/90 max-w-lg leading-relaxed">
-                  Join Mbeya University of Science and Technology's innovative learning platform. 
-                  Access world-class courses, connect with expert instructors, and earn 
-                  internationally recognized certificates.
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" variant="secondary" className="group" asChild>
-                  <Link to="/auth/register">
-                    Get Started Free
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20" asChild>
-                  <Link to="/courses">
-                    <Play className="mr-2 h-4 w-4" />
-                    Explore Courses
-                  </Link>
-                </Button>
-              </div>
-
-              <div className="flex items-center space-x-8 text-white/80">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-white">15,000+</div>
-                  <div className="text-sm">Students</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-white">500+</div>
-                  <div className="text-sm">Courses</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-white">98%</div>
-                  <div className="text-sm">Success Rate</div>
-                </div>
-              </div>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Moodle-style public navigation */}
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+        <div className="container flex h-16 items-center justify-between gap-4">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <GraduationCap className="h-6 w-6" />
             </div>
-
-            <div className="relative animate-fade-in animation-delay-300">
-              <div className="relative bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-                <h3 className="text-2xl font-semibold text-white mb-6">Quick Access</h3>
-                
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <Button variant="outline" className="h-16 bg-white/10 border-white/30 text-white hover:bg-white/20 flex-col" asChild>
-                    <Link to="/auth/login?role=student">
-                      <Users className="h-6 w-6 mb-2" />
-                      Student Login
-                    </Link>
-                  </Button>
-                  <Button variant="outline" className="h-16 bg-white/10 border-white/30 text-white hover:bg-white/20 flex-col" asChild>
-                    <Link to="/auth/login?role=instructor">
-                      <BookOpen className="h-6 w-6 mb-2" />
-                      Instructor Login
-                    </Link>
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  <Input
-                    placeholder="Search courses..."
-                    className="bg-white/20 border-white/30 text-white placeholder:text-white/70"
-                  />
-                  <Button className="w-full bg-white text-primary hover:bg-white/90">
-                    Search Courses
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 bg-background">
-        <div className="container">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold">Why Choose MUST Learning Hub?</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Experience the future of education with our comprehensive learning management system
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card className="text-center group hover:shadow-academic transition-all duration-300 hover:-translate-y-1">
-              <CardHeader>
-                <div className="mx-auto w-16 h-16 bg-primary-subtle rounded-full flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                  <BookOpen className="h-8 w-8" />
-                </div>
-                <CardTitle>Interactive Learning</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Engage with multimedia content, virtual labs, and interactive assignments designed for maximum learning retention.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center group hover:shadow-academic transition-all duration-300 hover:-translate-y-1">
-              <CardHeader>
-                <div className="mx-auto w-16 h-16 bg-success-subtle rounded-full flex items-center justify-center group-hover:bg-success group-hover:text-white transition-colors">
-                  <Award className="h-8 w-8" />
-                </div>
-                <CardTitle>Certified Excellence</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Earn internationally recognized certificates and digital badges that showcase your achievements to employers worldwide.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center group hover:shadow-academic transition-all duration-300 hover:-translate-y-1">
-              <CardHeader>
-                <div className="mx-auto w-16 h-16 bg-warning-subtle rounded-full flex items-center justify-center group-hover:bg-warning group-hover:text-white transition-colors">
-                  <Users className="h-8 w-8" />
-                </div>
-                <CardTitle>Expert Instructors</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Learn from industry professionals and renowned academics who bring real-world experience to every course.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center group hover:shadow-academic transition-all duration-300 hover:-translate-y-1">
-              <CardHeader>
-                <div className="mx-auto w-16 h-16 bg-accent rounded-full flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                  <Globe className="h-8 w-8" />
-                </div>
-                <CardTitle>Global Access</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Access your courses anytime, anywhere with our mobile-friendly platform supporting English and Kiswahili.
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Popular Courses Preview */}
-      <section className="py-20 bg-card-subtle">
-        <div className="container">
-          <div className="flex items-center justify-between mb-12">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Popular Courses</h2>
-              <p className="text-xl text-muted-foreground">
-                Discover our most sought-after courses across various disciplines
+              <div className="text-lg font-bold leading-none">Greg-LMS</div>
+              <div className="text-xs text-muted-foreground">Learning Management System</div>
+            </div>
+          </Link>
+
+          <nav className="hidden items-center gap-2 sm:flex">
+            <Button variant="ghost" asChild>
+              <Link to="/courses">Courses</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/auth/login">Sign in</Link>
+            </Button>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
+              <Link to="/auth/register">Sign up</Link>
+            </Button>
+          </nav>
+
+          <div className="flex gap-2 sm:hidden">
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/auth/login">Sign in</Link>
+            </Button>
+            <Button size="sm" asChild>
+              <Link to="/auth/register">Sign up</Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        {/* Welcome section */}
+        <section className="border-b bg-muted/30">
+          <div className="container py-16 md:py-20">
+            <div className="mx-auto max-w-3xl text-center">
+              <Badge variant="secondary" className="mb-5">Greg-LMS Learning Platform</Badge>
+              <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+                Welcome to Greg-LMS
+              </h1>
+              <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+                Access your courses, learning materials, assignments, assessments and progress
+                in one place.
+              </p>
+
+              <form onSubmit={submitSearch} className="mx-auto mt-8 flex max-w-xl gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search courses"
+                    className="h-11 pl-9"
+                    aria-label="Search courses"
+                  />
+                </div>
+                <Button type="submit" className="h-11">
+                  Search
+                </Button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        {/* Course catalogue */}
+        <section className="container py-14 md:py-16">
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold md:text-3xl">Available courses</h2>
+              <p className="mt-2 text-muted-foreground">
+                Browse courses available on the Greg-LMS platform.
               </p>
             </div>
-            <Button variant="outline" asChild>
-              <Link to="/courses">
-                View All Courses
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Link>
+            <Button variant="ghost" asChild>
+             {/* <Link to="/courses">
+                View all courses
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>*/}
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Advanced Computer Science",
-                instructor: "Dr. Sarah Johnson",
-                students: 1240,
-                rating: 4.9,
-                level: "Advanced",
-                duration: "12 weeks",
-                category: "Technology"
-              },
-              {
-                title: "Sustainable Engineering",
-                instructor: "Prof. Michael Chen",
-                students: 856,
-                rating: 4.8,
-                level: "Intermediate",
-                duration: "10 weeks",
-                category: "Engineering"
-              },
-              {
-                title: "Digital Marketing Strategy",
-                instructor: "Dr. Emily Davis",
-                students: 2100,
-                rating: 4.7,
-                level: "Beginner",
-                duration: "8 weeks",
-                category: "Business"
-              }
-            ].map((course, index) => (
-              <Card key={index} className="group hover:shadow-academic transition-all duration-300 hover:-translate-y-1">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <Badge variant="secondary">{course.category}</Badge>
-                    <div className="flex items-center text-yellow-500">
-                      <Star className="h-4 w-4 fill-current" />
-                      <span className="ml-1 text-sm font-medium">{course.rating}</span>
+          {courses === null && !courseError && (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="space-y-3">
+                  <Skeleton className="h-36 w-full rounded-lg" />
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {courseError && (
+            <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
+              {courseError}
+            </div>
+          )}
+
+          {courses && courses.length === 0 && (
+            <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
+              No published courses are available yet.
+            </div>
+          )}
+
+          {courses && courses.length > 0 && (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {courses.map((course) => (
+                <Link
+                  key={course.id}
+                  to={`/course/${course.id}`}
+                  className="group overflow-hidden rounded-lg border bg-card transition-shadow hover:shadow-md"
+                >
+                  <div className="flex h-36 items-center justify-center bg-primary/10">
+                    <BookOpen className="h-12 w-12 text-primary" />
+                  </div>
+                  <div className="space-y-3 p-4">
+                    <div className="flex flex-wrap gap-2">
+                      {course.category && <Badge variant="secondary">{course.category}</Badge>}
+                      {course.level && <Badge variant="outline">{course.level}</Badge>}
+                    </div>
+                    <h3 className="font-semibold leading-snug group-hover:text-primary">
+                      {course.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {course.instructor_name || 'Instructor'}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {course.duration || 'Flexible'}
+                      </span>
                     </div>
                   </div>
-                  <CardTitle className="group-hover:text-primary transition-colors">
-                    {course.title}
-                  </CardTitle>
-                  <CardDescription>
-                    by {course.instructor}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                    <span>{course.students} students</span>
-                    <span>{course.duration}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {course.level}
-                    </Badge>
-                  </div>
-                  <Button className="w-full" asChild>
-                    <Link to={`/courses/${index + 1}`}>
-                      Learn More
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-hero-gradient">
-        <div className="container text-center">
-          <div className="max-w-3xl mx-auto space-y-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">
-              Ready to Start Your Learning Journey?
-            </h2>
-            <p className="text-xl text-white/90">
-              Join thousands of students already learning with MUST. Create your account today and 
-              unlock access to our comprehensive course library.
+        {/* Authentication call to action */}
+        <section className="border-t bg-muted/30">
+          <div className="container py-14 text-center">
+            <h2 className="text-2xl font-bold">Ready to use Greg-LMS?</h2>
+            <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
+              Sign in to access your learning dashboard, or create an account to start learning.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary" asChild>
-                <Link to="/auth/register">
-                  Create Free Account
-                </Link>
+            <div className="mt-6 flex justify-center gap-3">
+              <Button size="lg" variant="outline" asChild>
+                <Link to="/auth/login">Sign in</Link>
               </Button>
-              <Button size="lg" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20" asChild>
-                <Link to="/contact">
-                  Contact Admissions
-                </Link>
+              <Button size="lg" asChild>
+                <Link to="/auth/register">Sign up</Link>
               </Button>
             </div>
           </div>
+        </section>
+      </main>
+
+      <footer className="border-t py-6">
+        <div className="container text-center text-sm text-muted-foreground">
+          Greg-LMS Learning Management System
         </div>
-      </section>
+      </footer>
     </div>
   );
 }

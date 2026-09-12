@@ -83,6 +83,18 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Cinematic marketing tokens — used by the Home page's dark sections.
+       Independent of the app's light/dark toggle, this is a deliberate
+       always-dark treatment for storytelling sections (hero, CTA). */
+    --cinema-bg: 224 45% 6%;
+    --cinema-bg-elevated: 224 38% 10%;
+    --cinema-bg-elevated-2: 224 32% 14%;
+    --cinema-border: 222 30% 22%;
+    --cinema-accent: 217 100% 60%;
+    --cinema-accent-soft: 213 100% 75%;
+    --cinema-text: 210 40% 98%;
+    --cinema-text-muted: 217 18% 68%;
   }
 
   .dark {
@@ -211,5 +223,37 @@
   /* Smooth Scrolling */
   .scroll-smooth {
     scroll-behavior: smooth;
+  }
+
+  /* Cinematic surface for Home marketing sections */
+  .cinema {
+    background: hsl(var(--cinema-bg));
+    color: hsl(var(--cinema-text));
+  }
+
+  /* Layered radial glow mesh — the hero's abstract backdrop */
+  .cinema-mesh {
+    background-image:
+      radial-gradient(ellipse 60% 50% at 15% 20%, hsl(var(--cinema-accent) / 0.20), transparent 60%),
+      radial-gradient(ellipse 45% 40% at 85% 15%, hsl(var(--cinema-accent-soft) / 0.14), transparent 60%),
+      radial-gradient(ellipse 55% 60% at 50% 100%, hsl(var(--cinema-accent) / 0.10), transparent 65%);
+  }
+
+  /* Faint structural grid line texture */
+  .cinema-grid {
+    background-image:
+      linear-gradient(hsl(var(--cinema-border) / 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--cinema-border) / 0.35) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: linear-gradient(to bottom, black, transparent 85%);
+  }
+
+  /* Hide scrollbar for horizontal rails while staying scrollable */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }

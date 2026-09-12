@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, ArrowLeft, User, Mail, Lock, GraduationCap, Hash, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { authService, UserRole } from '@/services/authService'; // <-- Import yo
 
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   
   const [showPassword, setShowPassword] = useState(false);
@@ -82,7 +83,9 @@ export default function Register() {
       });
 
       // --- Navigate to login page after successful registration ---
-      navigate('/auth/login');
+      // Forward along where they should land after they then log in
+      // (e.g. back to course enrollment if that's what sent them here).
+      navigate('/auth/login', { state: location.state });
 
     } catch (error: any) {
       toast({

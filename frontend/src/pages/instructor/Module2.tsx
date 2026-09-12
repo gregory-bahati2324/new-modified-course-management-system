@@ -60,7 +60,7 @@ import {
     levels,
     courseTypes,
     getDepartmentsByCollege,
-} from '@/data/universityStructure';
+} from '@/data/learningStructure';
 import { lessonService } from '@/services/lessonService';
 import { LessonPreview } from '@/components/LessonPreview';
 

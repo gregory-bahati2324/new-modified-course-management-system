@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, ArrowLeft, Lock, Mail, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,12 @@ import { authService, UserRole } from '@/services/authService';
 export default function Login() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  // If the user was redirected here from somewhere else (e.g. clicking
+  // "Enroll" on a course while logged out), send them back there afterwards.
+  const redirectTo = (location.state as { from?: string } | null)?.from;
   
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +54,7 @@ export default function Login() {
     // Navigate AFTER token and user are set
     if (user.role === 'instructor') navigate('/instructor');
     else if (user.role === 'admin') navigate('/admin/dashboard');
-    else navigate('/dashboard');
+    else navigate(redirectTo || '/dashboard');
 
   } catch (error: any) {
     toast({

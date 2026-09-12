@@ -1,377 +1,304 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BookOpen,
   Calendar,
-  Trophy,
   Clock,
-  TrendingUp,
-  Bell,
-  PlayCircle,
+  Trophy,
   CheckCircle2,
   FileText,
-  Users
+  PlayCircle,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { authService, UserProfile } from '@/services/authService';
+import { courseService, type Course } from '@/services/courseService';
+import { apiAssessmentClient } from '@/services/assessmentsapi';
+import { apiProgressClient } from '@/services/apiProgress';
+import { apiSchedulingClient } from '@/services/schedulingapi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
+interface StudentAssignment {
+  id: string;
+  title: string;
+  course_id: string;
+  course_title?: string;
+  due_date?: string;
+  status: 'pending' | 'submitted' | 'overdue' | string;
+  submitted?: boolean;
+  graded?: boolean;
+  score?: number;
+}
+
+interface CourseProgress {
+  course_id: string;
+  completed_modules: number;
+  total_modules: number;
+  completed_lessons: number;
+  total_lessons: number;
+  progress_percentage: number;
+  is_completed: boolean;
+  last_accessed_at?: string;
+}
+
+
+interface LearningSession {
+  id: string;
+  title: string;
+  course_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  type: string;
+}
 
 export default function Dashboard() {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [progress, setProgress] = useState<CourseProgress[]>([]);
+  const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
+  const [sessions, setSessions] = useState<LearningSession[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const user_mock = {
-    name: "John Doe",
-    studentId: "MUST/CS/2024/001",
-    program: "Computer Science",
-    level: "Level 3",
-    avatar: undefined
-  };
-
-  const stats = [
-    {
-      title: "Enrolled Courses",
-      value: "6",
-      description: "Active this semester",
-      icon: BookOpen,
-      trend: "+2 from last semester"
-    },
-    {
-      title: "Completed Assignments",
-      value: "24",
-      description: "Submitted on time",
-      icon: CheckCircle2,
-      trend: "95% completion rate"
-    },
-    {
-      title: "Study Hours",
-      value: "142",
-      description: "This month",
-      icon: Clock,
-      trend: "+18 hours from last month"
-    },
-    {
-      title: "Achievement Points",
-      value: "1,340",
-      description: "Total earned",
-      icon: Trophy,
-      trend: "Top 15% of class"
-    }
-  ];
-
-  const enrolledCourses = [
-    {
-      id: 1,
-      title: "Advanced Database Systems",
-      instructor: "Dr. Sarah Johnson",
-      progress: 75,
-      nextDeadline: "Assignment 3 - Dec 15, 2024",
-      status: "active",
-      lastAccessed: "2 hours ago"
-    },
-    {
-      id: 2,
-      title: "Machine Learning Fundamentals",
-      instructor: "Prof. Michael Chen",
-      progress: 60,
-      nextDeadline: "Final Project - Dec 20, 2024",
-      status: "active",
-      lastAccessed: "1 day ago"
-    },
-    {
-      id: 3,
-      title: "Software Engineering Principles",
-      instructor: "Dr. Emily Davis",
-      progress: 90,
-      nextDeadline: "Code Review - Dec 12, 2024",
-      status: "active",
-      lastAccessed: "5 hours ago"
-    },
-    {
-      id: 4,
-      title: "Digital Signal Processing",
-      instructor: "Prof. James Wilson",
-      progress: 45,
-      nextDeadline: "Lab Report 4 - Dec 18, 2024",
-      status: "active",
-      lastAccessed: "3 days ago"
-    }
-  ];
-
-  const recentActivity = [
-    {
-      type: "assignment",
-      title: "Database Design Assignment submitted",
-      course: "Advanced Database Systems",
-      time: "2 hours ago",
-      status: "completed"
-    },
-    {
-      type: "quiz",
-      title: "ML Quiz 3 completed with 95% score",
-      course: "Machine Learning Fundamentals",
-      time: "1 day ago",
-      status: "completed"
-    },
-    {
-      type: "discussion",
-      title: "Replied to Software Architecture discussion",
-      course: "Software Engineering Principles",
-      time: "2 days ago",
-      status: "completed"
-    },
-    {
-      type: "announcement",
-      title: "New lecture materials uploaded",
-      course: "Digital Signal Processing",
-      time: "3 days ago",
-      status: "new"
-    }
-  ];
-
-  const upcomingDeadlines = [
-    {
-      title: "Code Review Submission",
-      course: "Software Engineering Principles",
-      date: "Dec 12, 2024",
-      time: "11:59 PM",
-      daysLeft: 3,
-      priority: "high"
-    },
-    {
-      title: "Database Assignment 3",
-      course: "Advanced Database Systems",
-      date: "Dec 15, 2024",
-      time: "11:59 PM",
-      daysLeft: 6,
-      priority: "medium"
-    },
-    {
-      title: "Lab Report 4",
-      course: "Digital Signal Processing",
-      date: "Dec 18, 2024",
-      time: "11:59 PM",
-      daysLeft: 9,
-      priority: "medium"
-    }
-  ];
-
   useEffect(() => {
-    const loadUser = async () => {
+    let cancelled = false;
+
+    const loadDashboard = async () => {
       try {
-        const me = await authService.getCurrentUser();
-        setUser(me);
+        const currentUser = await authService.getCurrentUser();
+        const [enrolledCourses, studentAssignments] = await Promise.all([
+          courseService.getEnrolledCourses(),
+          apiAssessmentClient
+            .get<StudentAssignment[]>('/assignments/student/assignments')
+            .then((response) => response.data),
+        ]);
+
+        if (cancelled) return;
+
+        setUser(currentUser);
+        setCourses(enrolledCourses);
+        setAssignments(studentAssignments);
+
+        const [courseProgress, mySessions] = await Promise.all([
+          Promise.all(
+            enrolledCourses.map(async (course) => {
+              try {
+                const response = await apiProgressClient.get<CourseProgress>(
+                  `/progress/courses/${course.id}`,
+                );
+                return response.data;
+              } catch {
+                return null;
+              }
+            }),
+          ),
+          Promise.all(
+            enrolledCourses.map(async (course) => {
+              try {
+                const response = await apiSchedulingClient.get<LearningSession[]>(
+                  `/sessions/course/${course.id}`,
+                );
+                return response.data;
+              } catch {
+                return [];
+              }
+            }),
+          ),
+        ]);
+
+        if (cancelled) return;
+
+        setProgress(courseProgress.filter(Boolean) as CourseProgress[]);
+        setSessions(
+          mySessions
+            .flat()
+            .sort((a, b) => `${a.date} ${a.start_time}`.localeCompare(`${b.date} ${b.start_time}`)),
+        );
       } catch (error) {
-        console.error('Failed to load user', error);
+        console.error('Unable to load student dashboard:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    loadUser();
+    loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  const progressByCourse = useMemo(
+    () => new Map(progress.map((item) => [item.course_id, item])),
+    [progress],
+  );
+
+  const courseById = useMemo(
+    () => new Map(courses.map((course) => [course.id, course])),
+    [courses],
+  );
+
+  const learningTimeSeconds = progress.reduce((total, item) => total + (item.completed_lessons || 0), 0);
+
+  const completedAssignments = assignments.filter(
+    (assignment) => assignment.submitted || assignment.status === 'submitted' || assignment.graded,
+  ).length;
+
+  const completedCourses = progress.filter((item) => item.is_completed).length;
+
+  const upcomingAssignments = assignments
+    .filter((assignment) => assignment.status === 'pending' || assignment.status === 'overdue')
+    .filter((assignment) => assignment.due_date)
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+    .slice(0, 4);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-muted-foreground">Loading dashboard...</p>
-      </div>
-    );
+    return <div className="py-20 text-center text-muted-foreground">Loading your Moodle dashboard...</div>;
   }
 
+  if (!user) {
+    return <div className="py-20 text-center text-muted-foreground">Unable to load your account.</div>;
+  }
+
+  const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase();
 
   return (
-    <div className="container py-8 space-y-8 animate-fade-in">
-      {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Welcome back, {user?.first_name} {user?.last_name} </h1>
-          <div className="flex items-center gap-4 text-muted-foreground">
-            <span>{user?.registrationNumber}</span>
-            <span>•</span>
-            <span>{user_mock.program}</span>
-            <span>•</span>
-            <span>{user_mock.level}</span>
-          </div>
+    <div className="container space-y-8 py-6 lg:py-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">Moodle Dashboard</p>
+          <h1 className="text-2xl font-bold lg:text-3xl">
+            Welcome, {user.first_name} {user.last_name}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{user.registrationNumber}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => window.location.href = '/student/schedule'}>
-            <Calendar className="mr-2 h-4 w-4" />
-            View Schedule
-          </Button>
-          <Button size="sm" onClick={() => window.location.href = '/student/course/1/learn'}>
-            <BookOpen className="mr-2 h-4 w-4" />
-            Continue Learning
-          </Button>
-        </div>
+        <Avatar className="h-12 w-12">
+          <AvatarFallback>{initials || 'S'}</AvatarFallback>
+        </Avatar>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <Card key={index} className="hover:shadow-academic transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-1">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mb-2">
-                {stat.description}
-              </p>
-              <div className="flex items-center text-xs text-success">
-                <TrendingUp className="mr-1 h-3 w-3" />
-                {stat.trend}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Enrolled courses</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{courses.length}</div><p className="text-xs text-muted-foreground">Current courses</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Submitted assignments</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{completedAssignments}</div><p className="text-xs text-muted-foreground">From your assignments</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Completed courses</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{completedCourses}</div><p className="text-xs text-muted-foreground">Based on course progress</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Learning activity</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{learningTimeSeconds}</div><p className="text-xs text-muted-foreground">Completed lessons</p></CardContent>
+        </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Enrolled Courses */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
-                My Courses
-              </CardTitle>
-              <CardDescription>
-                Continue your learning journey with your enrolled courses
-              </CardDescription>
+              <CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5" /> My courses</CardTitle>
+              <CardDescription>Your enrolled courses and current progress.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {enrolledCourses.map((course) => (
-                <div key={course.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">{course.title}</h3>
-                      <Badge variant="secondary" className="text-xs">
-                        {course.progress}% Complete
+              {courses.length === 0 && (
+                <p className="py-6 text-center text-muted-foreground">You are not enrolled in any courses yet.</p>
+              )}
+              {courses.map((course) => {
+                const item = progressByCourse.get(course.id);
+                const percentage = item?.progress_percentage ?? 0;
+
+                return (
+                  <div key={course.id} className="rounded-lg border p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h3 className="font-semibold">{course.title}</h3>
+                        <p className="text-sm text-muted-foreground">{course.code} · {course.instructor_name || 'Instructor'}</p>
+                      </div>
+                      <Badge variant={item?.is_completed ? 'default' : 'secondary'}>
+                        {item?.is_completed ? 'Completed' : `${percentage}%`}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      by {course.instructor}
-                    </p>
-                    <Progress value={course.progress} className="h-2" />
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Next: {course.nextDeadline}</span>
-                      <span>Last accessed: {course.lastAccessed}</span>
+                    <Progress value={percentage} className="mt-4 h-2" />
+                    <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{item?.completed_lessons ?? 0} / {item?.total_lessons ?? 0} lessons</span>
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to={`/student/course/${course.id}/learn`}>
+                          <PlayCircle className="mr-2 h-4 w-4" /> Continue
+                        </Link>
+                      </Button>
                     </div>
                   </div>
-                  <Button size="sm" className="ml-4" onClick={() => window.location.href = `/student/course/${course.id}/learn`}>
-                    <PlayCircle className="mr-2 h-4 w-4" />
-                    Continue
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
 
-          {/* Recent Activity */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Recent Activity
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Recent assignments</CardTitle>
+              <CardDescription>Assignment status from Moodle.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-start gap-3 pb-3 border-b last:border-0">
-                    <div className={`p-2 rounded-full ${activity.type === 'assignment' ? 'bg-primary-subtle' :
-                      activity.type === 'quiz' ? 'bg-success-subtle' :
-                        activity.type === 'discussion' ? 'bg-warning-subtle' :
-                          'bg-accent'
-                      }`}>
-                      {activity.type === 'assignment' && <FileText className="h-4 w-4" />}
-                      {activity.type === 'quiz' && <CheckCircle2 className="h-4 w-4" />}
-                      {activity.type === 'discussion' && <Users className="h-4 w-4" />}
-                      {activity.type === 'announcement' && <Bell className="h-4 w-4" />}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium">{activity.title}</p>
-                      <p className="text-xs text-muted-foreground">{activity.course}</p>
-                      <p className="text-xs text-muted-foreground">{activity.time}</p>
-                    </div>
+            <CardContent className="space-y-3">
+              {assignments.slice(0, 5).map((assignment) => (
+                <div key={assignment.id} className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                  <div className="min-w-0">
+                    <p className="font-medium">{assignment.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {assignment.course_title || courseById.get(assignment.course_id)?.title || 'Course'}
+                    </p>
                   </div>
-                ))}
-              </div>
+                  <Badge variant={assignment.status === 'submitted' ? 'default' : assignment.status === 'overdue' ? 'destructive' : 'secondary'}>
+                    {assignment.status}
+                  </Badge>
+                </div>
+              ))}
+              {assignments.length === 0 && <p className="py-4 text-center text-muted-foreground">No assignments found.</p>}
             </CardContent>
           </Card>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Upcoming Deadlines */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Upcoming Deadlines
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {upcomingDeadlines.map((deadline, index) => (
-                <div key={index} className="space-y-2 p-3 rounded-lg bg-card-subtle">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium">{deadline.title}</h4>
-                    <Badge
-                      variant={deadline.priority === 'high' ? 'destructive' : 'secondary'}
-                      className="text-xs"
-                    >
-                      {deadline.daysLeft} days
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{deadline.course}</p>
-                  <div className="text-xs text-muted-foreground">
-                    {deadline.date} at {deadline.time}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Calendar className="h-5 w-5" /> Upcoming deadlines</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => window.location.href = '/courses'}>
-                <BookOpen className="mr-2 h-4 w-4" />
-                Browse Courses
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => window.location.href = '/student/assignments'}>
-                <FileText className="mr-2 h-4 w-4" />
-                Submit Assignment
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => window.location.href = '/forums'}>
-                <Users className="mr-2 h-4 w-4" />
-                Join Discussion
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => window.location.href = '/certificates'}>
-                <Trophy className="mr-2 h-4 w-4" />
-                View Certificates
-              </Button>
+              {upcomingAssignments.map((assignment) => (
+                <div key={assignment.id} className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-sm font-medium">{assignment.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {assignment.course_title || courseById.get(assignment.course_id)?.title}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {new Date(assignment.due_date!).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+              {upcomingAssignments.length === 0 && <p className="py-4 text-center text-muted-foreground">No upcoming deadlines.</p>}
             </CardContent>
           </Card>
 
-          {/* Achievement Badge */}
-          <Card className="bg-success-gradient text-white">
-            <CardContent className="pt-6 text-center">
-              <Trophy className="h-8 w-8 mx-auto mb-2" />
-              <h3 className="font-semibold mb-1">Top Performer!</h3>
-              <p className="text-sm opacity-90">
-                You're in the top 15% of your class. Keep up the excellent work!
-              </p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" /> Scheduled sessions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {sessions.slice(0, 4).map((session) => (
+                <div key={session.id} className="rounded-lg border p-3">
+                  <p className="text-sm font-medium">{session.title}</p>
+                  <p className="text-xs text-muted-foreground">{courseById.get(session.course_id)?.title || 'Course'}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{session.date} · {session.start_time}–{session.end_time}</p>
+                  <p className="text-xs text-muted-foreground">{session.location}</p>
+                </div>
+              ))}
+              {sessions.length === 0 && <p className="py-4 text-center text-muted-foreground">No scheduled sessions.</p>}
             </CardContent>
           </Card>
         </div>

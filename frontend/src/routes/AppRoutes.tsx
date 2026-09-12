@@ -26,6 +26,7 @@ import StudentAssignments from "@/pages/student/Assignments";
 import Exams from "@/pages/student/Exam";
 import ExamHistory from "@/pages/student/ExamHistory";
 import TakeExam from "@/pages/student/TakeExam";
+import ExamResultPage from "@/pages/student/ExamResult";
 import StudentSchedule from "@/pages/student/Schedule";
 import StudentGrades from "@/pages/student/Grades";
 import StudentProfile from "@/pages/student/Profile";
@@ -98,6 +99,7 @@ export default function AppRoutes() {
         <Route path="exams" element={<Exams />} />
         <Route path="exam-history" element={<ExamHistory />} />
         <Route path="exam/:examId/take" element={<TakeExam />} />
+        <Route path="exam/:attemptId/result" element={<ExamResultPage />} />
         <Route path="schedule" element={<StudentSchedule />} />
         <Route path="grades" element={<StudentGrades />} />
         <Route path="profile" element={<StudentProfile />} />

@@ -11,27 +11,22 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { courseService, CreateCourseRequest } from '@/services/courseService';
 import { toast } from '@/hooks/use-toast'; // <-- custom toast
-import { levels } from '@/data/universityStructure';
-import { colleges, getDepartmentsByCollege, Department } from '@/data/universityStructure';
+import { categories, levels, courseTypes } from '@/data/learningStructure';
 
 
 export default function CreateCourse() {
   const navigate = useNavigate();
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
-  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
   const [courseData, setCourseData] = useState<CreateCourseRequest>({
     title: '',
     code: '',
     instructor_name: '',
     description: '',
     category: '',
-    department: '',
     level: '',
     course_type: '',
     duration: '',
-    year_of_study: undefined,
-    semester: undefined,
     max_students: undefined,
     prerequisites: '',
     learning_outcomes: '',
@@ -39,9 +34,6 @@ export default function CreateCourse() {
     allow_self_enrollment: true,
     certificate: true,
   });
-
-  const [departments, setDepartments] = useState<string[]>([]);
-  const [courseType, setCourseType] = useState<string>('');
 
 
   const addTag = () => {
@@ -57,23 +49,8 @@ export default function CreateCourse() {
     e.preventDefault();
 
     try {
-      let duration = courseData.duration;
-
-      // ✅ Build duration for NORMAL courses
-      if (courseData.course_type === 'normal' &&
-        courseData.year_of_study &&
-        courseData.semester) {
-        duration = `Year ${courseData.year_of_study} - Semester ${courseData.semester}`;
-      }
-
-      //  Build duration for SHORT courses
-      if (courseData.course_type === 'short' && courseData.duration) {
-        duration = `${courseData.duration} weeks`;
-      }
-
       const payload = {
         ...courseData,
-        duration,
         tags,
       };
 
@@ -189,61 +166,41 @@ export default function CreateCourse() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* College Selector */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Category Selector */}
                   <div className="space-y-2">
-                    <Label>College *</Label>
+                    <Label>Category *</Label>
                     <Select
                       value={courseData.category}
-                      onValueChange={(value) => {
-                        // Get departments for selected college
-                        const depts = getDepartmentsByCollege(value);
-                        setFilteredDepartments(depts);
-
-                        // Update course data
-                        setCourseData({
-                          ...courseData,
-                          category: value,
-                          department: '', // reset department
-                        });
-                      }}
+                      onValueChange={(value) => setCourseData({ ...courseData, category: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select College" />
+                        <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                        {colleges.map((college) => (
-                          <SelectItem key={college.id} value={college.id}>
-                            {college.shortName}
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.name}>
+                            {cat.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {/* Department Selector */}
+                  {/* Level Selector */}
                   <div className="space-y-2">
-                    <Label>Department *</Label>
+                    <Label>Level *</Label>
                     <Select
-                      disabled={!courseData.category}
-                      value={courseData.department || ''}
-                      onValueChange={(value) =>
-                        setCourseData({ ...courseData, department: value })
-                      }
+                      value={courseData.level}
+                      onValueChange={(value) => setCourseData({ ...courseData, level: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            courseData.category
-                              ? 'Select Department'
-                              : 'Select a college first'
-                          }
-                        />
+                        <SelectValue placeholder="Select level" />
                       </SelectTrigger>
                       <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                        {filteredDepartments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id}>
-                            {dept.name}
+                        {levels.map((level) => (
+                          <SelectItem key={level.id} value={level.name}>
+                            {level.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -251,122 +208,37 @@ export default function CreateCourse() {
                   </div>
                 </div>
 
-
-                <div className="space-y-2">
-                  <Label>Level *</Label>
-                  <Select
-                    disabled={!courseData.category || !courseData.department} // ✅ disable until both college & department selected
-                    value={courseData.level}
-                    onValueChange={(value) => setCourseData({ ...courseData, level: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={
-                          !courseData.category
-                            ? "Select a college first"
-                            : !courseData.department
-                              ? "Select a department first"
-                              : "Select level"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                      {levels.map((level) => (
-                        <SelectItem key={level.id} value={level.id}>
-                          {level.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                </div>
-                {/* Course Type Section */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                {/* Course Type + Duration */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Course Type *</Label>
                     <Select
                       value={courseData.course_type}
-                      onValueChange={(value) => {
-                        setCourseType(value);
-                        setCourseData({
-                          ...courseData,
-                          course_type: value,
-                          duration: '',
-                          year_of_study: undefined,
-                          semester: undefined,
-                        });
-                      }}
+                      onValueChange={(value) => setCourseData({ ...courseData, course_type: value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select course type" />
                       </SelectTrigger>
                       <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                        <SelectItem value="normal">Normal Course</SelectItem>
-                        <SelectItem value="short">Short Course</SelectItem>
+                        {courseTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {/* NORMAL COURSE */}
-                  {courseType === 'normal' && (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Year of Study *</Label>
-                        <Select
-                          value={courseData.year_of_study?.toString() || ''}
-                          onValueChange={(value) =>
-                            setCourseData({ ...courseData, year_of_study: Number(value) })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select year" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                            <SelectItem value="1">Year 1</SelectItem>
-                            <SelectItem value="2">Year 2</SelectItem>
-                            <SelectItem value="3">Year 3</SelectItem>
-                            <SelectItem value="4">Year 4</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Semester *</Label>
-                        <Select
-                          value={courseData.semester || ''}
-                          onValueChange={(value) =>
-                            setCourseData({ ...courseData, semester: value as '1' | '2' })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select semester" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white text-black shadow-lg rounded-md z-50">
-                            <SelectItem value="1">Semester 1</SelectItem>
-                            <SelectItem value="2">Semester 2</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </>
-                  )}
-
-                  {/* SHORT COURSE */}
-                  {courseType === 'short' && (
-                    <div className="space-y-2">
-                      <Label>Duration (Weeks) *</Label>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 8 weeks"
-                        value={courseData.duration}
-                        onChange={(e) =>
-                          setCourseData({ ...courseData, duration: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    <Label>Duration *</Label>
+                    <Input
+                      placeholder="e.g., 8 weeks, 3 months"
+                      value={courseData.duration}
+                      onChange={(e) => setCourseData({ ...courseData, duration: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
-
               </div>
             </CardContent>
           </Card>

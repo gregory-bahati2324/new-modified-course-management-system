@@ -34,10 +34,10 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
         <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center space-x-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-hero-gradient">
-              <span className="text-sm font-bold text-white">M</span>
+              <span className="text-sm font-bold text-white">G</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold">MUST</span>
+              <span className="text-sm font-semibold">Greg-LMS</span>
               <span className="text-xs text-muted-foreground hidden sm:block">Learning Hub</span>
             </div>
           </Link>
@@ -151,16 +151,7 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/auth/login">Login</Link>
-              </Button>
-              <Button size="sm" asChild>
-                <Link to="/auth/register">Get Started</Link>
-              </Button>
-            </div>
-          )}
+          ) : null}
 
           {/* Mobile Menu Button */}
           <Button

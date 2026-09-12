@@ -1,4 +1,3 @@
-import { departments } from '@/data/universityStructure';
 import { apiCourseClient, handleApiError } from './apiCourse';
 import { API_ENDPOINTS } from '@/config/api.config';
 
@@ -8,11 +7,8 @@ export interface CreateCourseRequest {
   instructor_name?: string;
   description?: string;
   category?: string;
-  department?: string;
   level?: string;
   course_type?: string;
-  year_of_study?: number;
-  semester?: '1' | '2';
   duration?: string;
   max_students?: number;
   prerequisites?: string;
@@ -203,6 +199,20 @@ class CourseService {
     return response.data;
   }
 
+  // Public, unauthenticated course listing — used by the Home page.
+  // Backed by the real GET /api/courses/all endpoint (no auth required).
+  async getPublicCourses(limit = 6): Promise<Course[]> {
+    try {
+      const response = await apiCourseClient.get<Course[]>(API_ENDPOINTS.courses.list);
+      const published = response.data.filter((c) => c.is_published !== false);
+      return published
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, limit);
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
   async getEnrolledCourses(): Promise<Course[]> {
     const token = localStorage.getItem('accessToken');
 
@@ -233,8 +243,6 @@ export interface Course extends CreateCourseRequest {
   students_enrolled: number;
   max_students?: number;
   course_type: string;
-  year_of_study?: number;
-  semester?: '1' | '2';
   rating: number;
   image_url?: string;
   created_at: string;

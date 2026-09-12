@@ -21,7 +21,7 @@ def create_session(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
-@router.get("/my")
+@router.get("/my", response_model=list[schemas.SessionOut])
 def get_my_sessions(
     db: Session = Depends(get_db),
     user=Depends(require_role(["instructor"]))
@@ -29,7 +29,7 @@ def get_my_sessions(
     return crud.get_sessions_by_instructor(db, user.sub)
 
 
-@router.get("/course/{course_id}")
+@router.get("/course/{course_id}", response_model=list[schemas.SessionOut])
 def get_course_sessions(
     course_id: str,
     db: Session = Depends(get_db),
@@ -37,7 +37,7 @@ def get_course_sessions(
 ):
     return crud.get_sessions_by_course(db, course_id)
 
-@router.put("/{session_id}")
+@router.put("/{session_id}", response_model=schemas.SessionOut)
 def update_session(
     session_id: str,
     updates: schemas.SessionUpdate,
@@ -53,7 +53,10 @@ def update_session(
     if db_session.instructor_id != user.sub:
         raise HTTPException(status_code=403, detail="Not allowed")
 
-    return crud.update_session(db, session_id, updates)
+    try:
+        return crud.update_session(db, session_id, updates)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.delete("/{session_id}")
 def delete_session(
@@ -69,4 +72,8 @@ def delete_session(
     if db_session.instructor_id != user.sub:
         raise HTTPException(status_code=403, detail="Not allowed")
 
-    return crud.delete_session(db, session_id)
+    # Don't return the deleted ORM object: after commit its attributes are
+    # expired, and SQLAlchemy trying to refresh them from a now-deleted row
+    # raises ObjectDeletedError. A plain confirmation is all the caller needs.
+    crud.delete_session(db, session_id)
+    return {"message": "Session deleted successfully", "id": session_id}

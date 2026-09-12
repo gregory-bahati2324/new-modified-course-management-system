@@ -63,7 +63,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
       children: [
         { title: 'All Assignments', href: '/student/assignments', icon: FileText },
         { title: 'Submit Assignment', href: '/student/submit-assignment', icon: FileText },
-        { title: 'Grades', href: '/student/grades', icon: Trophy },
+        
       ],
     },
     {
@@ -79,31 +79,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
       href: '/student/schedule',
       icon: Calendar,
     },
-    {
-      title: 'Forums',
-      href: '/forums',
-      icon: MessageSquare,
-    },
-    {
-      title: 'Certificates',
-      href: '/certificates',
-      icon: Trophy,
-    },
-    {
-      title: 'Profile',
-      href: '/student/profile',
-      icon: User,
-    },
-    {
-      title: 'Discussions',
-      href: '/student/discussions',
-      icon: MessageSquare,
-    },
-    {
-      title: 'Live Sessions',
-      href: '/student/live-sessions',
-      icon: Video,
-    },
+    
   ];
 
   const isActive = (path: string) => location.pathname === path;

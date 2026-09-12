@@ -10,7 +10,6 @@ import {
   Trash2,
   GripVertical,
   Eye,
-  Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,22 +50,15 @@ import { moduleService, type Module, type Lesson } from '@/services/moduleServic
 import { lessonService } from '@/services/lessonService';
 import { courseService, type Course } from '@/services/courseService';
 import { useToast } from '@/hooks/use-toast';
-import { colleges, departments, levels, courseTypes, getDepartmentsByCollege } from '@/data/universityStructure';
-
 export default function InstructorModules() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // -------------------------
-  // Filters & selections
+  // Course selection
   // -------------------------
-  const [selectedCollege, setSelectedCollege] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState('');
-  const [selectedCourseType, setSelectedCourseType] = useState('');
-  const [filteredDepartments, setFilteredDepartments] = useState(departments);
-
   const [courses, setCourses] = useState<Course[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
   const [selectedCourseId, setSelectedCourseId] = useState('');
 
   // -------------------------
@@ -99,40 +91,21 @@ export default function InstructorModules() {
   const sensors = useSensors(useSensor(PointerSensor));
 
   // ================================================================
-  // Effects: load filters
+  // Effects: load the instructor's own courses
   // ================================================================
   useEffect(() => {
-    if (selectedCollege) {
-      setFilteredDepartments(getDepartmentsByCollege(selectedCollege));
-      setSelectedDepartment('');
-      setSelectedLevel('');
-      setSelectedCourseType('');
-      setSelectedCourseId('');
-      setCourses([]);
-      setModules([]);
-    } else {
-      setFilteredDepartments(departments);
-    }
-  }, [selectedCollege]);
-
-  useEffect(() => {
-    if (selectedCollege && selectedDepartment && selectedLevel && selectedCourseType) {
-      (async () => {
-        try {
-          const { courses } = await courseService.getMyCourses({
-            college: selectedCollege,
-            department: selectedDepartment,
-            level: selectedLevel,
-            type: selectedCourseType,
-          });
-          setCourses(courses);
-          setSelectedCourseId('');
-        } catch {
-          toast({ title: 'Error', description: 'Failed to load courses', variant: 'destructive' });
-        }
-      })();
-    }
-  }, [selectedCollege, selectedDepartment, selectedLevel, selectedCourseType]);
+    (async () => {
+      try {
+        setCoursesLoading(true);
+        const { courses } = await courseService.getCourses();
+        setCourses(courses);
+      } catch {
+        toast({ title: 'Error', description: 'Failed to load courses', variant: 'destructive' });
+      } finally {
+        setCoursesLoading(false);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (selectedCourseId) loadModules();
@@ -341,55 +314,29 @@ export default function InstructorModules() {
         <div className="container mx-auto p-6 space-y-6">
           <h1 className="text-3xl font-bold">Manage Modules</h1>
 
-          {/* Filters Card */}
+          {/* Course picker */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5 text-primary" /> Course Filters</CardTitle>
-              <CardDescription>Select college, department, level, type & course</CardDescription>
+              <CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /> Choose a course</CardTitle>
+              <CardDescription>Pick one of your courses to manage its modules and lessons</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* College */}
               <div className="space-y-2">
-                <Label>College</Label>
-                <Select value={selectedCollege} onValueChange={setSelectedCollege}>
-                  <SelectTrigger><SelectValue placeholder="Choose a college..." /></SelectTrigger>
-                  <SelectContent>{colleges.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                <Label>Course</Label>
+                <Select value={selectedCourseId} onValueChange={setSelectedCourseId} disabled={coursesLoading}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={coursesLoading ? 'Loading your courses...' : 'Choose a course...'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((c) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+                  </SelectContent>
                 </Select>
+                {!coursesLoading && courses.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    You haven't created any courses yet.
+                  </p>
+                )}
               </div>
-              {/* Department */}
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Select value={selectedDepartment} onValueChange={setSelectedDepartment} disabled={!selectedCollege}>
-                  <SelectTrigger><SelectValue placeholder="Choose department..." /></SelectTrigger>
-                  <SelectContent>{filteredDepartments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              {/* Level */}
-              <div className="space-y-2">
-                <Label>Level</Label>
-                <Select value={selectedLevel} onValueChange={setSelectedLevel} disabled={!selectedDepartment}>
-                  <SelectTrigger><SelectValue placeholder="Choose level..." /></SelectTrigger>
-                  <SelectContent>{levels.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              {/* Type */}
-              <div className="space-y-2">
-                <Label>Course Type</Label>
-                <Select value={selectedCourseType} onValueChange={setSelectedCourseType} disabled={!selectedLevel}>
-                  <SelectTrigger><SelectValue placeholder="Choose type..." /></SelectTrigger>
-                  <SelectContent>{courseTypes.map((ct) => <SelectItem key={ct.id} value={ct.id}>{ct.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              {/* Course */}
-              {selectedCourseType && (
-                <div className="space-y-2">
-                  <Label>Course</Label>
-                  <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-                    <SelectTrigger><SelectValue placeholder="Choose course..." /></SelectTrigger>
-                    <SelectContent>{courses.map((c) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              )}
             </CardContent>
           </Card>
 

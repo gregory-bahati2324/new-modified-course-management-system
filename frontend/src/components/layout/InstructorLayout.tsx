@@ -55,7 +55,7 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
       title: 'Course Management',
       icon: FolderOpen,
       children: [
-        { title: 'My Courses', href: '/instructor/courses' },
+        
         { title: 'Create Course', href: '/instructor/create-course' },
         { title: 'Manage Modules', href: '/instructor/modules' },
         { title: 'Course Analytics', href: '/instructor/analytics' },
@@ -73,25 +73,8 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
         { title: 'Grade Submissions', href: '/instructor/grade' },
       ],
     },
-    {
-      title: 'Students',
-      icon: Users,
-      children: [
-        { title: 'Student List', href: '/instructor/students' },
-        { title: 'Student Reviews', href: '/instructor/review' },
-        { title: 'Message Students', href: '/instructor/messages' },
-      ],
-    },
-    {
-      title: 'Discussions',
-      href: '/instructor/discussions',
-      icon: MessageSquare,
-    },
-    {
-      title: 'Live Sessions',
-      href: '/instructor/live-sessions',
-      icon: Video,
-    },
+    
+    
     {
       title: 'Schedule',
       href: '/instructor/schedule',

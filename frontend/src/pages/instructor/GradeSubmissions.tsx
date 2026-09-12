@@ -1,27 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, Filter, Download, CheckCircle, Clock, 
-  AlertCircle, MoreVertical, Eye, Edit, FileText 
+import {
+  Search, Download, CheckCircle, Clock,
+  MoreVertical, Eye, Edit, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import {
   DropdownMenu,
@@ -31,20 +31,48 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { InstructorLayout } from '@/components/layout/InstructorLayout';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+import { markingGradingService, StudentSubmission } from '@/services/markingGradingService';
 
+// -----------------------------------------------------------------------------
+// Local shape used by this page. Only fields the backend actually returns
+// (see marking_grading service's /grading/dashboard aggregator) are kept.
+// Fields the mock data used to invent — registration number, attempt number,
+// and a "late" status — aren't provided by the backend, so they've been
+// removed rather than faked.
+// -----------------------------------------------------------------------------
 interface Submission {
   id: string;
-  studentName: string;
   studentId: string;
-  registrationNumber: string;
-  assignmentTitle: string;
+  studentName: string;
   assignmentId: string;
+  assignmentTitle: string;
+  courseId: string;
   course: string;
   submittedAt: string;
-  status: 'pending' | 'graded' | 'late';
+  status: 'pending' | 'graded';
   grade?: number;
   maxGrade: number;
-  attemptNumber: number;
+  type: string;
+  submissionType: string; // "assignment" | "assessment" — used for routing to the grading page
+}
+
+function mapSubmission(sub: StudentSubmission): Submission {
+  return {
+    id: sub.id,
+    studentId: sub.student_id,
+    studentName: sub.student_name,
+    assignmentId: sub.assignment_id,
+    assignmentTitle: sub.assignment_title,
+    courseId: sub.course_id,
+    course: sub.course_name,
+    submittedAt: sub.submitted_at,
+    status: sub.grade !== undefined && sub.grade !== null ? 'graded' : 'pending',
+    grade: sub.grade,
+    maxGrade: sub.max_score ?? 100,
+    type: sub.type,
+    submissionType: sub.submission_type,
+  };
 }
 
 export default function GradeSubmissions() {
@@ -52,88 +80,46 @@ export default function GradeSubmissions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCourse, setFilterCourse] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const submissions: Submission[] = [
-    {
-      id: '1',
-      studentName: 'John Doe',
-      studentId: '1',
-      registrationNumber: 'STU-2024-001',
-      assignmentTitle: 'Database Design Project',
-      assignmentId: 'a1',
-      course: 'Database Systems',
-      submittedAt: '2024-03-15T14:30:00Z',
-      status: 'pending',
-      maxGrade: 100,
-      attemptNumber: 1
-    },
-    {
-      id: '2',
-      studentName: 'Jane Smith',
-      studentId: '2',
-      registrationNumber: 'STU-2024-002',
-      assignmentTitle: 'SQL Query Optimization',
-      assignmentId: 'a2',
-      course: 'Database Systems',
-      submittedAt: '2024-03-14T10:15:00Z',
-      status: 'graded',
-      grade: 92,
-      maxGrade: 100,
-      attemptNumber: 1
-    },
-    {
-      id: '3',
-      studentName: 'Mike Johnson',
-      studentId: '3',
-      registrationNumber: 'STU-2024-003',
-      assignmentTitle: 'Database Design Project',
-      assignmentId: 'a1',
-      course: 'Database Systems',
-      submittedAt: '2024-03-16T23:45:00Z',
-      status: 'late',
-      maxGrade: 100,
-      attemptNumber: 2
-    },
-    {
-      id: '4',
-      studentName: 'Sarah Williams',
-      studentId: '4',
-      registrationNumber: 'STU-2024-004',
-      assignmentTitle: 'React Component Development',
-      assignmentId: 'a3',
-      course: 'Web Development',
-      submittedAt: '2024-03-13T16:20:00Z',
-      status: 'graded',
-      grade: 95,
-      maxGrade: 100,
-      attemptNumber: 1
-    },
-    {
-      id: '5',
-      studentName: 'David Brown',
-      studentId: '5',
-      registrationNumber: 'STU-2024-005',
-      assignmentTitle: 'SQL Query Optimization',
-      assignmentId: 'a2',
-      course: 'Database Systems',
-      submittedAt: '2024-03-15T09:30:00Z',
-      status: 'pending',
-      maxGrade: 100,
-      attemptNumber: 1
-    }
-  ];
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      setLoading(true);
+      try {
+        const data = await markingGradingService.getStudentSubmissions();
+        setSubmissions(data.map(mapSubmission));
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? `Failed to load submissions: ${error.message}`
+            : 'Failed to load submissions.'
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const courses = ['all', 'Database Systems', 'Web Development', 'Data Structures'];
-  const statuses = ['all', 'pending', 'graded', 'late'];
+    fetchSubmissions();
+  }, []);
+
+  // Courses and statuses are derived from the real data rather than hardcoded,
+  // since the set of courses/statuses is whatever the backend actually returns.
+  const courses = useMemo(() => {
+    const unique = Array.from(new Set(submissions.map(s => s.course).filter(Boolean)));
+    return ['all', ...unique];
+  }, [submissions]);
+
+  const statuses = ['all', 'pending', 'graded'];
 
   const filteredSubmissions = submissions.filter(submission => {
-    const matchesSearch = 
-      submission.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      submission.registrationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      submission.assignmentTitle.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    const matchesSearch =
+      submission.studentName.toLowerCase().includes(query) ||
+      submission.assignmentTitle.toLowerCase().includes(query);
     const matchesCourse = filterCourse === 'all' || submission.course === filterCourse;
     const matchesStatus = filterStatus === 'all' || submission.status === filterStatus;
-    
+
     return matchesSearch && matchesCourse && matchesStatus;
   });
 
@@ -141,7 +127,6 @@ export default function GradeSubmissions() {
     switch (status) {
       case 'pending': return <Clock className="h-4 w-4" />;
       case 'graded': return <CheckCircle className="h-4 w-4" />;
-      case 'late': return <AlertCircle className="h-4 w-4" />;
       default: return null;
     }
   };
@@ -150,18 +135,65 @@ export default function GradeSubmissions() {
     switch (status) {
       case 'pending': return 'secondary';
       case 'graded': return 'default';
-      case 'late': return 'destructive';
       default: return 'default';
     }
   };
 
   const pendingCount = submissions.filter(s => s.status === 'pending').length;
   const gradedCount = submissions.filter(s => s.status === 'graded').length;
-  const lateCount = submissions.filter(s => s.status === 'late').length;
 
-  const handleExport = () => {
-    console.log('Exporting submissions...');
+  const handleExport = async () => {
+    if (filteredSubmissions.length === 0) {
+      toast.error('There are no submissions to export.');
+      return;
+    }
+
+    try {
+      const XLSX = await import('xlsx');
+
+      const rows = filteredSubmissions.map(s => ({
+        'Student Name': s.studentName,
+        'Student ID': s.studentId,
+        'Course': s.course,
+        'Assignment/Assessment': s.assignmentTitle,
+        'Type': s.type,
+        'Submitted At': format(new Date(s.submittedAt), 'yyyy-MM-dd HH:mm'),
+        'Status': s.status,
+        'Grade': s.grade ?? '',
+        'Max Grade': s.maxGrade,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      worksheet['!cols'] = [
+        { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 28 },
+        { wch: 12 }, { wch: 18 }, { wch: 10 }, { wch: 8 }, { wch: 10 },
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Grades');
+      XLSX.writeFile(workbook, `grades-export-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+
+      toast.success('Grades exported successfully.');
+    } catch (error) {
+      toast.error('Failed to export grades.');
+    }
   };
+
+  const handleOpenSubmission = (submission: Submission) => {
+    navigate(`/instructor/marking/submission/${submission.id}`, {
+      state: { submissionType: submission.submissionType },
+    });
+  };
+
+  if (loading) {
+    return (
+      <InstructorLayout>
+        <div className="container py-8">
+          <p className="text-muted-foreground">Loading submissions...</p>
+        </div>
+      </InstructorLayout>
+    );
+  }
 
   return (
     <InstructorLayout>
@@ -181,7 +213,7 @@ export default function GradeSubmissions() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -215,17 +247,6 @@ export default function GradeSubmissions() {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Late Submissions</p>
-                  <p className="text-2xl font-bold">{lateCount}</p>
-                </div>
-                <AlertCircle className="h-8 w-8 text-red-500" />
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Filters */}
@@ -236,7 +257,7 @@ export default function GradeSubmissions() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by student name, registration number, or assignment..."
+                    placeholder="Search by student name or assignment..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -279,95 +300,80 @@ export default function GradeSubmissions() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Assignment</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Attempt</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Grade</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSubmissions.map((submission) => (
-                  <TableRow key={submission.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{submission.studentName}</p>
-                        <p className="text-sm text-muted-foreground font-mono">
-                          {submission.registrationNumber}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <p className="font-medium">{submission.assignmentTitle}</p>
-                    </TableCell>
-                    <TableCell>{submission.course}</TableCell>
-                    <TableCell className="text-sm">
-                      {format(new Date(submission.submittedAt), 'MMM dd, yyyy')}
-                      <br />
-                      <span className="text-muted-foreground">
-                        {format(new Date(submission.submittedAt), 'hh:mm a')}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        Attempt {submission.attemptNumber}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(submission.status)} className="gap-1">
-                        {getStatusIcon(submission.status)}
-                        {submission.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {submission.grade !== undefined ? (
-                        <div>
-                          <span className="font-bold text-lg">{submission.grade}</span>
-                          <span className="text-muted-foreground">/{submission.maxGrade}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Not graded</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onClick={() => navigate(`/instructor/course/${submission.course}/assignment/${submission.assignmentId}/submission/${submission.id}/grade`)}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            {submission.status === 'graded' ? 'Edit Grade' : 'Grade Now'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => navigate(`/instructor/submission/${submission.id}/view`)}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Submission
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => navigate(`/instructor/student/${submission.studentId}`)}
-                          >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Student Profile
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+            {filteredSubmissions.length === 0 ? (
+              <p className="text-muted-foreground text-sm py-8 text-center">
+                No submissions found.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Assignment</TableHead>
+                    <TableHead>Course</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Grade</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredSubmissions.map((submission) => (
+                    <TableRow key={submission.id}>
+                      <TableCell>
+                        <p className="font-medium">{submission.studentName}</p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-medium">{submission.assignmentTitle}</p>
+                      </TableCell>
+                      <TableCell>{submission.course}</TableCell>
+                      <TableCell className="text-sm">
+                        {format(new Date(submission.submittedAt), 'MMM dd, yyyy')}
+                        <br />
+                        <span className="text-muted-foreground">
+                          {format(new Date(submission.submittedAt), 'hh:mm a')}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusColor(submission.status)} className="gap-1">
+                          {getStatusIcon(submission.status)}
+                          {submission.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {submission.grade !== undefined && submission.grade !== null ? (
+                          <div>
+                            <span className="font-bold text-lg">{submission.grade}</span>
+                            <span className="text-muted-foreground">/{submission.maxGrade}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Not graded</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleOpenSubmission(submission)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              {submission.status === 'graded' ? 'Edit Grade' : 'Grade Now'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenSubmission(submission)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Submission
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
