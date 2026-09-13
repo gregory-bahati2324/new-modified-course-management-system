@@ -64,8 +64,10 @@ apiClient.interceptors.response.use(
         }
         return apiClient(originalRequest);
       } catch (refreshError) {
-        removeTokens();
-        window.location.href = '/auth/login';
+        // Refresh token is gone/invalid too — the session is truly over.
+        // Route through authService.logout() so history/back-button
+        // protection stays consistent no matter what triggered the logout.
+        authService.logout({ reason: 'expired' });
         return Promise.reject(refreshError);
       }
     }

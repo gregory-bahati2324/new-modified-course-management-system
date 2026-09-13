@@ -2,10 +2,12 @@ import apiClient, {
   setToken, 
   setRefreshToken, 
   removeTokens, 
+  getToken,
   handleApiError 
 } from './api';
 
 import { API_ENDPOINTS } from '@/config/api.config';
+import { isTokenExpired } from '@/lib/jwt';
 
 export type UserRole = 'student' | 'instructor' | 'admin';
 
@@ -52,6 +54,18 @@ export interface LoginResponse {
   token_type: string;
   user: UserProfile;
 }
+
+// All the extra keys other parts of the app stash in localStorage on
+// login (see pages/auth/Login.tsx). Logout must clear every one of
+// these or a stale value (e.g. user_role) can leak into the next
+// unauthenticated render.
+const AUX_STORAGE_KEYS = ['user_profile', 'user_role', 'user_id', 'user_name'];
+
+// Fired on the `window` whenever the app forces a logout (manual,
+// session-expired, or a 401 that couldn't be refreshed). AuthGuard /
+// useSessionTimeout listen for this so every tab & component reacts
+// immediately instead of polling localStorage.
+export const SESSION_ENDED_EVENT = 'app:session-ended';
 
 // ---------------------------
 // AUTH SERVICE CLASS
@@ -128,17 +142,56 @@ class AuthService {
     }
   }
 
+  /** Synchronous, cache-friendly read of the cached user (no network). */
+  getCachedUser(): UserProfile | null {
+    if (this.currentUser) return this.currentUser;
+    const cached = localStorage.getItem('user_profile');
+    if (!cached) return null;
+    try {
+      this.currentUser = JSON.parse(cached);
+      return this.currentUser;
+    } catch {
+      return null;
+    }
+  }
+
   // ---------------------------
   // LOGOUT
   // ---------------------------
-  logout(): void {
+  /**
+   * Ends the session everywhere and makes sure the browser's back
+   * button can never reveal an authenticated page again.
+   *
+   * `redirect` defaults to true. We intentionally use a *hard*
+   * `window.location.replace` instead of React Router's `navigate()`:
+   *   1. It fully unmounts the React app, wiping any in-memory
+   *      protected-page state (nothing left for back/forward-cache
+   *      to resurrect the "logged in" view from).
+   *   2. `.replace()` swaps the current history entry instead of
+   *      pushing a new one, so the logged-out user landing on
+   *      /auth/login can't hit "forward" back into the app either.
+   * AuthGuard's `pageshow` listener is the second line of defense in
+   * case a browser still restores an older tab state from bfcache.
+   */
+  logout(options: { redirect?: boolean; reason?: 'manual' | 'expired' } = {}): void {
+    const { redirect = true } = options;
+
     removeTokens();
-    localStorage.removeItem('user_profile');
+    AUX_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
     this.currentUser = null;
+
+    window.dispatchEvent(new CustomEvent(SESSION_ENDED_EVENT, { detail: options.reason ?? 'manual' }));
+
+    if (redirect) {
+      window.location.replace('/auth/login');
+    }
   }
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('auth_token');
+    const token = getToken();
+    if (!token) return false;
+    // A token that's present but expired is not a valid session.
+    return !isTokenExpired(token);
   }
 
   // ---------------------------
