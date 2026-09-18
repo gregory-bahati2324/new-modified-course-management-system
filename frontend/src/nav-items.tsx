@@ -1,8 +1,9 @@
-import { HomeIcon, BookOpen, Users, MessageSquare, Award, BarChart3, Settings, Calendar, FileText, Plus, Eye, Edit, FileQuestion, Shield, UserPlus, Upload, Download } from "lucide-react";
+import { HomeIcon, BookOpen, Users, MessageSquare, Award, BarChart3, Settings, Calendar, FileText, Plus, Eye, Edit, FileQuestion, Shield, UserPlus, Upload, Download, Bell } from "lucide-react";
 import Home from "./pages/Home.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import Profile from "./pages/Profile.tsx";
 import SettingsPage from "./pages/Settings.tsx";
+import Notifications from "./pages/Notifications.tsx";
 import StudentCourses from "./pages/student/Courses.tsx";
 import Enrollment from "./pages/student/Enrollment.tsx";
 import StudentAssignments from "./pages/student/Assignments.tsx";
@@ -152,6 +153,12 @@ export const navItems = [
     page: <StudentLayout><StudentProfile /></StudentLayout>,
   },
   {
+    title: "Student Notifications",
+    to: "/student/notifications",
+    icon: <Bell className="h-4 w-4" />,
+    page: <StudentLayout><Notifications /></StudentLayout>,
+  },
+  {
     title: "Course Learn",
     to: "/student/course/:courseId/learn",
     icon: <BookOpen className="h-4 w-4" />,
@@ -216,6 +223,12 @@ export const navItems = [
     to: "/instructor/analytics",
     icon: <BarChart3 className="h-4 w-4" />,
     page: <InstructorLayout><InstructorAnalytics /></InstructorLayout>,
+  },
+  {
+    title: "Instructor Notifications",
+    to: "/instructor/notifications",
+    icon: <Bell className="h-4 w-4" />,
+    page: <InstructorLayout><Notifications /></InstructorLayout>,
   },
   {
     title: "Schedule Session",
@@ -410,6 +423,12 @@ export const navItems = [
     to: "/admin/export-data",
     icon: <Download className="h-4 w-4" />,
     page: <AdminExportData />,
+  },
+  {
+    title: "Admin Notifications",
+    to: "/admin/notifications",
+    icon: <Bell className="h-4 w-4" />,
+    page: <AdminLayout><Notifications /></AdminLayout>,
   },
   {
     title: "Courses",

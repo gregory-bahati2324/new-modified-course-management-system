@@ -248,9 +248,7 @@ export default function AddLesson() {
   // ---------- Submit Lesson ----------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("COURSE ID:", courseId);
-    console.log("MODULE ID:", moduleId);
-
+    
 
     if (!moduleId) {
       return toast.error('Module ID is missing');
@@ -310,7 +308,7 @@ export default function AddLesson() {
         await lessonService.createLesson(moduleId, payload);
         toast.success('Lesson created successfully');
       }
-      navigate(`/instructor/course/${courseId}/manage`);
+      navigate(`/instructor/modules`);
     } catch (err: any) {
       console.error('Lesson creation error:', err);
 

@@ -12,8 +12,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { notificationService, AppNotification } from '@/services/notificationService';
+import { authService } from '@/services/authService';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { cn } from '@/lib/utils';
+
+// The notifications page is mounted per-role (see nav-items.tsx:
+// /student/notifications, /instructor/notifications,
+// /admin/notifications) so it renders under the right sidebar/layout —
+// there is no bare "/notifications" route. Route "View all" there
+// based on whoever is actually logged in.
+function getNotificationsPath(): string {
+  const role = authService.getCachedUser()?.role;
+  if (role === 'instructor') return '/instructor/notifications';
+  if (role === 'admin') return '/admin/notifications';
+  return '/student/notifications';
+}
 
 // Poll unread count every 45s (§32 — plain polling for v1, no WebSockets;
 // this interval can be swapped for a push-based subscription later
@@ -190,7 +203,7 @@ export function NotificationBell() {
         <button
           onClick={() => {
             setOpen(false);
-            navigate('/notifications');
+            navigate(getNotificationsPath());
           }}
           className="block w-full px-3 py-2.5 text-center text-sm text-primary hover:bg-accent"
         >

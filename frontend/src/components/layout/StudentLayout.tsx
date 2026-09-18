@@ -53,16 +53,13 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
       icon: BookOpen,
       children: [
         { title: 'All Courses', href: '/student/courses', icon: BookOpen },
-        { title: 'Browse Courses', href: '/courses', icon: GraduationCap },
-        { title: 'Course Progress', href: '/student/progress', icon: ClipboardCheck },
-      ],
+        ],
     },
     {
       title: 'Assignments',
       icon: FileText,
       children: [
         { title: 'All Assignments', href: '/student/assignments', icon: FileText },
-        { title: 'Submit Assignment', href: '/student/submit-assignment', icon: FileText },
         
       ],
     },
