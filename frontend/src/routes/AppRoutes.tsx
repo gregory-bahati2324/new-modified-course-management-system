@@ -74,6 +74,9 @@ import AdminCreateCourse from "@/pages/admin/CreateCourse";
 import AdminBulkImport from "@/pages/admin/BulkImport";
 import AdminExportData from "@/pages/admin/ExportData";
 
+// Notifications (shared across roles — see pages/Notifications.tsx)
+import Notifications from "@/pages/Notifications";
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -106,6 +109,7 @@ export default function AppRoutes() {
         <Route path="course/:courseId/learn" element={<CourseLearn />} />
         <Route path="discussions" element={<StudentDiscussions />} />
         <Route path="live-sessions" element={<StudentLiveSessions />} />
+        <Route path="notifications" element={<Notifications />} />
       </Route>
 
       {/* ================= INSTRUCTOR ================= */}
@@ -142,6 +146,7 @@ export default function AppRoutes() {
 
         <Route path="discussions" element={<InstructorDiscussions />} />
         <Route path="live-sessions" element={<InstructorLiveSessions />} />
+        <Route path="notifications" element={<Notifications />} />
       </Route>
 
       {/* ================= ADMIN ================= */}
@@ -156,6 +161,7 @@ export default function AppRoutes() {
         <Route path="create-course" element={<AdminCreateCourse />} />
         <Route path="bulk-import" element={<AdminBulkImport />} />
         <Route path="export-data" element={<AdminExportData />} />
+        <Route path="notifications" element={<Notifications />} />
       </Route>
 
       {/* 404 */}

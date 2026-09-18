@@ -1,4 +1,3 @@
-
 import { useState, ReactNode } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
@@ -177,14 +176,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <Header
-        isAuthenticated
-        user={{
-          name: 'Admin User',
-          email: 'admin@must.ac.tz',
-          role: 'admin',
-        }}
-      />
+      <Header />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}

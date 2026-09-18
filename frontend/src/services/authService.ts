@@ -11,17 +11,17 @@ import { isTokenExpired } from '@/lib/jwt';
 
 export type UserRole = 'student' | 'instructor' | 'admin';
 
-// The user object returned from the backend
+// The user object returned from the backend.
+// Kept in exact sync with backend/app/schemas.py's UserResponse — the
+// backend has no avatar/bio/created_at/is_active fields, so we don't
+// pretend it does here anymore.
 export interface UserProfile {
   id: string;
   registrationNumber: string;
   first_name: string;
   last_name: string;
   role: UserRole;
-  avatar_url?: string;
-  bio?: string;
-  created_at: string;
-  is_active: boolean;
+  newsletter: boolean;
 }
 
 // ---------------------------
@@ -155,6 +155,24 @@ class AuthService {
     }
   }
 
+  /**
+   * Always hits the backend (GET /auth/me) instead of trusting the
+   * cache. Use this anywhere "real, current backend data" matters —
+   * the header's user-details label, a settings/account screen, etc.
+   * Updates the cache too, so getCachedUser()/getCurrentUser() pick up
+   * the fresh values afterwards.
+   */
+  async fetchUserDetails(): Promise<UserProfile> {
+    try {
+      const response = await apiClient.get<UserProfile>(API_ENDPOINTS.auth.me);
+      this.currentUser = response.data;
+      localStorage.setItem('user_profile', JSON.stringify(this.currentUser));
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
   // ---------------------------
   // LOGOUT
   // ---------------------------
@@ -221,6 +239,39 @@ class AuthService {
       this.currentUser = null;
       throw new Error(handleApiError(error));
     }
+  }
+
+  // ---------------------------
+  // SETTINGS > SECURITY
+  // ---------------------------
+
+  /** PUT /auth/change-password — verified server-side against the current password. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<string> {
+    try {
+      const response = await apiClient.put<{ message: string }>(
+        API_ENDPOINTS.auth.changePassword,
+        { current_password: currentPassword, new_password: newPassword }
+      );
+      return response.data.message;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  /**
+   * DELETE /auth/me — the backend re-checks the password before
+   * deleting the row. Once the backend confirms deletion we end the
+   * local session the same way a normal logout does (clears storage,
+   * fires SESSION_ENDED_EVENT, hard-redirects to /auth/login so the
+   * back button can't reveal the now-deleted account's pages).
+   */
+  async deleteAccount(password: string): Promise<void> {
+    try {
+      await apiClient.delete(API_ENDPOINTS.auth.deleteAccount, { data: { password } });
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+    this.logout({ reason: 'manual' });
   }
 }
 

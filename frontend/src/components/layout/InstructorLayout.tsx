@@ -153,14 +153,7 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <Header
-        isAuthenticated
-        user={{
-          name: 'Dr. Sarah Johnson',
-          email: 'sarah.johnson@must.ac.tz',
-          role: 'instructor',
-        }}
-      />
+      <Header />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}

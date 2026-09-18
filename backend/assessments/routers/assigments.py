@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
@@ -8,6 +8,8 @@ from crud.assigments import build_assignment_summary, create_assignment, delete_
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.enrollment_client import get_student_enrollments, get_course_details
 from services.grading_client import get_assignment_grade
+from services.course_client import get_course_enrolled_student_ids
+from services.notification_client import send_notification_event
 from database import get_db
 from utils.auth import get_current_user_token, require_role
 
@@ -28,6 +30,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("", response_model=AssignmentResponse)
 async def create_assignment_route(
+    background_tasks: BackgroundTasks,
     title: str = Form(...),
     description: str = Form(""),
     instructions: str = Form(""),
@@ -69,7 +72,31 @@ async def create_assignment_route(
         "file_url": file_url,
     }
 
-    return create_assignment(db, assignment_data, instructor_id)
+    assignment = create_assignment(db, assignment_data, instructor_id)
+
+    # ---- Notification: ASSIGNMENT_CREATED -> enrolled students (§5, §46) ----
+    # Only for assignments that are actually visible to students — a
+    # "draft" assignment shouldn't ping anyone (matches the existing
+    # get_published_assignments()/status=="published" convention used
+    # elsewhere in this file).
+    if status == "published":
+        recipient_ids = get_course_enrolled_student_ids(course_id, token_data.raw_token)
+        if recipient_ids:
+            background_tasks.add_task(
+                send_notification_event,
+                event_type="ASSIGNMENT_CREATED",
+                source_service="assessment_service",
+                recipient_ids=recipient_ids,
+                actor_id=instructor_id,
+                entity_type="assignment",
+                entity_id=assignment.id,
+                course_id=course_id,
+                title="New assignment posted",
+                message=f"A new assignment, \"{title}\", has been posted.",
+                action_url="/student/assignments",
+            )
+
+    return assignment
 # -------------------------------
 # GET ALL ASSIGNMENTS FOR LOGGED IN INSTRUCTOR
 # -------------------------------
@@ -329,6 +356,7 @@ async def get_student_assignment_detail_route(
 @router.post("/{assignment_id}/submit", response_model=SubmissionResponse)
 async def submit_assignment(
     assignment_id: str,
+    background_tasks: BackgroundTasks,
     submission_text: str = Form(""),
     file: UploadFile = File(None),
 
@@ -347,6 +375,23 @@ async def submit_assignment(
 
     if not submission:
         raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # ---- Notification: ASSIGNMENT_SUBMITTED -> instructor (§5, §46) ----
+    assignment = submission.assignment  # relationship already loaded (see crud)
+    if assignment and assignment.instructor_id:
+        background_tasks.add_task(
+            send_notification_event,
+            event_type="ASSIGNMENT_SUBMITTED",
+            source_service="assessment_service",
+            recipient_ids=[assignment.instructor_id],
+            actor_id=student_id,
+            entity_type="assignment_submission",
+            entity_id=submission.id,
+            course_id=assignment.course_id,
+            title="New submission to grade",
+            message=f"A student submitted \"{assignment.title}\".",
+            action_url="/instructor/grade",
+        )
 
     return submission   
 

@@ -1,5 +1,3 @@
-
-
 export const API_CONFIG = {
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
   useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
@@ -42,20 +40,27 @@ export const API_CONFIG_SCHEDULING = {
   timeout: 30000,
 };
 
+export const API_CONFIG_NOTIFICATION = {
+  baseURL: import.meta.env.VITE_API_NOTIFICATION_BASE_URL || 'http://localhost:8007',
+  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  timeout: 30000,
+};
+
 /**
  * API Endpoints
  * Define all API endpoints used in the application
  */
 
 export const API_ENDPOINTS = {
-  // Authentication endpoints - maps to FastAPI /api/auth/*
+  // Authentication endpoints - maps to the auth service's /auth/* router
+  // (it has no "/api" prefix - see backend/app/main.py's include_router call).
   auth: {
     login: '/auth/login',
     register: '/auth/register',
-    logout: '/api/auth/logout',
-    refresh: '/api/auth/refresh',
-    me: '/api/auth/me',
-
+    refresh: '/auth/refresh',
+    me: '/auth/me',
+    changePassword: '/auth/change-password',
+    deleteAccount: '/auth/me',
   },
 
   // Course endpoints - maps to FastAPI /api/courses/*
@@ -170,6 +175,17 @@ export const API_ENDPOINTS = {
     course: (id: string) => `/sessions/course/${id}`,
     upcoming: '/sessions/upcoming',
     my: '/sessions/my'
+  },
+
+  // Notification endpoints - maps to the notification microservice's /notifications/*
+  notifications: {
+    list: '/notifications',
+    unread: '/notifications/unread',
+    count: '/notifications/count',
+    detail: (id: string) => `/notifications/${id}`,
+    markRead: (id: string) => `/notifications/${id}/read`,
+    markAllRead: '/notifications/read-all',
+    delete: (id: string) => `/notifications/${id}`,
   },
 
   // Forum endpoints - maps to FastAPI /api/forums/*

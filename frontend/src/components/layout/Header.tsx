@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Search, User, Menu, X, Globe, LogOut } from 'lucide-react';
+import { Search, User, Menu, X, Globe, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,12 +13,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { authService, SESSION_ENDED_EVENT, UserRole } from '@/services/authService';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface HeaderUser {
   name: string;
-  email: string;
+  registrationNumber: string;
   role: UserRole;
-  avatar?: string;
 }
 
 interface HeaderProps {
@@ -40,9 +40,8 @@ function readAuthFromStorage(): { isAuthenticated: boolean; user?: HeaderUser } 
     isAuthenticated: true,
     user: {
       name: `${cached.first_name} ${cached.last_name}`,
-      email: cached.registrationNumber,
+      registrationNumber: cached.registrationNumber,
       role: cached.role,
-      avatar: cached.avatar_url,
     },
   };
 }
@@ -63,6 +62,36 @@ export function Header({ isAuthenticated, user }: HeaderProps) {
     return () => {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener(SESSION_ENDED_EVENT, onStorage);
+    };
+  }, [isAuthenticated]);
+
+  // The "user details" shown in the dropdown label should be real,
+  // current backend data — not just whatever was cached at login
+  // time. Cache paints instantly (above), then this quietly refreshes
+  // it from GET /auth/me once per mount.
+  useEffect(() => {
+    if (isAuthenticated !== undefined) return; // parent is controlling this explicitly
+    if (!authService.isAuthenticated()) return;
+
+    let cancelled = false;
+    authService.fetchUserDetails()
+      .then((fresh) => {
+        if (cancelled) return;
+        setSelfDetected({
+          isAuthenticated: true,
+          user: {
+            name: `${fresh.first_name} ${fresh.last_name}`,
+            registrationNumber: fresh.registrationNumber,
+            role: fresh.role,
+          },
+        });
+      })
+      .catch(() => {
+        // Cache-derived state (already painted) stays as the fallback.
+      });
+
+    return () => {
+      cancelled = true;
     };
   }, [isAuthenticated]);
 
@@ -128,65 +157,34 @@ export function Header({ isAuthenticated, user }: HeaderProps) {
 
           {effectiveIsAuthenticated ? (
             <>
-              {/* Notifications */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="h-4 w-4" />
-                    <Badge className="absolute -top-1 -right-1 px-1 min-w-0 h-5 text-xs">
-                      3
-                    </Badge>
-                    <span className="sr-only">Notifications</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80 bg-white text-black shadow-lg rounded-md z-50">
-                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium">New course available</p>
-                      <p className="text-xs text-muted-foreground">Advanced React Development is now live</p>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium">Assignment due tomorrow</p>
-                      <p className="text-xs text-muted-foreground">Database Design Project - submit by 11:59 PM</p>
-                    </div>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Notifications — real data from the notification
+                  microservice, not the previous hard-coded "3" badge
+                  and two static items. */}
+              <NotificationBell />
 
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    {effectiveUser?.avatar ? (
-                      <img
-                        src={effectiveUser.avatar}
-                        alt={effectiveUser.name}
-                        className="h-6 w-6 rounded-full"
-                      />
-                    ) : (
-                      <User className="h-4 w-4" />
-                    )}
+                    <User className="h-4 w-4" />
                     <span className="sr-only">User menu</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-white text-black shadow-lg rounded-md z-50">
+                  {/* User details — sourced from the backend (GET /auth/me),
+                      never mock data. */}
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium">{effectiveUser?.name}</p>
-                      <p className="text-xs text-muted-foreground">{effectiveUser?.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Reg No: {effectiveUser?.registrationNumber}
+                      </p>
                       <Badge variant="secondary" className="w-fit text-xs">
                         {effectiveUser?.role}
                       </Badge>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile">Profile</Link>
-                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/settings">Settings</Link>
                   </DropdownMenuItem>

@@ -47,4 +47,24 @@ class RefreshTokenRequest(BaseModel):
 # Response for refresh token
 class RefreshTokenResponse(BaseModel):
     access_token: str
-    token_type: str    
+    token_type: str
+
+# ----------------------------------------------------------------------
+# Account management (Settings > Security)
+# ----------------------------------------------------------------------
+
+# Request body for changing the logged-in user's password
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+# Request body for deleting the logged-in user's account.
+# Requiring the password again (even though they're already authenticated)
+# guards against someone deleting an account from a session left open on
+# a shared/unlocked device.
+class DeleteAccountRequest(BaseModel):
+    password: str
+
+# Generic simple message response, used by the two endpoints above
+class MessageResponse(BaseModel):
+    message: str

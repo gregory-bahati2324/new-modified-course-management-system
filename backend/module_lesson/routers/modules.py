@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from fastapi import Request
 from sqlalchemy.orm import Session
 from database import get_db
@@ -14,6 +14,10 @@ import shutil
 import os
 import uuid
 
+from services.notification_client import send_notification_event
+from services.course_client import get_course_enrolled_student_ids
+from utils.optional_auth import get_bearer_token, get_actor_id_best_effort
+
 router = APIRouter()
 
 # ---------------------
@@ -22,8 +26,31 @@ router = APIRouter()
 module_router = APIRouter(prefix="/modules", tags=["Modules"])
 
 @module_router.post("/", summary="Create module")
-def create_module_route(data: ModuleCreate, db: Session = Depends(get_db)):
-    return create_module(db, data)
+def create_module_route(data: ModuleCreate, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    module = create_module(db, data)
+
+    # ---- Notification: MODULE_CREATED -> enrolled students (§4, §46) ----
+    # Best-effort: only fires if the request carried a usable Bearer token
+    # (see utils/optional_auth.py) and course_service can be reached.
+    # Neither failure blocks module creation, which has already committed.
+    token = get_bearer_token(request)
+    recipient_ids = get_course_enrolled_student_ids(module.course_id, token)
+    if recipient_ids:
+        background_tasks.add_task(
+            send_notification_event,
+            event_type="MODULE_CREATED",
+            source_service="module_lesson_service",
+            recipient_ids=recipient_ids,
+            actor_id=get_actor_id_best_effort(token),
+            entity_type="module",
+            entity_id=module.id,
+            course_id=module.course_id,
+            title="New module added",
+            message=f"A new module, \"{module.title}\", was added to your course.",
+            action_url=f"/student/course/{module.course_id}/learn",
+        )
+
+    return module
 
 @module_router.get("/", summary="Get all modules")
 def get_all_modules_route(db: Session = Depends(get_db)):
@@ -78,8 +105,30 @@ def reorder_modules_route(data: ModuleReorderRequest, db: Session = Depends(get_
 # ---------------------
 
 @module_router.post("/{module_id}/lessons", response_model=LessonResponse)
-def create_lesson_route(data: LessonCreate, module_id: str, db: Session = Depends(get_db)):
-    return create_lesson(db, module_id, data)
+def create_lesson_route(data: LessonCreate, module_id: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    lesson = create_lesson(db, module_id, data)
+
+    # ---- Notification: LESSON_CREATED -> enrolled students (§4, §46) ----
+    module = get_module(db, module_id)
+    if module:
+        token = get_bearer_token(request)
+        recipient_ids = get_course_enrolled_student_ids(module.course_id, token)
+        if recipient_ids:
+            background_tasks.add_task(
+                send_notification_event,
+                event_type="LESSON_CREATED",
+                source_service="module_lesson_service",
+                recipient_ids=recipient_ids,
+                actor_id=get_actor_id_best_effort(token),
+                entity_type="lesson",
+                entity_id=lesson.id,
+                course_id=module.course_id,
+                title="New lesson available",
+                message=f"A new lesson, \"{lesson.title}\", is now available.",
+                action_url=f"/student/course/{module.course_id}/learn",
+            )
+
+    return lesson
 
 @module_router.get("/{module_id}/lessons", response_model=List[LessonResponse])
 def get_lessons_by_module_route(module_id: str, request: Request, db: Session = Depends(get_db)):

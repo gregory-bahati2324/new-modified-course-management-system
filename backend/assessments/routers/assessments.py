@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, Form, UploadFile, File, Request, HTTPException
+from fastapi import APIRouter, Depends, Form, UploadFile, File, Request, HTTPException, BackgroundTasks
 import json
 from sqlalchemy.orm import Session
-from models.assessments import Question
+from models.assessments import Question, Assessment
 from database import get_db
 from schemas.assessments import (AssessmentCreate, 
             SaveProgressRequest,
@@ -27,6 +27,8 @@ from crud.questions import list_questions_for_assessment
 from utils.auth import require_role, get_current_user_token, security
 from services.enrollment_client import get_student_enrollments, get_course_details
 from services.assessment_status import calculate_student_status
+from services.course_client import get_course_enrolled_student_ids
+from services.notification_client import send_notification_event
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import os
 import random
@@ -38,11 +40,32 @@ get_current_instructor = require_role(["instructor", "admin"])
 @router.post("", response_model=AssessmentResponse)
 def create_assessment_route(
     data: AssessmentCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     token_data = Depends(get_current_instructor)
 ):
     instructor_id = token_data.sub
-    return create_assessment(db, data, instructor_id)
+    assessment = create_assessment(db, data, instructor_id)
+
+    # ---- Notification: ASSESSMENT_CREATED -> enrolled students (§6, §46) ----
+    if data.status == "published" and data.course_id:
+        recipient_ids = get_course_enrolled_student_ids(data.course_id, token_data.raw_token)
+        if recipient_ids:
+            background_tasks.add_task(
+                send_notification_event,
+                event_type="ASSESSMENT_CREATED",
+                source_service="assessment_service",
+                recipient_ids=recipient_ids,
+                actor_id=instructor_id,
+                entity_type="assessment",
+                entity_id=str(assessment.id),
+                course_id=data.course_id,
+                title="New exam available",
+                message=f"A new exam, \"{data.title}\", is now available.",
+                action_url="/student/exams",
+            )
+
+    return assessment
 
 @router.get("", response_model=list[AssessmentResponse])
 def get_instructor_assessments(
@@ -247,6 +270,7 @@ def save_progress_route(
 @router.post("/attempts/submit")
 async def submit_exam_route(
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     token = Depends(get_current_user_token)
 ):
@@ -334,6 +358,23 @@ async def submit_exam_route(
         final_answers,
         time_taken
     )
+
+    # ---- Notification: ASSESSMENT_SUBMITTED -> instructor (§6, §46) ----
+    assessment = db.query(Assessment).filter(Assessment.id == attempt.assessment_id).first()
+    if assessment and assessment.instructor_id:
+        background_tasks.add_task(
+            send_notification_event,
+            event_type="ASSESSMENT_SUBMITTED",
+            source_service="assessment_service",
+            recipient_ids=[assessment.instructor_id],
+            actor_id=token.sub,
+            entity_type="assessment_attempt",
+            entity_id=str(attempt.id),
+            course_id=assessment.course_id,
+            title="New exam submission to mark",
+            message=f"A student submitted \"{assessment.title}\".",
+            action_url="/instructor/marking",
+        )
 
     return {
         "message": "Exam submitted successfully",

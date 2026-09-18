@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -25,6 +25,7 @@ from services.aggregator import (
     get_student_submission_details,
     get_submission_details
 )
+from services.notification_client import send_notification_event
 
 router = APIRouter()
 
@@ -60,16 +61,39 @@ def submission_details(
 @router.post("/assignments/grade", response_model=AssignmentGradeResponse)
 def grade_assignment(
     payload: AssignmentGradeCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     token=Depends(get_current_user_token)
 ):
     instructor_id = token.sub
 
-    return upsert_assignment_grade(
+    grade = upsert_assignment_grade(
         db,
         payload.dict(),
         instructor_id
     )
+
+    # ---- Notification: ASSIGNMENT_GRADED -> student (§7, §46) ----
+    # Only when the instructor actually publishes the grade — an
+    # unpublished/pending grade isn't visible to the student yet, so
+    # notifying now would point them at something they can't see.
+    if payload.is_published:
+        background_tasks.add_task(
+            send_notification_event,
+            event_type="ASSIGNMENT_GRADED",
+            source_service="marking_grading_service",
+            recipient_ids=[payload.student_id],
+            actor_id=instructor_id,
+            entity_type="assignment_grade",
+            entity_id=grade.id,
+            course_id=payload.course_id,
+            title="Assignment graded",
+            message=f"Your assignment has been graded: {payload.score}/{payload.max_score}.",
+            action_url="/student/grades",
+            priority="HIGH",
+        )
+
+    return grade
 
 
 @router.get("/assignments/{submission_id}/grade")
@@ -91,16 +115,36 @@ def get_assignment_grade_route(
 @router.post("/assessments/grade", response_model=AssessmentGradeResponse)
 def grade_assessment(
     payload: AssessmentGradeCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     token=Depends(get_current_user_token)
 ):
     instructor_id = token.sub
 
-    return upsert_assessment_grade(
+    grade = upsert_assessment_grade(
         db,
         payload.dict(),
         instructor_id
     )
+
+    # ---- Notification: ASSESSMENT_GRADED -> student (§7, §46) ----
+    if payload.is_published:
+        background_tasks.add_task(
+            send_notification_event,
+            event_type="ASSESSMENT_GRADED",
+            source_service="marking_grading_service",
+            recipient_ids=[payload.student_id],
+            actor_id=instructor_id,
+            entity_type="assessment_grade",
+            entity_id=grade.id,
+            course_id=payload.course_id,
+            title="Exam result published",
+            message=f"Your exam has been graded: {payload.score}/{payload.max_score}.",
+            action_url="/student/exam-history",
+            priority="HIGH",
+        )
+
+    return grade
 
 
 @router.get("/assessments/{attempt_id}/grade", response_model=AssessmentGradeResponse)

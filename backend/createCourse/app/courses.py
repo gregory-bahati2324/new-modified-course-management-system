@@ -1,9 +1,10 @@
 # app/routers/courses.py
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from app import auth_utils
 from app import crud, database, schemas
+from app.services.notification_client import send_notification_event
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
 
@@ -116,7 +117,8 @@ def delete_course(course_id: str, db: Session = Depends(database.get_db), token=
              response_model=schemas.EnrollmentOut, 
              status_code=status.HTTP_201_CREATED,
              dependencies=[Depends(auth_utils.require_role(["student", "admin"]))])
-def enroll_in_course(course_id: str, db: Session = Depends(database.get_db),
+def enroll_in_course(course_id: str, background_tasks: BackgroundTasks,
+                     db: Session = Depends(database.get_db),
                      token=Depends(auth_utils.get_current_user_token)):
 
     enrollment_in = schemas.EnrollmentCreate(
@@ -124,6 +126,27 @@ def enroll_in_course(course_id: str, db: Session = Depends(database.get_db),
         student_id=token.sub
     )
     enrollment = crud.create_enrollment(db, enrollment_in)
+
+    # ---- Notification: COURSE_ENROLLED -> course instructor (§3, §46) ----
+    # Fired only after create_enrollment has already committed. Failure
+    # here (network error, notification service down) never surfaces to
+    # the student — enrollment has already succeeded by this point.
+    course = crud.get_course(db, course_id)
+    if course and course.instructor_id:
+        background_tasks.add_task(
+            send_notification_event,
+            event_type="COURSE_ENROLLED",
+            source_service="course_service",
+            recipient_ids=[course.instructor_id],
+            actor_id=token.sub,
+            entity_type="course",
+            entity_id=course_id,
+            course_id=course_id,
+            title="New student enrolled",
+            message=f"A new student enrolled in \"{course.title}\".",
+            action_url="/instructor/students",
+        )
+
     return schemas.EnrollmentOut.from_orm(enrollment)
 
 @router.get("/enrollments/student", response_model=List[schemas.EnrollmentOut],

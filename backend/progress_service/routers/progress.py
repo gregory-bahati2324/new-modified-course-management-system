@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from database import get_db
@@ -29,6 +29,11 @@ from services.course_stucture import (
     get_total_lessons_in_module
 )
 from services.version_syc import sync_lesson_versions
+from services.notification_client import send_notification_event
+
+# Milestones worth telling a student about (§8) — deliberately NOT every
+# percentage tick, only these four.
+PROGRESS_MILESTONES = (25, 50, 75, 100)
 
 
 router = APIRouter(prefix="/progress", tags=["Progress"])
@@ -56,6 +61,7 @@ def start_lesson_route(
 def complete_lesson_route(
     lesson_id: str,
     data: LessonProgressCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: TokenData = Depends(get_current_user_token),
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()
@@ -87,7 +93,7 @@ def complete_lesson_route(
         total_lessons=total_lessons_module
     )
 
-    recalculate_course_progress(
+    course_progress = recalculate_course_progress(
         db=db,
         student_id=student_id,
         course_id=data.course_id,
@@ -95,6 +101,47 @@ def complete_lesson_route(
         total_lessons=total_lessons_course,
         token=token
     )
+
+    # ---- Notification: COURSE_PROGRESS_MILESTONE / COURSE_COMPLETED (§8, §46) ----
+    # Only fires from the "complete a lesson" action, not from every
+    # course-progress page load (get_course_progress_route below also
+    # calls recalculate_course_progress, but merely viewing progress
+    # shouldn't generate a notification).
+    old_pct = course_progress.previous_progress_percentage
+    new_pct = course_progress.progress_percentage
+    just_completed = course_progress.is_completed and not course_progress.was_completed
+
+    if just_completed:
+        background_tasks.add_task(
+            send_notification_event,
+            event_type="COURSE_COMPLETED",
+            source_service="progress_service",
+            recipient_ids=[student_id],
+            entity_type="course",
+            entity_id=data.course_id,
+            course_id=data.course_id,
+            title="Course completed!",
+            message="Congratulations — you've completed the course.",
+            action_url="/student/grades",
+            priority="HIGH",
+        )
+    else:
+        crossed = [m for m in PROGRESS_MILESTONES if old_pct < m <= new_pct]
+        if crossed:
+            milestone = max(crossed)
+            background_tasks.add_task(
+                send_notification_event,
+                event_type="COURSE_PROGRESS_MILESTONE",
+                source_service="progress_service",
+                recipient_ids=[student_id],
+                entity_type="course",
+                entity_id=data.course_id,
+                course_id=data.course_id,
+                title="Progress milestone reached",
+                message=f"You've reached {milestone}% course completion. Keep going!",
+                action_url=f"/student/course/{data.course_id}/learn",
+                data={"milestone": milestone},
+            )
 
     return progress
 

@@ -31,3 +31,17 @@ def authenticate_user(db: Session, registrationNumber: str, password: str):
 
 def get_student_by_id(db: Session, student_id: str):
     return db.query(User).filter(User.id == student_id, User.role == "student").first()
+
+
+def update_user_password(db: Session, user: User, new_password: str) -> User:
+    """Hashes and persists a new password for an already-authenticated user."""
+    user.password = hash_password(new_password)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def delete_user(db: Session, user: User) -> None:
+    """Permanently removes the user's account row."""
+    db.delete(user)
+    db.commit()

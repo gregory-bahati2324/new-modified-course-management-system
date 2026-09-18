@@ -166,7 +166,6 @@ def recalculate_course_progress(
         student_lesson_progress.StudentLessonProgress.course_id == course_id,
         student_lesson_progress.StudentLessonProgress.is_completed.is_(True)
     ).count()
-
     # -----------------------------
     # LESSON PROGRESS
     # -----------------------------
@@ -263,6 +262,12 @@ def recalculate_course_progress(
         )
         db.add(course_progress)
 
+    # Captured BEFORE mutation so the caller (routers/progress.py) can
+    # detect a milestone threshold crossing (25/50/75/100) without a
+    # second query. 0 for a brand-new row, matching "no progress yet".
+    previous_progress_percentage = course_progress.progress_percentage or 0
+    was_completed = course_progress.is_completed or False
+
     course_progress.completed_modules = completed_modules
     course_progress.total_modules = total_modules
     course_progress.completed_lessons = completed_lessons
@@ -284,3 +289,13 @@ def recalculate_course_progress(
         course_progress.completed_at = datetime.utcnow()
 
     db.commit()
+    db.refresh(course_progress)
+
+    # Attach these as plain attributes (not DB columns) so the router can
+    # read them off the same object it already has, rather than this
+    # function returning a bespoke tuple that every other caller of
+    # recalculate_course_progress would also need to unpack.
+    course_progress.previous_progress_percentage = previous_progress_percentage
+    course_progress.was_completed = was_completed
+
+    return course_progress
