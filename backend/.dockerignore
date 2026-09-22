@@ -1,0 +1,17 @@
+# Build context for auth_service is ./backend -> exclude every other service and stray files
+assessments/
+createCourse/
+marking_grading/
+module_lesson/
+notification_service/
+progress_service/
+scheduling_service/
+notification_client.py
+*.sql
+__pycache__/
+*.py[cod]
+**/__pycache__/
+.env
+.env.*
+*.db
+.git

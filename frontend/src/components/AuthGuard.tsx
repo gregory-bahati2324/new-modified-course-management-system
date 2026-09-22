@@ -8,7 +8,7 @@ import { authService, SESSION_ENDED_EVENT } from '@/services/authService';
  * default for an LMS is "deny unless explicitly public".
  * Add any other public marketing/browse routes here if needed.
  */
-const PUBLIC_PATHS = ['/', '/auth/login', '/auth/register', '/admin/login'];
+const PUBLIC_PATHS = ['/', '/login', '/register', '/admin/login'];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(
@@ -46,7 +46,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     if (isPublicPath(location.pathname)) return;
 
     if (!authService.isAuthenticated()) {
-      navigate('/auth/login', { replace: true, state: { from: location.pathname } });
+      navigate('/login', { replace: true, state: { from: location.pathname } });
     }
   };
 

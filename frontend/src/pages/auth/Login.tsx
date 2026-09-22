@@ -19,7 +19,7 @@ export default function Login() {
   // If the user was redirected here from somewhere else (e.g. clicking
   // "Enroll" on a course while logged out), send them back there afterwards.
   const redirectTo = (location.state as { from?: string } | null)?.from;
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -90,7 +90,7 @@ export default function Login() {
                 Sign in to your MUST Learning Hub account
               </CardDescription>
               <Badge variant="secondary" className="text-xs">
-                {role === 'instructor' ? 'Instructor Portal' : 
+                {role === 'instructor' ? 'Instructor Portal' :
                  role === 'admin' ? 'Admin Portal' : 'Student Portal'}
               </Badge>
             </div>
@@ -100,8 +100,8 @@ export default function Login() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="identifier">
-                  {role === 'admin' ? 'Email Address' : 
-                   role === 'instructor' ? 'Staff Registration Number' : 
+                  {role === 'admin' ? 'Email Address' :
+                   role === 'instructor' ? 'Staff Registration Number' :
                    'Student Registration Number'}
                 </Label>
                 <div className="relative">
@@ -113,8 +113,8 @@ export default function Login() {
                   <Input
                     id="identifier"
                     type={role === 'admin' ? 'email' : 'text'}
-                    placeholder={role === 'admin' ? 'admin@must.ac.tz' : 
-                                role === 'instructor' ? 'STAFF-2024-001' : 
+                    placeholder={role === 'admin' ? 'admin@must.ac.tz' :
+                                role === 'instructor' ? 'STAFF-2024-001' :
                                 '2024-01-12345'}
                     value={formData.identifier}
                     onChange={(e) => setFormData({...formData, identifier: e.target.value})}
@@ -154,7 +154,7 @@ export default function Login() {
                   <Checkbox
                     id="remember"
                     checked={formData.rememberMe}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setFormData({...formData, rememberMe: checked as boolean})
                     }
                   />
@@ -162,8 +162,8 @@ export default function Login() {
                     Remember me
                   </Label>
                 </div>
-                <Link 
-                  to="/auth/forgot-password" 
+                <Link
+                  to="/auth/forgot-password"
                   className="text-sm text-primary hover:underline"
                 >
                   Forgot password?
@@ -180,15 +180,15 @@ export default function Login() {
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
-                
+
               </div>
 
               <div className="text-center text-sm">
                 <span className="text-muted-foreground">
                   Don't have an account?{' '}
                 </span>
-                <Link 
-                  to="/auth/register" 
+                <Link
+                  to="/register"
                   className="text-primary hover:underline font-medium"
                 >
                   Sign up

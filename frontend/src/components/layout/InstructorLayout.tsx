@@ -73,7 +73,11 @@ export function InstructorLayout({ children }: InstructorLayoutProps) {
         { title: 'Grade Submissions', href: '/instructor/grade' },
       ],
     },
-    
+    {
+      title: "Student Enrolled",
+      href: "/instructor/students",
+      icon: Users,
+    },
     
     {
       title: 'Schedule',

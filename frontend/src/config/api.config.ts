@@ -1,48 +1,69 @@
+/**
+ * API base URLs
+ *
+ * PRODUCTION (docker / AWS): every VITE_*_BASE_URL is left empty, so the browser calls the SAME
+ * origin it loaded the page from ("/auth/login", "/modules", "/api/courses/..."). The nginx
+ * container in front of the app routes each path prefix to the right microservice, so there is
+ * no CORS, no mixed-content and no hard-coded host anywhere in the bundle.
+ *
+ * LOCAL DEV (`npm run dev`): if a variable is not defined at all, we fall back to the service's
+ * published localhost port, exactly like before. Setting a variable to "" or "/" forces
+ * same-origin, setting it to a full URL (https://api.example.com) forces that host.
+ */
+const trimSlash = (v: string) => v.replace(/\/+$/, '');
+
+const resolveBase = (value: string | undefined, devDefault: string): string => {
+  if (value !== undefined) return trimSlash(value); // "", "/" -> "" (same origin)
+  return import.meta.env.DEV ? devDefault : '';      // production build: same origin
+};
+
+const useMockData = import.meta.env.VITE_USE_MOCK_DATA === 'true';
+
 export const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
-  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  baseURL: resolveBase(import.meta.env.VITE_API_BASE_URL, 'http://localhost:8000'),
+  useMockData,
   timeout: 30000,
 };
 
 export const API_CONFIG_COURSE = {
-  baseURL: import.meta.env.VITE_API_COURSE_BASE_URL_COURSE || 'http://localhost:8001',
-  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  baseURL: resolveBase(import.meta.env.VITE_API_COURSE_BASE_URL_COURSE, 'http://localhost:8001'),
+  useMockData,
   timeout: 30000,
 };
 
 export const API_CONFIG_MODULE_LESSON = {
-  baseURL: import.meta.env.VITE_API_MODULE_LESSON_BASE_URL || 'http://localhost:8002',
-  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  baseURL: resolveBase(import.meta.env.VITE_API_MODULE_LESSON_BASE_URL, 'http://localhost:8002'),
+  useMockData,
   timeout: 30000,
 };
 
 export const API_CONFIG_ASSIGNMENT = {
-  baseURL: import.meta.env.VITE_API_ASSIGNMENT_BASE_URL || 'http://localhost:8003',
-  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  baseURL: resolveBase(import.meta.env.VITE_API_ASSIGNMENT_BASE_URL, 'http://localhost:8003'),
+  useMockData,
   timeout: 30000,
 };
 
 export const API_CONFIG_PROGRESS = {
-  baseURL: import.meta.env.VITE_API_PROGRESS_BASE_URL || 'http://localhost:8004',
-  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  baseURL: resolveBase(import.meta.env.VITE_API_PROGRESS_BASE_URL, 'http://localhost:8004'),
+  useMockData,
   timeout: 30000,
 };
 
 export const API_CONFIG_MARKING_GRADING = {
-  baseURL: import.meta.env.VITE_API_MARKING_GRADING_BASE_URL || 'http://localhost:8005',
-  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  baseURL: resolveBase(import.meta.env.VITE_API_MARKING_GRADING_BASE_URL, 'http://localhost:8005'),
+  useMockData,
   timeout: 30000,
 };
 
 export const API_CONFIG_SCHEDULING = {
-  baseURL: import.meta.env.VITE_API_SCHEDULING_BASE_URL || 'http://localhost:8006',
-  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  baseURL: resolveBase(import.meta.env.VITE_API_SCHEDULING_BASE_URL, 'http://localhost:8006'),
+  useMockData,
   timeout: 30000,
 };
 
 export const API_CONFIG_NOTIFICATION = {
-  baseURL: import.meta.env.VITE_API_NOTIFICATION_BASE_URL || 'http://localhost:8007',
-  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true',
+  baseURL: resolveBase(import.meta.env.VITE_API_NOTIFICATION_BASE_URL, 'http://localhost:8007'),
+  useMockData,
   timeout: 30000,
 };
 
@@ -61,6 +82,8 @@ export const API_ENDPOINTS = {
     me: '/auth/me',
     changePassword: '/auth/change-password',
     deleteAccount: '/auth/me',
+    // GET /auth/student/{id}/details -> { id, registrationNumber, first_name, last_name, ... }
+    studentDetails: (studentId: string) => `/auth/student/${studentId}/details`,
   },
 
   // Course endpoints - maps to FastAPI /api/courses/*
@@ -76,6 +99,8 @@ export const API_ENDPOINTS = {
     delete: (id: string) => `/api/courses/${id}`,
     enroll: (id: string) => `/api/courses/${id}/enroll`,
     getStudentsenrollments: '/api/courses/enrollments/student',
+    // GET /api/courses/enrollments/course/{id} (instructor/admin) -> Enrollment[]
+    courseEnrollments: (id: string) => `/api/courses/enrollments/course/${id}`,
     getEnrolledCourses: '/api/courses/enrollments/student/courses',
     unenroll: (id: string) => `/api/courses/${id}/unenroll`,
     students: (id: string) => `/api/courses/${id}/students`,
@@ -126,7 +151,7 @@ export const API_ENDPOINTS = {
     studentList: '/assignments/student/assignments', // GET all assignments for logged-in student
     getStudentAssignment: (id: string) => `/assignments/student/${id}/details`,
     submissions: (id: string) => `/assignments/${id}/submissions`,
-    grade: (id: string, submissionId: string) => `assignments/${id}/submissions/${submissionId}/grade`,
+    grade: (id: string, submissionId: string) => `/assignments/${id}/submissions/${submissionId}/grade`,
   },
   // Assessment endpoints - maps to FastAPI /api/assessments/*
   assessments: {
@@ -160,10 +185,10 @@ export const API_ENDPOINTS = {
 
   // Grade endpoints - maps to FastAPI /api/grades/*
   Marking_grading: {
-    student_submissions: 'grading/dashboard',
+    student_submissions: '/grading/dashboard',
     submission_details: (id: string) => `/grading/submissions/${id}`,
-    grade_assignment: 'grading/assignments/grade',
-    grade_assessment: 'grading/assessments/grade',
+    grade_assignment: '/grading/assignments/grade',
+    grade_assessment: '/grading/assessments/grade',
   },
 
   // Schedule endpoints - maps to FastAPI /api/schedule/*

@@ -15,6 +15,7 @@ enforce authentication where none exists today, which would change
 existing behaviour (§42/§56, "don't modify unrelated files/behaviour").
 """
 
+import os
 from typing import Optional
 from fastapi import Request
 
@@ -37,8 +38,8 @@ def get_actor_id_best_effort(token: Optional[str]) -> Optional[str]:
 
         payload = jwt.decode(
             token,
-            "your-secret-key-here-change-in-production",
-            algorithms=["HS256"],
+            os.getenv("JWT_SECRET_KEY", "your-secret-key-here-change-in-production"),
+            algorithms=[os.getenv("JWT_ALGORITHM", "HS256")],
             options={"verify_exp": False},
         )
         return payload.get("sub")

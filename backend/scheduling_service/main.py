@@ -1,5 +1,7 @@
 # app/main.py
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
@@ -47,11 +49,19 @@ def startup():
 # =========================
 # CORS CONFIGURATION
 # =========================
-origins = [
+def _cors_origins(default):
+    """CORS_ORIGINS env var: comma separated list or "*". Same-origin traffic through nginx doesn't need CORS."""
+    raw = os.getenv("CORS_ORIGINS")
+    if raw is None:
+        return default
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+origins = _cors_origins([
     "http://localhost:5173",
     "http://localhost:3000",
     "http://localhost:8080",
-]
+])
 
 app.add_middleware(
     CORSMiddleware,

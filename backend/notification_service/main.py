@@ -40,7 +40,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # matches the permissive CORS already used by
+    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()],  # matches the permissive CORS already used by
     allow_credentials=True,  # every other service in this LMS (see
     allow_methods=["*"],     # backend/module_lesson/main.py,
     allow_headers=["*"],     # backend/createCourse/app/main.py, etc.)

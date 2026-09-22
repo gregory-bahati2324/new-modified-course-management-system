@@ -1,0 +1,16 @@
+
+# Python generated files
+__pycache__/
+*.py[cod]
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Frontend generated files
+node_modules/
+dist/
+
+# Logs
+*.log

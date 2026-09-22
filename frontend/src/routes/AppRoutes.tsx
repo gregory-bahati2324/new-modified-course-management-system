@@ -90,8 +90,8 @@ export default function AppRoutes() {
       <Route path="/settings" element={<SettingsPage />} />
 
       {/* Auth */}
-      <Route path="/auth/login" element={<Login />} />
-      <Route path="/auth/register" element={<Register />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
       {/* ================= STUDENT ================= */}
       <Route path="/student" element={<StudentLayout />}>

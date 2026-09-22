@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.gitignore
+# local environment files (contain localhost URLs) must never reach the production build
+.env
+.env.*
+!.env.example
+*.log
+Dockerfile
+.dockerignore
+bun.lockb
+*.md

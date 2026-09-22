@@ -12,7 +12,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   // Check if user is authenticated
   if (!token) {
-    return <Navigate to="/auth/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // Check if user has the required role

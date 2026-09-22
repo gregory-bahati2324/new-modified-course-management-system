@@ -1,173 +1,219 @@
-version: "3.9"
+# =============================================================================
+#  PRODUCTION stack (AWS EC2 / any Docker host)
+#
+#    cp .env.example .env      # fill in the secrets  (or run ./scripts/deploy.sh which does it)
+#    docker compose up -d --build
+#
+#  Only the `frontend` container (nginx) publishes ports. It serves the React app and reverse
+#  proxies every API call to the right microservice over the private compose network, so the
+#  databases and the 8 APIs are NOT reachable from the internet.
+#
+#  Local development uses docker-compose.dev.yml instead.
+#
+#  NOTE: no top-level `name:` is set on purpose. Compose derives the project name from this folder,
+#  which keeps re-using the existing "<folder>_postgres_data" volume (your database) on the server.
+# =============================================================================
 
-# Shared by every producing service so they can reach the notification
-# service and authenticate to its internal ingestion endpoint. Centralized
-# here (via a YAML anchor) rather than repeated per-service so the internal
-# key only has to be changed in one place for a real deployment.
-x-notification-client-env: &notification-client-env
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"     # stop container logs from slowly filling the EC2 disk
+    max-file: "5"
+
+# Environment shared by every backend service ---------------------------------
+x-service-env: &service-env
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required - copy .env.example to .env and set it}
+  JWT_ALGORITHM: HS256
   NOTIFICATION_SERVICE_URL: http://notification_service:8000
-  NOTIFICATION_INTERNAL_API_KEY: change-this-internal-notification-key
+  NOTIFICATION_INTERNAL_API_KEY: ${NOTIFICATION_INTERNAL_API_KEY:?NOTIFICATION_INTERNAL_API_KEY is required - see .env.example}
+  CORS_ORIGINS: ${CORS_ORIGINS:-*}
+  PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+
+# Postgres connection pieces ---------------------------------------------------
+x-db: &db
+  POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - see .env.example}
 
 services:
 
+  # ---------------------------------------------------------------------------
+  #  Database
+  # ---------------------------------------------------------------------------
   postgres:
     image: postgres:15
     container_name: auth_postgres
-    restart: always
+    restart: unless-stopped
+    logging: *default-logging
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      <<: *db
       POSTGRES_DB: auth_db
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres-init:/docker-entrypoint-initdb.d
+    # no `ports:` -> Postgres is only reachable from other containers
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d auth_db"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
-  auth_service:
-    build: ./backend
-    container_name: auth_service
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8000:8000"
+  # One-shot job: makes sure every service database exists. Idempotent, so it also repairs an
+  # older postgres volume that was created before some of the databases were added.
+  db_init:
+    image: postgres:15
+    container_name: lms_db_init
+    restart: "no"
+    logging: *default-logging
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/auth_db
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - see .env.example}
     volumes:
-      - ./backend/app:/app/app
-    restart: always
+      - ./postgres-init/create-databases.sh:/create-databases.sh:ro
+    entrypoint: ["sh", "/create-databases.sh"]
+
+  # ---------------------------------------------------------------------------
+  #  Backend services  (internal only - reached through nginx)
+  # ---------------------------------------------------------------------------
+  auth_service:
+    build: ./backend
+    container_name: auth_service
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      db_init:
+        condition: service_completed_successfully
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/auth_db
 
   course_service:
     build: ./backend/createCourse
     container_name: course_service
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8001:8000"
+    restart: unless-stopped
+    logging: *default-logging
     depends_on:
-      postgres:
-        condition: service_healthy
+      db_init:
+        condition: service_completed_successfully
     environment:
-      <<: *notification-client-env
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/course_db
-    volumes:
-      - ./backend/createCourse/app:/app/app
-    restart: always  
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/course_db
 
   module_lesson_service:
     build: ./backend/module_lesson
     container_name: module_lesson_service
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8002:8000"
+    restart: unless-stopped
+    logging: *default-logging
     depends_on:
-      postgres:
-        condition: service_healthy
+      db_init:
+        condition: service_completed_successfully
     environment:
-      <<: *notification-client-env
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/module_db
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/module_db
       COURSE_SERVICE_URL: http://course_service:8000
     volumes:
-      - ./backend/module_lesson:/app
+      # lesson media (images / video / pdf). Same host folder as before, so existing files survive.
       - ./backend/module_lesson/uploads:/app/uploads
-    restart: always
 
   assessment_service:
     build: ./backend/assessments
     container_name: assessment_service
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8003:8000"
+    restart: unless-stopped
+    logging: *default-logging
     depends_on:
-      postgres:
-        condition: service_healthy
+      db_init:
+        condition: service_completed_successfully
     environment:
-      <<: *notification-client-env
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/assessment_db
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/assessment_db
       COURSE_SERVICE_URL: http://course_service:8000
+      GRADING_SERVICE_URL: http://marking_grading_service:8000
     volumes:
-      - ./backend/assessments:/app/app
+      # assignment / submission / question / answer files
       - ./backend/assessments/uploads:/app/uploads
-    restart: always  
 
   progress_service:
     build: ./backend/progress_service
     container_name: progress_service
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8004:8000"
+    restart: unless-stopped
+    logging: *default-logging
     depends_on:
-      postgres:
-        condition: service_healthy
+      db_init:
+        condition: service_completed_successfully
     environment:
-      <<: *notification-client-env
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/progress_db
-    volumes:
-      - ./backend/progress_service:/app/app
-    restart: always  
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/progress_db
+      MODULE_SERVICE_BASE_URL: http://module_lesson_service:8000
 
   marking_grading_service:
     build: ./backend/marking_grading
     container_name: marking_grading_service
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8005:8000"
+    restart: unless-stopped
+    logging: *default-logging
     depends_on:
-      postgres:
-        condition: service_healthy
-      course_service:
-        condition: service_started
-      assessment_service:
-        condition: service_started
-      progress_service:
-        condition: service_started
+      db_init:
+        condition: service_completed_successfully
     environment:
-      <<: *notification-client-env
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/marking_db
-    volumes:
-      - ./backend/marking_grading:/app
-    restart: always
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/marking_db
+      AUTHENTICATION_SERVICE_URL: http://auth_service:8000
 
   scheduling_service:
     build: ./backend/scheduling_service
     container_name: scheduling_service
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8006:8000"
+    restart: unless-stopped
+    logging: *default-logging
     depends_on:
-      postgres:
-        condition: service_healthy
+      db_init:
+        condition: service_completed_successfully
     environment:
-      <<: *notification-client-env
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/scheduling_db
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/scheduling_db
       COURSE_SERVICE_URL: http://course_service:8000
-    volumes:
-      - ./backend/scheduling_service:/app
-    restart: always
 
   notification_service:
     build: ./backend/notification_service
     container_name: notification_service
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8007:8000"
+    restart: unless-stopped
+    logging: *default-logging
     depends_on:
-      postgres:
-        condition: service_healthy
+      db_init:
+        condition: service_completed_successfully
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/notification_db
-      JWT_SECRET_KEY: your-secret-key-here-change-in-production
-      JWT_ALGORITHM: HS256
-      NOTIFICATION_INTERNAL_API_KEY: change-this-internal-notification-key
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/notification_db
+
+  # ---------------------------------------------------------------------------
+  #  Frontend + reverse proxy  (the ONLY container that publishes ports)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+    container_name: lms_frontend
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      - auth_service
+      - course_service
+      - module_lesson_service
+      - assessment_service
+      - progress_service
+      - marking_grading_service
+      - scheduling_service
+      - notification_service
+    environment:
+      # Domain name of the site. If /etc/letsencrypt/live/<SERVER_NAME>/ exists nginx switches to
+      # HTTPS automatically, otherwise it serves plain HTTP (see DEPLOYMENT.md).
+      SERVER_NAME: ${SERVER_NAME:-_}
+      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-200m}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     volumes:
-      - ./backend/notification_service:/app
-    restart: always
+      - /etc/letsencrypt:/etc/letsencrypt:ro     # certificates issued by certbot on the host
+      - ./certbot-www:/var/www/certbot           # ACME HTTP-01 challenge files
 
 volumes:
   postgres_data:

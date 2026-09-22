@@ -5,7 +5,61 @@ from models.modules import Module
 from models.lessons import Lesson
 from schemas import ModuleCreate, LessonCreate, LessonUpdate, LessonReorderItem, ModuleReorderItem
 from typing import List
+import os
+import re
 import uuid
+
+# ---------------------------------------------------------------------------
+# Public media URLs
+#
+# Lesson content blocks store the *path* of an uploaded file ("uploads/x.mp4").
+# When lessons are read back we turn that into a URL the browser can load.
+#
+# PUBLIC_BASE_URL is optional. Left empty (the default) the URL is root-relative
+# ("/uploads/x.mp4"), so it always resolves against whatever host/scheme the
+# page was loaded from (IP, domain, load balancer...) and can never end up as
+# http:// on an https:// page or point at localhost / an internal docker name.
+# ---------------------------------------------------------------------------
+MEDIA_TYPES = ["image", "video", "audio", "pdf", "ppt", "pptx", "doc", "docx", "document"]
+
+# an absolute URL that points at one of OUR uploaded files, e.g. one that was
+# stored by an older version with http://localhost:8000/uploads/abc.mp4
+_OWN_UPLOAD_URL = re.compile(r"^https?://[^/]+(/uploads/.+)$", re.IGNORECASE)
+
+
+def public_base_url() -> str:
+    return os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
+
+
+def resolve_media_url(content, base_url: Optional[str] = None):
+    """Return a browser-loadable URL for a media block's `content` value."""
+    if not content or not isinstance(content, str):
+        return content
+    if content.startswith(("data:", "blob:")):
+        return content
+
+    base = public_base_url() if base_url is None else base_url.rstrip("/")
+
+    m = _OWN_UPLOAD_URL.match(content)
+    if m:                                   # legacy absolute URL -> re-base it
+        return f"{base}{m.group(1)}"
+    if content.lower().startswith(("http://", "https://")):
+        return content                      # external (YouTube, CDN, ...)
+
+    path = content if content.startswith("/") else f"/{content}"
+    return f"{base}{path}"
+
+
+def resolve_content_blocks(blocks, base_url: Optional[str] = None):
+    out = []
+    for block in blocks or []:
+        if not block:
+            continue
+        block = block.copy()
+        if block.get("type") in MEDIA_TYPES:
+            block["content"] = resolve_media_url(block.get("content"), base_url)
+        out.append(block)
+    return out
 
 
 # -----------------------
@@ -154,9 +208,6 @@ def create_lesson(db: Session, module_id: str, data: LessonCreate) -> Lesson:
 
 
 
-Base_url = "http://localhost:8000"
-
-
 def get_lessons_by_module(db: Session, module_id: str, base_url: Optional[str] = None):
     lessons = db.query(Lesson).filter(Lesson.module_id == module_id).order_by(Lesson.order).all()
     
@@ -184,22 +235,7 @@ def get_lessons_by_module(db: Session, module_id: str, base_url: Optional[str] =
             "updated_at": lesson.updated_at,
         }
         
-        # ✅ Add URL conversion - SAME logic as get_lesson
-        if base_url:
-            cb = []
-            MEDIA_TYPES = ["image", "video", "audio", "pdf", "ppt", "pptx", "doc", "docx", "document"]
-            for block in lesson_data.get("contentBlocks", []):
-                if not block:
-                    continue
-                block = block.copy()
-                content = block.get("content")
-                
-                if content and block.get("type") in MEDIA_TYPES and not content.startswith("http"):
-                    # ensure leading slash for safety
-                    path = content if content.startswith("/") else f"/{content}"
-                    block["content"] = f"{base_url.rstrip('/')}{path}"
-                cb.append(block)
-            lesson_data["contentBlocks"] = cb
+        lesson_data["contentBlocks"] = resolve_content_blocks(lesson_data.get("contentBlocks"), base_url)
         
         result.append(lesson_data)
     
@@ -234,22 +270,7 @@ def get_lesson(db: Session, lesson_id: str, base_url: Optional[str] = None):
         "version": lesson_obj.version
     }
 
-    # If base_url provided, convert local upload paths to absolute URLs
-    if base_url:
-        cb = []
-        MEDIA_TYPES = ["image", "video", "audio", "pdf", "ppt", "pptx", "doc", "docx", "document"]
-        for block in lesson_data.get("contentBlocks", []):
-            if not block:
-                continue
-            block = block.copy()
-            content = block.get("content")
-            
-            if content and block.get("type") in MEDIA_TYPES and not content.startswith("http"):
-                # ensure leading slash for safety
-                path = content if content.startswith("/") else f"/{content}"
-                block["content"] = f"{base_url.rstrip('/')}{path}"
-            cb.append(block)
-        lesson_data["contentBlocks"] = cb
+    lesson_data["contentBlocks"] = resolve_content_blocks(lesson_data.get("contentBlocks"), base_url)
 
     return lesson_data
 

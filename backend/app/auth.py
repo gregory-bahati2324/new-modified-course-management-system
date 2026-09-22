@@ -28,10 +28,7 @@ def register(user: RegisterRequest, db: Session = Depends(get_db)):
     "role": new_user.role
     })
 
-    refresh_token = create_refresh_token({
-        "sub": str(new_user.id),
-        "role": new_user.role
-    })
+    refresh_token = create_refresh_token(new_user.id)
 
     user_data = UserResponse(
         id=new_user.id,
@@ -64,10 +61,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         "name": full_name,
         "reg_no": user.registrationNumber
     })
-    refresh_token = create_refresh_token({
-        "sub": str(user.id),
-        "role": user.role
-    })
+    refresh_token = create_refresh_token(user.id)
 
     user_data = UserResponse(
         id=user.id,
@@ -90,26 +84,35 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 def refresh_token(data: RefreshTokenRequest, db: Session = Depends(get_db)):
     """
     Accepts a refresh token and returns a new access token.
+
+    The new access token carries the SAME claims as the one issued at login
+    (sub/role/name/reg_no). Every other microservice authorises requests from
+    the `role` claim, so a token without it would be rejected with 403.
     """
     try:
-        # Decode refresh token
         payload = decode_token(data.refresh_token)
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=401, detail="Invalid token type")
+
         user_id: str = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
 
-        # Verify user exists
-        user = db.query(get_current_user.__annotations__['return']).filter_by(id=user_id).first()
+        user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Generate new access token
-        access_token = create_access_token({"sub": str(user.id)})
+        access_token = create_access_token({
+            "sub": str(user.id),
+            "role": user.role,
+            "name": f"{user.first_name} {user.last_name}",
+            "reg_no": user.registrationNumber,
+        })
         return RefreshTokenResponse(access_token=access_token, token_type="bearer")
-    
+
     except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")  
-    
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+
 @router.get("/student/{student_id}/details", response_model=UserResponse)
 def get_student_details(student_id: str, db: Session = Depends(get_db)):
     student = get_student_by_id(db, student_id)

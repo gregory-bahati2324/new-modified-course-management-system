@@ -199,6 +199,20 @@ class CourseService {
     return response.data;
   }
 
+  // Instructor/admin: every enrollment for one course.
+  // Backed by GET /api/courses/enrollments/course/{course_id}, which the
+  // backend restricts to the course's own instructor (or an admin).
+  async getCourseEnrollments(courseId: string): Promise<Enrollment[]> {
+    try {
+      const response = await apiCourseClient.get<Enrollment[]>(
+        API_ENDPOINTS.courses.courseEnrollments(courseId)
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
   // Public, unauthenticated course listing — used by the Home page.
   // Backed by the real GET /api/courses/all endpoint (no auth required).
   async getPublicCourses(limit = 6): Promise<Course[]> {

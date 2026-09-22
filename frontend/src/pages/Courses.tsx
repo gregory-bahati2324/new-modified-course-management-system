@@ -176,7 +176,7 @@ export default function Courses() {
     if (!isAuthed) {
       // Not logged in — send them to sign in (or create an account), and
       // remember to bring them back to finish enrolling afterwards.
-      navigate('/auth/login', { state: { from: '/student/enrollment' } });
+      navigate('/login', { state: { from: '/student/enrollment' } });
       return;
     }
 

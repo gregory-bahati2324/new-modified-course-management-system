@@ -1,4 +1,5 @@
 # utils/auth.py
+import os
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
@@ -8,8 +9,8 @@ from pydantic import BaseModel
 # ============================================================================
 # CONFIGURATION  (IMPORTANT: Same secret + algorithm as your Auth Service)
 # ============================================================================
-SECRET_KEY = "your-secret-key-here-change-in-production"
-ALGORITHM = "HS256"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-here-change-in-production")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 # Use HTTPBearer to read JWT from Authorization: Bearer <token>
 security = HTTPBearer()

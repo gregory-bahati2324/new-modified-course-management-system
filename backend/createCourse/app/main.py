@@ -1,4 +1,6 @@
 # app/main.py
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
@@ -18,11 +20,19 @@ app = FastAPI(
 # CORS CONFIGURATION
 # =========================
 # Allow your frontend origins. Add more if needed
-origins = [
+def _cors_origins(default):
+    """CORS_ORIGINS env var: comma separated list or "*". Same-origin traffic through nginx doesn't need CORS."""
+    raw = os.getenv("CORS_ORIGINS")
+    if raw is None:
+        return default
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+origins = _cors_origins([
     "http://localhost:5173",  # Vite dev server
     "http://localhost:8080",  # React dev server (optional)
     "http://localhost:3000",  # React dev server (optional)
-]
+])
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,3 +54,8 @@ app.include_router(courses.router, prefix="/api", tags=["Courses"])
 @app.get("/", tags=["Root"])
 def root():
     return {"message": "Course microservice running"}
+
+
+@app.get("/health", tags=["Health"])
+def health():
+    return {"status": "ok"}

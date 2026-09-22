@@ -14,7 +14,7 @@ export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +51,7 @@ export default function Register() {
       });
       return;
     }
-    
+
     if (!formData.role) {
       toast({
         title: "Role Required",
@@ -85,7 +85,7 @@ export default function Register() {
       // --- Navigate to login page after successful registration ---
       // Forward along where they should land after they then log in
       // (e.g. back to course enrollment if that's what sent them here).
-      navigate('/auth/login', { state: location.state });
+      navigate('/login', { state: location.state });
 
     } catch (error: any) {
       toast({
@@ -114,7 +114,7 @@ export default function Register() {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-hero-gradient mx-auto">
               <span className="text-lg font-bold text-white">M</span>
             </div>
-            
+
             <div className="space-y-2">
               <CardTitle className="text-2xl">Join MUST</CardTitle>
               <CardDescription>
@@ -156,8 +156,8 @@ export default function Register() {
               {/* Registration number */}
               <div className="space-y-2">
                 <Label htmlFor="registrationNumber">
-                  {formData.role === 'student' ? 'Student Registration Number' : 
-                   formData.role === 'instructor' ? 'Staff Registration Number' : 
+                  {formData.role === 'student' ? 'Student Registration Number' :
+                   formData.role === 'instructor' ? 'Staff Registration Number' :
                    'Registration Number'} *
                 </Label>
                 <div className="relative">
@@ -172,8 +172,8 @@ export default function Register() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {formData.role === 'student' 
-                    ? 'Your unique student registration number' 
+                  {formData.role === 'student'
+                    ? 'Your unique student registration number'
                     : formData.role === 'instructor'
                     ? 'Your staff registration number'
                     : 'This will be your unique identifier'}
@@ -194,7 +194,7 @@ export default function Register() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>             
+              </div>
 
               {/* Password */}
               <div className="space-y-2">
@@ -254,7 +254,7 @@ export default function Register() {
                   <Checkbox
                     id="terms"
                     checked={formData.acceptTerms}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setFormData({...formData, acceptTerms: checked as boolean})
                     }
                     required
@@ -271,7 +271,7 @@ export default function Register() {
                   <Checkbox
                     id="privacy"
                     checked={formData.acceptPrivacy}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setFormData({...formData, acceptPrivacy: checked as boolean})
                     }
                     required
@@ -288,7 +288,7 @@ export default function Register() {
                   <Checkbox
                     id="newsletter"
                     checked={formData.newsletter}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setFormData({...formData, newsletter: checked as boolean})
                     }
                   />
@@ -307,8 +307,8 @@ export default function Register() {
               <span className="text-muted-foreground">
                 Already have an account?{' '}
               </span>
-              <Link 
-                to="/auth/login" 
+              <Link
+                to="/login"
                 className="text-primary hover:underline font-medium"
               >
                 Sign in

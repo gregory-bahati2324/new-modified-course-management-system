@@ -56,7 +56,10 @@ def get_student_assignment_detail(db: Session, assignment_id: str, course_ids: L
     
 
 
-BASE_FILE_URL = os.getenv("BASE_FILE_URL", "http://localhost:8003")
+# Empty (default) => root-relative URLs like "/uploads/x.pdf", which resolve against
+# whatever host the page was loaded from. Set PUBLIC_BASE_URL only if files must be
+# served from a different absolute origin.
+BASE_FILE_URL = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
 
 
 def build_file_url(file_path: str):

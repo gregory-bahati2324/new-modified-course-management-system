@@ -3,6 +3,7 @@ Authentication and Utility Functions for FastAPI Backend
 Handles JWT tokens, password hashing, and role-based permissions.
 """
 
+import os
 from datetime import datetime, timedelta
 from typing import Optional, List
 from fastapi import Depends, HTTPException, status
@@ -17,8 +18,8 @@ from .database import get_db
 # CONFIGURATION
 # ============================================================================
 
-SECRET_KEY = "your-secret-key-here-change-in-production"
-ALGORITHM = "HS256"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-here-change-in-production")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 

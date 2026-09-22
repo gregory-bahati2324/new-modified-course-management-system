@@ -35,10 +35,7 @@ def attach_file_urls(question: Question) -> Question:
 import os
 
 def attach_file_urls_exam(q: Question):
-    BASE_FILE_URL = os.getenv(
-        "BASE_FILE_URL",
-        "http://localhost:8003/static/questions"
-    )
+    BASE_FILE_URL = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/") + "/static/questions"
 
     return {
         "id": q.id,

@@ -1,0 +1,10 @@
+# Shell scripts must keep LF endings - Docker images run "sh script.sh" and a CRLF line ending
+# in the shebang or in `set -e` breaks the script with a cryptic "bad interpreter" / syntax error.
+*.sh text eol=lf
+postgres-init/*.sh text eol=lf
+
+# Everything else: let git normalize line endings, but don't force a particular style on
+# Windows checkouts of the TypeScript/Python source (avoids noisy whole-file diffs).
+*.py text=auto
+*.ts text=auto
+*.tsx text=auto

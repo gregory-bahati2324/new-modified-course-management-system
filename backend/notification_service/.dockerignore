@@ -1,0 +1,19 @@
+# --- python / tooling
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+tests/
+# --- secrets & local data must never be baked into an image
+**/.env
+**/.env.*
+!**/.env.example
+*.db
+*.sqlite3
+# --- user-uploaded files live in a mounted volume, not in the image
+uploads/
+.git
+.gitignore
+Dockerfile
+*.md

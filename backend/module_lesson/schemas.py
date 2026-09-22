@@ -45,24 +45,27 @@ class QuizQuestion(BaseModel):
     options: List[str]
     correctAnswer: int
 
+# Defaults below match the Lesson model's column default ({}), so a lesson created without
+# these settings (or created before they existed) still serializes instead of raising a
+# ResponseValidationError / 500 when it's read back.
 class DiscussionSettings(BaseModel):
-    enabled: bool
+    enabled: bool = False
     prompt: Optional[str] = None
 
 class ProgressSettings(BaseModel):
-    completion: bool
-    timeSpent: bool
-    quizScore: bool
+    completion: bool = False
+    timeSpent: bool = False
+    quizScore: bool = False
 
 class AccessibilitySettings(BaseModel):
-    darkMode: bool
-    fontSize: str  # 'small' | 'medium' | 'large'
-    transcriptEnabled: bool
+    darkMode: bool = False
+    fontSize: str = "medium"  # 'small' | 'medium' | 'large'
+    transcriptEnabled: bool = False
     transcriptText: Optional[str] = None
 
 class FeedbackSettings(BaseModel):
-    ratings: bool
-    reviews: bool
+    ratings: bool = False
+    reviews: bool = False
     customQuestions: List[str] = []
 
 # -------------------------

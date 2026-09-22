@@ -142,6 +142,23 @@ class AuthService {
     }
   }
 
+  /**
+   * GET /auth/student/{id}/details — looks up another user's public
+   * identity (name + registration number) by id. Used by instructor
+   * pages that only have a student_id (e.g. from an enrollment) and
+   * need something human-readable to display.
+   */
+  async getStudentDetails(studentId: string): Promise<UserProfile> {
+    try {
+      const response = await apiClient.get<UserProfile>(
+        API_ENDPOINTS.auth.studentDetails(studentId)
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  }
+
   /** Synchronous, cache-friendly read of the cached user (no network). */
   getCachedUser(): UserProfile | null {
     if (this.currentUser) return this.currentUser;
@@ -201,7 +218,7 @@ class AuthService {
     window.dispatchEvent(new CustomEvent(SESSION_ENDED_EVENT, { detail: options.reason ?? 'manual' }));
 
     if (redirect) {
-      window.location.replace('/auth/login');
+      window.location.replace('/login');
     }
   }
 

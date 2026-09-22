@@ -80,19 +80,19 @@ export default function Home() {
                 <Link to="/courses">Courses</Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link to="/auth/login">Sign in</Link>
+                <Link to="/login">Sign in</Link>
               </Button>
               <Button asChild>
-                <Link to="/auth/register">Sign up</Link>
+                <Link to="/register">Sign up</Link>
               </Button>
             </nav>
 
             <div className="flex gap-2 sm:hidden">
               <Button size="sm" variant="outline" asChild>
-                <Link to="/auth/login">Sign in</Link>
+                <Link to="/login">Sign in</Link>
               </Button>
               <Button size="sm" asChild>
-                <Link to="/auth/register">Sign up</Link>
+                <Link to="/register">Sign up</Link>
               </Button>
             </div>
           </div>
@@ -254,10 +254,10 @@ export default function Home() {
             </p>
             <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
               <Button size="lg" variant="outline" asChild>
-                <Link to="/auth/login">Sign in</Link>
+                <Link to="/login">Sign in</Link>
               </Button>
               <Button size="lg" asChild>
-                <Link to="/auth/register">Create an account</Link>
+                <Link to="/register">Create an account</Link>
               </Button>
             </div>
           </div>

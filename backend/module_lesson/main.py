@@ -5,14 +5,14 @@ from starlette.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
-app = FastAPI()
+app = FastAPI(title="Module & Lesson Service")
 
 Base.metadata.create_all(bind=engine)
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],  # MUST include OPTIONS
     allow_headers=["*"],
@@ -27,3 +27,8 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 @app.get("/")
 def root():
     return {"message": "Module service running"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

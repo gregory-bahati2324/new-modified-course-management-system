@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Backgro
 from fastapi import Request
 from sqlalchemy.orm import Session
 from database import get_db
+from crud import public_base_url
 from crud import (
     create_module, get_modules, get_module, update_module, delete_module, get_course_modules,
     create_lesson, get_lessons_by_module, get_lesson, update_lesson, delete_lesson, reorder_lessons,
@@ -25,7 +26,8 @@ router = APIRouter()
 # ---------------------
 module_router = APIRouter(prefix="/modules", tags=["Modules"])
 
-@module_router.post("/", summary="Create module")
+@module_router.post("", summary="Create module")
+@module_router.post("/", include_in_schema=False)
 def create_module_route(data: ModuleCreate, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     module = create_module(db, data)
 
@@ -52,7 +54,8 @@ def create_module_route(data: ModuleCreate, request: Request, background_tasks: 
 
     return module
 
-@module_router.get("/", summary="Get all modules")
+@module_router.get("", summary="Get all modules")
+@module_router.get("/", include_in_schema=False)
 def get_all_modules_route(db: Session = Depends(get_db)):
     return get_modules(db)
 
@@ -132,8 +135,7 @@ def create_lesson_route(data: LessonCreate, module_id: str, request: Request, ba
 
 @module_router.get("/{module_id}/lessons", response_model=List[LessonResponse])
 def get_lessons_by_module_route(module_id: str, request: Request, db: Session = Depends(get_db)):
-    # ✅ Add request to get base_url
-    base_url = str(request.base_url).rstrip("/")
+    base_url = public_base_url()
     
     # ✅ Use the updated CRUD function with base_url
     lessons = get_lessons_by_module(db, module_id, base_url=base_url)
@@ -141,7 +143,7 @@ def get_lessons_by_module_route(module_id: str, request: Request, db: Session = 
 
 @module_router.get("/lessons/{lesson_id}", response_model=LessonResponse)
 def get_one_lesson_route(lesson_id: str, request: Request, db: Session = Depends(get_db)):
-    base_url = str(request.base_url).rstrip("/")
+    base_url = public_base_url()
     lesson = get_lesson(db, lesson_id, base_url=base_url)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
@@ -187,8 +189,8 @@ def upload_lesson_file(lesson_id: str, request: Request, file: UploadFile = File
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Build absolute URL using request.base_url
-    file_url = str(request.base_url).rstrip("/") + f"/uploads/{filename}"
+    # Root-relative unless PUBLIC_BASE_URL is set (see crud.public_base_url)
+    file_url = public_base_url() + f"/uploads/{filename}"
 
     return {"lesson_id": lesson_id, "filename": filename, "url": file_url, "filepath": filepath}
 # ---------------------

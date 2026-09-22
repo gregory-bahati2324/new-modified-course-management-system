@@ -169,7 +169,7 @@ export default function AdminLogin() {
         <div className="mt-6 text-center">
           <p className="text-sm text-white/80">
             Not an administrator?{' '}
-            <Link to="/auth/login" className="font-semibold text-white hover:underline">
+            <Link to="/login" className="font-semibold text-white hover:underline">
               Go to regular login
             </Link>
           </p>

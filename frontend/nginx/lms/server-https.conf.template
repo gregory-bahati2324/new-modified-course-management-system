@@ -1,0 +1,46 @@
+# Generated at container start by 25-lms-nginx-mode.sh  (mode: HTTPS)
+# Selected automatically because /etc/letsencrypt/live/${SERVER_NAME}/ contains a certificate.
+
+# Port 80: keep the ACME challenge + health check reachable, redirect everything else to HTTPS.
+server {
+    listen 80 default_server;
+    server_name _;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl default_server;
+    http2 on;                       # nginx >= 1.25.1 syntax (image is pinned to nginx:1.27-alpine)
+    server_name ${SERVER_NAME};
+
+    ssl_certificate     /etc/letsencrypt/live/${SERVER_NAME}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${SERVER_NAME}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    client_max_body_size ${CLIENT_MAX_BODY_SIZE};
+    error_page 502 504 = @svc_unavailable;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    include /etc/nginx/lms/routes.conf;
+}

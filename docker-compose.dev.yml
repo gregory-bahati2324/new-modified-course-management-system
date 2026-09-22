@@ -1,0 +1,181 @@
+# =============================================================================
+#  LOCAL DEVELOPMENT stack:   docker compose -f docker-compose.dev.yml up --build
+#  Every service is published on localhost:800x, has hot-reload and the source is bind-mounted.
+#  Run the frontend separately with `npm run dev` (frontend/.env.example has the localhost URLs).
+#
+#  For the PRODUCTION / AWS stack use docker-compose.yml (see DEPLOYMENT.md).
+# =============================================================================
+
+# Shared by every producing service so they can reach the notification
+# service and authenticate to its internal ingestion endpoint. Centralized
+# here (via a YAML anchor) rather than repeated per-service so the internal
+# key only has to be changed in one place for a real deployment.
+x-notification-client-env: &notification-client-env
+  NOTIFICATION_SERVICE_URL: http://notification_service:8000
+  NOTIFICATION_INTERNAL_API_KEY: change-this-internal-notification-key
+
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: auth_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth_service:
+    build: ./backend
+    container_name: auth_service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/auth_db
+    volumes:
+      - ./backend/app:/app/app
+    restart: always
+
+  course_service:
+    build: ./backend/createCourse
+    container_name: course_service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *notification-client-env
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/course_db
+    volumes:
+      - ./backend/createCourse/app:/app/app
+    restart: always  
+
+  module_lesson_service:
+    build: ./backend/module_lesson
+    container_name: module_lesson_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8002:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *notification-client-env
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/module_db
+      COURSE_SERVICE_URL: http://course_service:8000
+      PUBLIC_BASE_URL: http://localhost:8002
+    volumes:
+      - ./backend/module_lesson:/app
+      - ./backend/module_lesson/uploads:/app/uploads
+    restart: always
+
+  assessment_service:
+    build: ./backend/assessments
+    container_name: assessment_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8003:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *notification-client-env
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/assessment_db
+      COURSE_SERVICE_URL: http://course_service:8000
+      PUBLIC_BASE_URL: http://localhost:8003
+    volumes:
+      - ./backend/assessments:/app/app
+      - ./backend/assessments/uploads:/app/uploads
+    restart: always  
+
+  progress_service:
+    build: ./backend/progress_service
+    container_name: progress_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8004:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *notification-client-env
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/progress_db
+    volumes:
+      - ./backend/progress_service:/app/app
+    restart: always  
+
+  marking_grading_service:
+    build: ./backend/marking_grading
+    container_name: marking_grading_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8005:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      course_service:
+        condition: service_started
+      assessment_service:
+        condition: service_started
+      progress_service:
+        condition: service_started
+    environment:
+      <<: *notification-client-env
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/marking_db
+    volumes:
+      - ./backend/marking_grading:/app
+    restart: always
+
+  scheduling_service:
+    build: ./backend/scheduling_service
+    container_name: scheduling_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8006:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *notification-client-env
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/scheduling_db
+      COURSE_SERVICE_URL: http://course_service:8000
+    volumes:
+      - ./backend/scheduling_service:/app
+    restart: always
+
+  notification_service:
+    build: ./backend/notification_service
+    container_name: notification_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload --proxy-headers --forwarded-allow-ips="*"
+    ports:
+      - "8007:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/notification_db
+      JWT_SECRET_KEY: your-secret-key-here-change-in-production
+      JWT_ALGORITHM: HS256
+      NOTIFICATION_INTERNAL_API_KEY: change-this-internal-notification-key
+    volumes:
+      - ./backend/notification_service:/app
+    restart: always
+
+volumes:
+  postgres_data:

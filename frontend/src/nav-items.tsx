@@ -468,13 +468,13 @@ export const navItems = [
   },
   {
     title: "Login",
-    to: "/auth/login",
+    to: "/login",
     icon: <Users className="h-4 w-4" />,
     page: <Login />,
   },
   {
     title: "Register",
-    to: "/auth/register",
+    to: "/register",
     icon: <Users className="h-4 w-4" />,
     page: <Register />,
   },
